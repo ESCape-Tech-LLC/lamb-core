@@ -1,0 +1,12 @@
+.DS_Store
+.idea
+*.pyc
+static/*
+!static/.keep
+docs/build/
+env/
+logs/
+run/
+celerybeat.pid
+celerybeat-schedule.db
+gateway/config.py
