@@ -9,4 +9,3 @@ logs/
 run/
 celerybeat.pid
 celerybeat-schedule.db
-gateway/config.py
