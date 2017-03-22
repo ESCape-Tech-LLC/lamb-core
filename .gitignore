@@ -9,3 +9,4 @@ logs/
 run/
 celerybeat.pid
 celerybeat-schedule.db
+/*.egg-info

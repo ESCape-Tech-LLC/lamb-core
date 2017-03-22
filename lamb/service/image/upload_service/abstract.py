@@ -89,7 +89,7 @@ class ImageUploadServiceAbstract(object):
         except IOError as e:
             raise InvalidParamTypeError("Could not open file as image")
         except Exception as e:
-            print e.__class__.__name__, e
+            print(e.__class__.__name__, e)
             raise ServerError("Unhandled open image error")
 
         src = src.convert('RGB')

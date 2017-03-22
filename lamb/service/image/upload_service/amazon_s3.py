@@ -56,7 +56,7 @@ class ImageUploadServiceAmazonS3(ImageUploadServiceAbstract):
             uploaded_url = "http://%s.s3.amazonaws.com/%s" % (self.bucket.name, file_name)
             return uploaded_url
         except Exception as e:
-            print e.__class__.__name__, e
+            print (e.__class__.__name__, e)
             raise ExternalServiceError('Could not load data in bucket')
         finally:
             os.remove(temp_file)

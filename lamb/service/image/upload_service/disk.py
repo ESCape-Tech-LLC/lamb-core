@@ -2,7 +2,7 @@ __author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
 
 import os
-import urlparse
+from urllib.parse import urljoin
 from django.conf import settings
 from lamb.service.image.upload_service.abstract import ImageUploadServiceAbstract
 
@@ -69,7 +69,7 @@ class ImageUploadServiceDisk(ImageUploadServiceAbstract):
 
             if not os.path.exists(full_path):
                 image.save(full_path, 'JPEG', quality=settings.LAMB_IMAGE_UPLOAD_QUALITY)
-                return urlparse.urljoin(self.static_url, file_name)
+                return urljoin(self.static_url, file_name)
             proposed_name = None  # nullify recommend name in case of have not save image
             attempts -= 1
         raise OSError
