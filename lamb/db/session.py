@@ -15,10 +15,15 @@ try:
     _PASS = settings.DATABASES['default'].get('PASSWORD', None)
     _HOST = settings.DATABASES['default'].get('HOST', None)
     _ENGINE = settings.DATABASES['default'].get('ENGINE', None)
+    _OPTS = settings.DATABASES['default'].get('DB_CONNECT_OPTS', None)
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.')+1:]
-    _CONNECTION_STRING = '%s://%s:%s@%s/%s?charset=utf8' % (_ENGINE, _USER, _PASS, _HOST, _NAME)
-    _engine = create_engine(_CONNECTION_STRING, echo=getattr(settings, 'LAMB_SQLALCHEMY_ECHO', False), pool_recycle=3600)
+    _CONNECTION_STRING = '%s://%s:%s@%s/%s?%s' % (_ENGINE, _USER, _PASS, _HOST, _NAME, _OPTS)
+    _engine = create_engine(
+        _CONNECTION_STRING,
+        echo=getattr(settings, 'LAMB_SQLALCHEMY_ECHO', False),
+        pool_recycle=3600
+    )
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 

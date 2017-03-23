@@ -5,8 +5,11 @@ static/*
 !static/.keep
 docs/build/
 env/
-logs/
-run/
+logs/*
+!logs/.keep
+run/*
+!run/.keep
 celerybeat.pid
 celerybeat-schedule.db
+config.py
 /*.egg-info

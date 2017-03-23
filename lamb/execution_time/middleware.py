@@ -21,7 +21,7 @@ class ExecutionTimeMiddleware(object):
         :type message: basestring
         """
         try:
-            request.lamb.execution_meter.append_marker(message)
+            request.lamb_execution_meter.append_marker(message)
         except: pass
 
     def _start(self, request):
@@ -29,7 +29,7 @@ class ExecutionTimeMiddleware(object):
         :param request: Request object
         :type request: pynm.utils.LambRequest
         """
-        request.lamb.execution_meter = ExecutionTimeMeter()
+        request.lamb_execution_meter = ExecutionTimeMeter()
 
     def _finish(self, request):
         """
@@ -70,7 +70,7 @@ class ExecutionTimeMiddleware(object):
             request.lamb_db_session.add(metric)
             request.lamb_db_session.commit()
             if settings.DEBUG:
-                request.lamb.execution_meter.print_marks()
+                request.lamb_execution_meter.print_marks()
         except: pass
 
 
