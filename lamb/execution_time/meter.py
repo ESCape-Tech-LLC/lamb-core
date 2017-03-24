@@ -2,6 +2,9 @@ __author__ = 'KoNEW'
 #-*- coding: utf-8 -*-
 
 import time
+import logging
+
+logger = logging.getLogger('django')
 
 class ExecutionTimeMeter(object):
     """
@@ -60,21 +63,22 @@ class ExecutionTimeMeter(object):
         return result
 
 
-    def print_marks(self, header=None):
+    def log_marks(self, header=None):
         try:
             total_elapsed = self.get_total_time()
             measurements = self.get_measurements()
 
-            # print header
-            final_header = "Time measures: "
             if isinstance(header, str):
-                final_header +=  header
-            print(final_header)
-            print('Total time: %.6f sec.' % total_elapsed)
+                final_header =  header + ' measures: '
+            else:
+                final_header = 'Time measures: '
+            logger.info(final_header)
+            logger.info('Total time: %.6f sec.' % total_elapsed)
 
 
             # print values
             for m in measurements:
-                print('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
+                logger.info('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
+                # print('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
         except:
             pass

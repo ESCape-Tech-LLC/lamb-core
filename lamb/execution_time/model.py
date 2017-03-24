@@ -10,8 +10,8 @@ from sqlalchemy.orm import relationship
 from lamb.db.session import DeclarativeBase
 from lamb.db.mixins import TableConfigMixin
 
-class MarbleExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
-    __tablename__ = 'lamb.execution_time_metric'
+class LambExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
+    __tablename__ = 'lamb_execution_time_metric'
 
     # columns
     metric_id = Column(BIGINT(unsigned=True), nullable=False, primary_key=True, autoincrement=True)
@@ -22,7 +22,7 @@ class MarbleExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
     elapsed_time = Column(FLOAT(), nullable=False, default=0.0, server_default=text('0'))
 
     # relations
-    markers = relationship('MarbleExecutionTimeMarker', cascade='all', backref='metric')
+    markers = relationship('LambExecutionTimeMarker', cascade='all', backref='metric')
     def __init__(self):
         self.app_name = 'INVALID'
         self.url_name = 'INVALID'
@@ -31,12 +31,12 @@ class MarbleExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
         self.elapsed_time = -1.0
 
 
-class MarbleExecutionTimeMarker(DeclarativeBase, TableConfigMixin):
-    __tablename__ = 'lamb.execution_time_marker'
+class LambExecutionTimeMarker(DeclarativeBase, TableConfigMixin):
+    __tablename__ = 'lamb_execution_time_marker'
 
     #columns
     f_metric_id = Column(BIGINT(unsigned=True),
-                         ForeignKey(MarbleExecutionTimeMetric.metric_id, onupdate='CASCADE', ondelete='CASCADE'),
+                         ForeignKey(LambExecutionTimeMetric.metric_id, onupdate='CASCADE', ondelete='CASCADE'),
                          nullable=False)
     marker_id = Column(BIGINT(unsigned=True), nullable=False, primary_key=True, autoincrement=True)
     absolute_interval = Column(FLOAT(), nullable=False)

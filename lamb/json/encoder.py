@@ -40,7 +40,8 @@ class JsonEncoder(json.JSONEncoder):
         elif isinstance(obj, uuid.UUID):
             result = str(obj)
         elif isinstance(obj.__class__, DeclarativeMeta):
-            result = OrderedDict()
+            result = dict()
+            # result = OrderedDict()
             ins = inspect(obj)
             for column in ins.mapper.column_attrs.keys():
                 result[column] = getattr(obj, column)

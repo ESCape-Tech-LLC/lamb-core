@@ -20,12 +20,12 @@ from lamb.rest.exceptions import InvalidBodyStructureError, InvalidParamTypeErro
 class LambRequest(HttpRequest):
     """ Class used only for proper type hinting in pycharm, not guarantee that properties will exist
     :type lamb_db_session: sqlalchemy.orm.Session | None
-    :type lamb.execution_meter: pynm.execution_time.ExecutionTimeMeter | None
+    :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     """
     def __init__(self):
         super(LambRequest, self).__init__()
         self.lamb_db_session = None
-        self.lamb.execution_meter = None
+        self.lamb_execution_meter = None
 
 def parse_body_as_json(request):
     """  Parse request object to dictionary as JSON

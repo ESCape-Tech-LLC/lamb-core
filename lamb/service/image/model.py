@@ -40,7 +40,7 @@ class LambImage(DeclarativeBase, TableConfigMixin):
     polymorphic_type = Column(VARCHAR(50), nullable=False)
 
     # meta information
-    __tablename__ = 'lamb.service_image'
+    __tablename__ = 'lamb_service_image'
     __mapper_args__ = {
         'polymorphic_identity': 'common_image',
         'polymorphic_on': polymorphic_type
