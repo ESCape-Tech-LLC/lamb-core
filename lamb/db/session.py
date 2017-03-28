@@ -15,7 +15,7 @@ try:
     _PASS = settings.DATABASES['default'].get('PASSWORD', None)
     _HOST = settings.DATABASES['default'].get('HOST', None)
     _ENGINE = settings.DATABASES['default'].get('ENGINE', None)
-    _OPTS = settings.DATABASES['default'].get('DB_CONNECT_OPTS', None)
+    _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.')+1:]
     _CONNECTION_STRING = '%s://%s:%s@%s/%s?%s' % (_ENGINE, _USER, _PASS, _HOST, _NAME, _OPTS)
