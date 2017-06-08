@@ -107,8 +107,8 @@ setup(
         'ipaddress',
         'geopy',
         'furl',
-        'uwsgi',
 
+        #'uwsgi',
         # optional packages
         # 'mysqlclient',
         # 'psycopg2',
