@@ -75,10 +75,8 @@ class ExecutionTimeMeter(object):
             logger.info(final_header)
             logger.info('Total time: %.6f sec.' % total_elapsed)
 
-
             # print values
             for m in measurements:
                 logger.info('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
-                # print('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
         except:
             pass

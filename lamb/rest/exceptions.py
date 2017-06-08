@@ -1,128 +1,133 @@
 __author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
 
-LAMB_REST_APP_ERROR_UNKNOWN = 0
-LAMB_REST_APP_ERROR_NOT_ALLOWED = 1
-LAMB_REST_APP_ERROR_NOT_REALIZED = 2
-LAMB_REST_APP_ERROR_PARAM_INVALID_STRUCTURE = 3
-LAMB_REST_APP_ERROR_PARAM_INVALID_VALUE = 4
-LAMB_REST_APP_ERROR_PARAM_INVALID_TYPE = 5
-LAMB_REST_APP_ERROR_AUTH_NOT_PROVIDED = 6
-LAMB_REST_APP_ERROR_AUTH_INVALID = 7
-LAMB_REST_APP_ERROR_AUTH_EXPIRED = 8
-LAMB_REST_APP_ERROR_AUTH_FORBIDDEN = 9
-LAMB_REST_APP_ERROR_NOT_EXIST = 10
-LAMB_REST_APP_ERROR_EXTERNAL_SERVICE = 11
-LAMB_REST_APP_ERROR_DATABASE = 12
+from enum import IntEnum, unique
+
+
+@unique
+class LambExceptionCodes(IntEnum):
+    Unknown             = 0
+    NotAllowed          = 1
+    NotRealized         = 2
+    InvalidStructure    = 3
+    InvalidParamValue   = 4
+    InvaludParamType    = 5
+    AuthNotProvided     = 6
+    AuthInvalid         = 7
+    AuthExpired         = 8
+    AuthForbidden       = 9
+    NotExist            = 10
+    ExternalService     = 11
+    Database            = 12
 
 class ApiError(Exception):
     """ Abstract rest api error """
-    def __init__(self, message=None, status_code=500, app_error_code=0, details=None):
+    def __init__(self, message=None, status_code=500, app_error_code=0, error_details=None):
         self.message = message
         self.status_code = status_code
         self.app_error_code = app_error_code
-        self.details = details
+        self.error_details = error_details
 
 
 class ServerError(ApiError):
     """ Common server side error """
     def __init__(self, *args, **kwargs):
-        super(ServerError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 500
-        self.app_error_code = LAMB_REST_APP_ERROR_UNKNOWN
+        self.app_error_code = LambExceptionCodes.Unknown
 
 
 class ClientError(ApiError):
     """ Common client side error """
     def __init__(self, *args, **kwargs):
-        super(ClientError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 400
-        self.app_error_code = LAMB_REST_APP_ERROR_UNKNOWN
+        self.app_error_code = LambExceptionCodes.Unknown
 
 
 class NotRealizedMethodError(ServerError):
     """ Server side error for not realized functional """
     def __init__(self, *args, **kwargs):
-        super(NotRealizedMethodError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 501
-        self.app_error_code = LAMB_REST_APP_ERROR_NOT_REALIZED
+        self.app_error_code = LambExceptionCodes.NotRealized
 
 
 class ExternalServiceError(ServerError):
     """ Server side error for problems with external services """
     def __init__(self, *args, **kwargs):
-        super(ExternalServiceError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 500
-        self.app_error_code = LAMB_REST_APP_ERROR_EXTERNAL_SERVICE
+        self.app_error_code = LambExceptionCodes.ExternalService
 
 
 class NotAllowedMethodError(ClientError):
     """ Client side error for requesting not allowed HTTP method """
     def __init__(self, *args, **kwargs):
-        super(NotAllowedMethodError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 405
-        self.app_error_code = LAMB_REST_APP_ERROR_NOT_ALLOWED
+        self.app_error_code = LambExceptionCodes.NotAllowed
 
 
 class InvalidBodyStructureError(ClientError):
     """ Client side invalid format of body error """
     def __init__(self, *args, **kwargs):
-        super(ClientError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 400
-        self.app_error_code = LAMB_REST_APP_ERROR_PARAM_INVALID_STRUCTURE
+        self.app_error_code = LambExceptionCodes.InvalidStructure
 
 
 class InvalidParamValueError(ClientError):
     """ Client side invalid params of request error """
     def __init__(self, *args, **kwargs):
-        super(ClientError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 400
-        self.app_error_code = LAMB_REST_APP_ERROR_PARAM_INVALID_VALUE
+        self.app_error_code = LambExceptionCodes.InvalidParamValue
 
 
 class InvalidParamTypeError(ClientError):
     """ Client side invalid param type error """
     def __init__(self, *args, **kwargs):
-        super(ClientError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 400
-        self.app_error_code = LAMB_REST_APP_ERROR_PARAM_INVALID_TYPE
+        self.app_error_code = LambExceptionCodes.InvaludParamType
 
 
 class NotExistError(ClientError):
     """ Client side error for not exist instance request """
     def __init__(self, *args, **kwargs):
-        super(NotExistError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 404
-        self.app_error_code = LAMB_REST_APP_ERROR_NOT_EXIST
+        self.app_error_code = LambExceptionCodes.NotExist
 
 
 class AuthCredentialsIsNotProvided(ClientError):
     """ Client side error for invalid credentials structure """
     def __init__(self, *args, **kwargs):
-        super(AuthCredentialsIsNotProvided, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 401
-        self.app_error_code = LAMB_REST_APP_ERROR_AUTH_NOT_PROVIDED
+        self.app_error_code = LambExceptionCodes.AuthNotProvided
 
 
 class AuthCredentialsInvalid(ClientError):
     """ Client side error for invalid credentials value """
     def __init__(self, *args, **kwargs):
-        super(AuthCredentialsInvalid, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 401
-        self.app_error_code = LAMB_REST_APP_ERROR_AUTH_INVALID
+        self.app_error_code = LambExceptionCodes.AuthInvalid
 
 
 class AuthCredentialsExpired(ClientError):
     """ Client side error for expired credentials value """
     def __init__(self, *args, **kwargs):
-        super(AuthCredentialsExpired, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 401
-        self.app_error_code = LAMB_REST_APP_ERROR_AUTH_EXPIRED
+        self.app_error_code = LambExceptionCodes.AuthExpired
 
 
 class AuthForbidden(ClientError):
     """ Client side error for requesting authorized but forbidden resource """
     def __init__(self, *args,**kwargs):
-        super(AuthForbidden, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.status_code = 403
-        self.app_error_code = LAMB_REST_APP_ERROR_AUTH_FORBIDDEN
+        self.app_error_code = LambExceptionCodes.AuthForbidden

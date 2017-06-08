@@ -100,14 +100,19 @@ setup(
         'requests',
         'python-magic',
         'python-dateutil',
-        #'mysqlclient',
-        #'psycopg2',
         'phonenumbers',
         'pyfcm',
         'python-gcm',
         'itunes-iap',
         'ipaddress',
         'geopy',
-        'furl'
+        'furl',
+        'uwsgi',
+
+        # optional packages
+        # 'mysqlclient',
+        # 'psycopg2',
+        #'django-ipware',
+        #'django-mobileesp',
     ]
 )

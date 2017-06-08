@@ -107,12 +107,12 @@ def validated_interval(value, bottom, top, key=None, allow_none=False):
 
     try:
         if value < bottom or value > top:
-            raise InvalidParamValueError('Invalid param %s value or type, should be between %s and %s' % (key, bottom, top), details=key)
+            raise InvalidParamValueError('Invalid param %s value or type, should be between %s and %s' % (key, bottom, top), error_details=key)
         return value
     except InvalidParamValueError as e:
         raise e
     except:
-        raise InvalidParamTypeError('Invalid param type for %s' % key, details=key)
+        raise InvalidParamTypeError('Invalid param type for %s' % key, error_details=key)
 
 def random_string(length=10, char_set = string.ascii_letters + string.digits):
     result = ''
@@ -130,10 +130,10 @@ def paginated(data, request):
     """
     offset = dpath_value(request.GET, 'offset', int, default=0)
     if offset < 0:
-        raise InvalidParamValueError('Invalid offset value for pagination', details='offset')
+        raise InvalidParamValueError('Invalid offset value for pagination', error_details='offset')
     limit = dpath_value(request.GET, 'limit', int, default=settings.LAMB_PAGINATION_WINDOW)
     if limit < 0:
-        raise InvalidParamValueError('Invalid limit value for pagination', details='limit')
+        raise InvalidParamValueError('Invalid limit value for pagination', error_details='limit')
     if limit > settings.LAMB_PAGINATION_WINDOW:
         limit = settings.LAMB_PAGINATION_WINDOW
 
@@ -164,7 +164,7 @@ def string_to_uuid(value='', key=None):
     try:
         return uuid.UUID(value)
     except ValueError:
-        raise InvalidParamValueError('Invalid value for user id field', details=key)
+        raise InvalidParamValueError('Invalid value for uuid field', error_details=key)
 
 
 

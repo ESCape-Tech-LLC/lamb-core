@@ -62,28 +62,26 @@ class LambRestApiJsonMiddleware(object):
             return exception
 
         # process exception to response
-        # logger.warning('Handled exception: %s, %s\n%s' % (exception.__class__.__name__, exception, exception.__traceback__))
-        # logger.warning("Handled exception: %s" % exception)
-        logger.exception("Handled exception:")
+        logger.exception("Handled exception: ")
         if isinstance(exception, (SQLAlchemyError, DBAPIError)):
             status_code = 500
-            error_code = LAMB_REST_APP_ERROR_DATABASE
+            error_code = LambExceptionCodes.Database
             error_message = 'Database error occurred'
-            details = None
+            error_details = None
         elif isinstance(exception, ApiError):
             status_code = exception.status_code
             error_code = exception.app_error_code
             error_message = exception.message
-            details = exception.details
+            error_details = exception.error_details
         else:
             status_code = 500
-            error_code = LAMB_REST_APP_ERROR_UNKNOWN
+            error_code = LambExceptionCodes.Unknown
             error_message = 'Unknown server side error occurred'
-            details = None
+            error_details = None
 
         result = OrderedDict()
         result['error_code'] = error_code
         result['error_message'] = error_message
-        result['details'] = details
+        result['error_details'] = error_details
 
         return JsonResponse(result, status=status_code)
