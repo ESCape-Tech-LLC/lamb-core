@@ -2,11 +2,14 @@ __author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
 
 import uuid
+import logging
 from PIL import Image
 from django.conf import settings
 
 from lamb.service.image.model import LambImage
 from lamb.rest.exceptions import InvalidParamTypeError, ServerError
+
+logger = logging.getLogger(__name__)
 
 
 class ImageUploadServiceAbstract(object):
@@ -89,7 +92,7 @@ class ImageUploadServiceAbstract(object):
         except IOError as e:
             raise InvalidParamTypeError("Could not open file as image")
         except Exception as e:
-            print(e.__class__.__name__, e)
+            logger.error('Failed to read image from file: %s' % e)
             raise ServerError("Unhandled open image error")
 
         src = src.convert('RGB')

@@ -10,6 +10,10 @@ from sqlalchemy.orm import relationship
 from lamb.db.session import DeclarativeBase
 from lamb.db.mixins import TableConfigMixin
 
+__all__ = [
+    'LambExecutionTimeMarker', 'LambExecutionTimeMetric'
+]
+
 class LambExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
     __tablename__ = 'lamb_execution_time_metric'
 

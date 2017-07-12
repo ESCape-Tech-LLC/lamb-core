@@ -14,7 +14,11 @@ from lamb.rest.exceptions import *
 
 apply_to_apps = getattr(settings, 'LAMB_REST_APPLIED_APPS', [])
 
-logger = logging.getLogger('django')
+logger = logging.getLogger(__name__)
+
+__all__ = [
+    'LambRestApiJsonMiddleware'
+]
 
 class LambRestApiJsonMiddleware(object):
     """ Simple middleware that converts data to JSON.

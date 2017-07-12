@@ -2,11 +2,14 @@ __author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
 
 import os
+import logging
 from boto3.session import Session
 from django.conf import settings
 
 from lamb.rest.exceptions import ServerError, ExternalServiceError
 from lamb.service.image.upload_service.abstract import ImageUploadServiceAbstract
+
+logger = logging.getLogger(__name__)
 
 
 class ImageUploadServiceAmazonS3(ImageUploadServiceAbstract):
@@ -56,7 +59,7 @@ class ImageUploadServiceAmazonS3(ImageUploadServiceAbstract):
             uploaded_url = "http://%s.s3.amazonaws.com/%s" % (self.bucket.name, file_name)
             return uploaded_url
         except Exception as e:
-            print (e.__class__.__name__, e)
+            logger.error('Failed to put image on S3 bucket: %s' % e)
             raise ExternalServiceError('Could not load data in bucket')
         finally:
             os.remove(temp_file)

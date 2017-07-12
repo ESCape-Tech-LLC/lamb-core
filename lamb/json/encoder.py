@@ -11,6 +11,10 @@ from collections import OrderedDict
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy import inspect
 
+__all__ = [
+    'JsonMixin', 'JsonEncoder'
+]
+
 class JsonMixin(object):
     def json_advance_encode(self, encoded_object):
         """

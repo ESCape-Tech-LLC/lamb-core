@@ -3,8 +3,11 @@ __author__ = 'KoNEW'
 
 import time
 import logging
+logger = logging.getLogger(__name__)
 
-logger = logging.getLogger('django')
+__all__ = [
+    'ExecutionTimeMeter'
+]
 
 class ExecutionTimeMeter(object):
     """

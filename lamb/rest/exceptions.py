@@ -3,6 +3,15 @@ __author__ = 'KoNEW'
 
 from enum import IntEnum, unique
 
+__all__ = [
+    'LambExceptionCodes',
+    'ApiError', 'ServerError', 'ClientError',
+    'NotRealizedMethodError', 'NotAllowedMethodError', 'NotExistError',
+    'ExternalServiceError',
+    'InvalidBodyStructureError', 'InvalidParamValueError', 'InvalidParamTypeError',
+    'AuthCredentialsIsNotProvided', 'AuthCredentialsInvalid', 'AuthCredentialsExpired', 'AuthForbidden'
+]
+
 
 @unique
 class LambExceptionCodes(IntEnum):
@@ -11,7 +20,7 @@ class LambExceptionCodes(IntEnum):
     NotRealized         = 2
     InvalidStructure    = 3
     InvalidParamValue   = 4
-    InvaludParamType    = 5
+    InvalidParamType    = 5
     AuthNotProvided     = 6
     AuthInvalid         = 7
     AuthExpired         = 8
@@ -19,6 +28,7 @@ class LambExceptionCodes(IntEnum):
     NotExist            = 10
     ExternalService     = 11
     Database            = 12
+
 
 class ApiError(Exception):
     """ Abstract rest api error """

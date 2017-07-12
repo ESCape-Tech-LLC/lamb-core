@@ -2,10 +2,13 @@ __author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
 
 import logging
+logger = logging.getLogger(__name__)
 
 from lamb.db.session import lamb_db_session_maker
 
-logger = logging.getLogger('django')
+__all__ = [
+    'SQLAlchemyMiddleware'
+]
 
 class SQLAlchemyMiddleware(object):
 

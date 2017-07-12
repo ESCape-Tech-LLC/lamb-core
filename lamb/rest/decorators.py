@@ -6,6 +6,10 @@ from django.http import HttpResponse
 from lamb.rest.rest_view import RestView
 from lamb.rest.exceptions import NotAllowedMethodError
 
+__all__ = [
+    'rest_allowed_http_methods'
+]
+
 def rest_allowed_http_methods(method_list):
     def wrapper(wrapped_object):
         def inner(request, *args, **kwargs):

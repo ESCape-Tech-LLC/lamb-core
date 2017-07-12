@@ -9,6 +9,10 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from lamb.rest.exceptions import ServerError
 
+__all__ = [
+    'DeclarativeBase', 'metadata', 'lamb_db_session_maker', '_engine'
+]
+
 try:
     _USER = settings.DATABASES['default'].get('USER', None)
     _NAME = settings.DATABASES['default'].get('NAME', None)

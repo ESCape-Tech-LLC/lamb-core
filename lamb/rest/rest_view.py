@@ -5,6 +5,9 @@ from functools import update_wrapper
 from django.utils.decorators import classonlymethod
 from lamb.rest.exceptions import NotRealizedMethodError
 
+__all__ = [
+    'RestView'
+]
 
 class RestView(object):
     """ Abstract class for dispatching url requests in REST logic

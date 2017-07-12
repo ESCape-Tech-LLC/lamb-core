@@ -5,6 +5,9 @@ import json
 from django.http import HttpResponse
 from lamb.json.encoder import JsonEncoder
 
+__all__ = [
+    'JsonResponse'
+]
 
 class JsonResponse(HttpResponse):
 

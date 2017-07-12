@@ -2,12 +2,19 @@ __author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
 
 import datetime
+import logging
 
 from django.core.urlresolvers import resolve
 from django.conf import settings
 
 from lamb.execution_time.meter import ExecutionTimeMeter
 from lamb.execution_time.model import LambExecutionTimeMetric, LambExecutionTimeMarker
+
+logger = logging.getLogger(__name__)
+
+__all__ = [
+    'ExecutionTimeMiddleware'
+]
 
 class ExecutionTimeMiddleware(object):
 
@@ -70,7 +77,7 @@ class ExecutionTimeMiddleware(object):
             request.lamb_db_session.add(metric)
             request.lamb_db_session.commit()
         except Exception as e:
-            print(e)
+            logger.error('ExecutionMetrics store error: %s' % e)
             pass
 
 
