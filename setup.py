@@ -91,8 +91,6 @@ setup(
         'django<=1.9.7' ,
         'boto3',
         'celery',
-        'apns',
-        'django',
         'dpath',
         'sqlalchemy',
         'sqlalchemy-utils',
@@ -101,17 +99,20 @@ setup(
         'python-magic',
         'python-dateutil',
         'phonenumbers',
-        'pyfcm',
-        'python-gcm',
-        'itunes-iap',
         'ipaddress',
         'geopy',
         'furl',
 
-        #'uwsgi',
         # optional packages
-        # 'mysqlclient',
-        # 'psycopg2',
+        #'apns',
+        #'pyfcm',
+
+        #'uwsgi',
+
+        #'mysqlclient',
+        #'psycopg2',
+
+        #'itunes-iap',
         #'django-ipware',
         #'django-mobileesp',
     ]
