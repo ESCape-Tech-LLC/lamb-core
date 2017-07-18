@@ -102,11 +102,9 @@ setup(
         'ipaddress',
         'geopy',
         'furl',
+        'pushjack'
 
         # optional packages
-        #'apns',
-        #'pyfcm',
-
         #'uwsgi',
 
         #'mysqlclient',
