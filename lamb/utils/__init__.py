@@ -189,3 +189,22 @@ def url_append_components(baseurl='', components=list()):
     path = '/'.join(c.strip('/') for c in components)
     result = urlunsplit((scheme, netloc, path, query, fragment))
     return result
+
+class lazy_property(object):
+    """A read only property that caches the initially computed value on demand.
+
+    This descriptor will only call the provided ``fget`` function once.
+    Subsequent access to this property will return the cached value.
+
+    """
+
+    def __init__(self, fget):
+        self._fget = fget
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+        else:
+            computed_value = self._fget(obj)
+            obj.__dict__[self._fget.__name__] = computed_value
+            return computed_value
