@@ -27,29 +27,7 @@ class LambRestApiJsonMiddleware(object):
     2. For response that is not subclass of HttpResponse also try to create JsonResponse object
     """
 
-    def process_response(self, request, response):
-        """
-        :param request: Request object
-        :type request: pynm.utils.LambRequest
-        :param response: Response object
-        :type response: django.http.HttpResponse
-        """
-        # touch request params
-        _ = request.POST
-        _ = request.FILES
-        logger.debug('LambRestApiJsonMiddleware. Processing response: %s' % response)
-        try:
-            if resolve(request.path).app_name not in apply_to_apps:
-                return response
-        except Resolver404:
-            return response
-
-        if not isinstance(response, HttpResponse):
-            response = JsonResponse(response)
-
-        return response
-
-    def process_exception(self, request, exception):
+    def _process_exception(self, request, exception):
         """
         :param request: Request object
         :type request: pynm.utils.LambRequest
@@ -89,3 +67,38 @@ class LambRestApiJsonMiddleware(object):
         result['error_details'] = error_details
 
         return JsonResponse(result, status=status_code)
+
+    def process_response(self, request, response):
+        """
+        :param request: Request object
+        :type request: pynm.utils.LambRequest
+        :param response: Response object
+        :type response: django.http.HttpResponse
+        """
+        # touch request params
+        _ = request.POST
+        _ = request.FILES
+        # logger.debug('LambRestApiJsonMiddleware. Processing response: %s' % response)
+        try:
+            if resolve(request.path).app_name not in apply_to_apps:
+                return response
+        except Resolver404:
+            return response
+
+        if not isinstance(response, HttpResponse):
+            try:
+                response = JsonResponse(response)
+            except Exception as e:
+                return self._process_exception(request=request, exception=e)
+
+        return response
+
+    def process_exception(self, request, exception):
+        """
+        :param request: Request object
+        :type request: pynm.utils.LambRequest
+        :param exception: Exception object
+        :type exception: Exception
+        """
+        return self._process_exception(request=request, exception=exception)
+        logger.debug('LambRestApiJsonMiddleware. Processing exception: %s' % exception)
