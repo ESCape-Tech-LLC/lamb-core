@@ -27,7 +27,7 @@ class SQLAlchemyMiddleware(object):
         :param response: Response object
         :type response: django.http.HttpResponse
         """
-        logger.debug('SQLAlchemyMiddleware. Processing response: %s' % response)
+        # logger.debug('SQLAlchemyMiddleware. Processing response: %s' % response)
         try:
             request.lamb_db_session.close()
         except AttributeError:
