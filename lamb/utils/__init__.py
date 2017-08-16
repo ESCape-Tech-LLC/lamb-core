@@ -81,8 +81,8 @@ def dpath_value(dict_object=None, key_path=None, req_type=None, allow_none=False
         try:
             value = req_type(value)
             return value
-        except (ValueError, TypeError):
-            raise InvalidParamTypeError('Invalid data type for param %s' % key_path)
+        except (ValueError, TypeError) as e:
+            raise InvalidParamTypeError('Invalid data type for param %s' % key_path, error_details={'key_path': key_path}) from e
     try:
         items = dpath.util.values(dict_object, key_path)
         result = items[0]
@@ -94,17 +94,17 @@ def dpath_value(dict_object=None, key_path=None, req_type=None, allow_none=False
             if allow_none:
                 return None
             else:
-                raise InvalidParamTypeError('Invalid data type for param %s' % key_path)
+                raise InvalidParamTypeError('Invalid data type for param %s' % key_path, error_details={'key_path': key_path})
 
         result = type_convert(req_type, result)
         return result
-    except IndexError:
+    except IndexError as e:
         if 'default' in kwargs.keys():
             return kwargs['default']
         else:
-            raise InvalidBodyStructureError('Could not extract param for key_path %s from provided dict data' % key_path)
-    except AttributeError:
-        raise ServerError('Invalid key_path type for querying in dict')
+            raise InvalidBodyStructureError('Could not extract param for key_path %s from provided dict data' % key_path, error_details={'key_path': key_path}) from e
+    except AttributeError as e:
+        raise ServerError('Invalid key_path type for querying in dict', error_details={'key_path': key_path}) from e
 
 
 def validated_interval(value, bottom, top, key=None, allow_none=False):
