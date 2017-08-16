@@ -100,7 +100,7 @@ class InvalidParamTypeError(ClientError):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.status_code = 400
-        self.app_error_code = LambExceptionCodes.InvaludParamType
+        self.app_error_code = LambExceptionCodes.InvalidParamType
 
 
 class NotExistError(ClientError):
