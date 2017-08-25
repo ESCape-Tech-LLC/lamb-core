@@ -139,7 +139,7 @@ def paginated(data, request):
     if offset < 0:
         raise InvalidParamValueError('Invalid offset value for pagination', error_details='offset')
     limit = dpath_value(request.GET, 'limit', int, default=settings.LAMB_PAGINATION_WINDOW)
-    if limit < 0:
+    if limit < -1:
         raise InvalidParamValueError('Invalid limit value for pagination', error_details='limit')
     if limit > settings.LAMB_PAGINATION_WINDOW:
         limit = settings.LAMB_PAGINATION_WINDOW
@@ -151,11 +151,17 @@ def paginated(data, request):
 
     if isinstance(data, Query):
         result['total_count'] = data.count()
-        result['items'] = data.offset(offset).limit(limit).all()
+        if limit != -1:
+            result['items'] = data.offset(offset).limit(limit).all()
+        else:
+            result['items'] = data.offset(offset).all()
         return result
     elif isinstance(data, list):
         result['total_count'] = len(data)
-        result['items'] = data[ offset : offset+limit ]
+        if limit != -1:
+            result['items'] = data[ offset : offset+limit ]
+        else:
+            result['items'] = data[ offset : ]
         return result
     else:
         return data
