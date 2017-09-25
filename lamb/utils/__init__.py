@@ -196,21 +196,69 @@ def url_append_components(baseurl='', components=list()):
     result = urlunsplit((scheme, netloc, path, query, fragment))
     return result
 
-class lazy_property(object):
-    """A read only property that caches the initially computed value on demand.
 
-    This descriptor will only call the provided ``fget`` function once.
-    Subsequent access to this property will return the cached value.
+from lazy import lazy as lazy_property
+# import functools
+# class lazy_property(object):
+#     """lazy descriptor
+#     Used as a decorator to create lazy attributes. Lazy attributes
+#     are evaluated on first use.
+#     """
+#
+#     def __init__(self, func):
+#         self.__func = func
+#         functools.wraps(self.__func)(self)
+#
+#     def __get__(self, inst, inst_cls):
+#         if inst is None:
+#             return self
+#
+#         if not hasattr(inst, '__dict__'):
+#             raise AttributeError("'%s' object has no attribute '__dict__'" % (inst_cls.__name__,))
+#
+#         name = self.__name__
+#         if name.startswith('__') and not name.endswith('__'):
+#             name = '_%s%s' % (inst_cls.__name__, name)
+#
+#         value = self.__func(inst)
+#         inst.__dict__[name] = value
+#         return value
+#
+#     @classmethod
+#     def invalidate(cls, inst, name):
+#         """Invalidate a lazy attribute.
+#         This obviously violates the lazy contract. A subclass of lazy
+#         may however have a contract where invalidation is appropriate.
+#         """
+#         inst_cls = inst.__class__
+#
+#         if not hasattr(inst, '__dict__'):
+#             raise AttributeError("'%s' object has no attribute '__dict__'" % (inst_cls.__name__,))
+#
+#         if name.startswith('__') and not name.endswith('__'):
+#             name = '_%s%s' % (inst_cls.__name__, name)
+#
+#         if not isinstance(getattr(inst_cls, name), cls):
+#             raise AttributeError("'%s.%s' is not a %s attribute" % (inst_cls.__name__, name, cls.__name__))
+#
+#         if name in inst.__dict__:
+#             del inst.__dict__[name]
 
-    """
-
-    def __init__(self, fget):
-        self._fget = fget
-
-    def __get__(self, obj, cls):
-        if obj is None:
-            return self
-        else:
-            computed_value = self._fget(obj)
-            obj.__dict__[self._fget.__name__] = computed_value
-            return computed_value
+# class lazy_property(object):
+#     """A read only property that caches the initially computed value on demand.
+#
+#     This descriptor will only call the provided ``fget`` function once.
+#     Subsequent access to this property will return the cached value.
+#
+#     """
+#
+#     def __init__(self, fget):
+#         self._fget = fget
+#
+#     def __get__(self, obj, cls):
+#         if obj is None:
+#             return self
+#         else:
+#             computed_value = self._fget(obj)
+#             obj.__dict__[self._fget.__name__] = computed_value
+#             return computed_value

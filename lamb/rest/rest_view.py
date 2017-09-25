@@ -2,6 +2,7 @@ __author__ = 'KoNEW'
 #-*- coding: utf-8 -*-
 
 from functools import update_wrapper
+import six
 from django.utils.decorators import classonlymethod
 from lamb.rest.exceptions import NotRealizedMethodError
 
@@ -14,6 +15,16 @@ class RestView(object):
 
     Class works in a similar way to django class based views to dispatch http methods.
     """
+
+    def __init__(self, **kwargs):
+        """
+        Constructor. Called in the URLconf; can contain helpful extra
+        keyword arguments, and other things.
+        """
+        # Go through keyword arguments, and either save their values to our
+        # instance, or raise an error.
+        for key, value in six.iteritems(kwargs):
+            setattr(self, key, value)
 
     @classonlymethod
     def as_request_callable(cls):
