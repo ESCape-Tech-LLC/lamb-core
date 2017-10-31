@@ -17,7 +17,7 @@ class SQLAlchemyMiddleware(object):
         :param request: Request object
         :type request: pynm.utils.LambRequest
         """
-        logger.debug('SQLAlchemyMiddleware. Processing request: %s %s' % (request.method, request.path))
+        logger.debug('Processing request: %s %s' % (request.method, request.path))
         request.lamb_db_session = lamb_db_session_maker()
 
     def process_response(self, request, response):
@@ -27,7 +27,7 @@ class SQLAlchemyMiddleware(object):
         :param response: Response object
         :type response: django.http.HttpResponse
         """
-        # logger.debug('SQLAlchemyMiddleware. Processing response: %s' % response)
+        # logger.debug('Processing response: %s' % response)
         try:
             request.lamb_db_session.close()
         except AttributeError:
@@ -42,7 +42,7 @@ class SQLAlchemyMiddleware(object):
         :param exception: Exception object
         :type exception: Exception
         """
-        logger.debug('SQLAlchemyMiddleware. Processing exception: %s.' % exception.message)
+        logger.debug('Processing exception: %s.' % exception.message)
         try:
             request.lamb_db_session.rollback()
             request.lamb_db_session.close()
