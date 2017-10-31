@@ -12,12 +12,15 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy import inspect
 
 __all__ = [
-    'JsonMixin', 'JsonEncoder'
+    'JsonMixin', 'JsonEncoder', 'JsonEncodeMixin'
 ]
 
 class JsonMixin(object):
     def json_advance_encode(self, encoded_object):
-        """
+        """ Called after basic JSON encoding with Encoder finish process object
+
+        Method can be used for exmaple with declarative models to append relations in response
+
         :param encoded_object:  Encoded to dictionary representation of self
         :type encoded_object: dict
         :return: Encoded representation with additional values or removed some values
@@ -26,9 +29,20 @@ class JsonMixin(object):
         raise NotImplementedError('JsonMixin json_advance_encode method is abstract '
                                   'and should be overridden in subclass')
 
+class JsonEncodeMixin(object):
+    def json_encode(self):
+        """ Mixin to mark object support JSON serialization with JsonEncoder class
+
+        :return: Encoded represenation of object
+        :rtype: dict
+        """
+        raise NotImplementedError('JsonEncodeMixin json_encode method is abstract and '
+                                  'should be implemented in subclass')
+
+
 class JsonEncoder(json.JSONEncoder):
 
-    def __init__(self, callback=None, request=None):
+    def __init__(self, callback=None, request=None, **kwargs):
         super(JsonEncoder, self).__init__()
         self.callback = callback
         self.request = request
@@ -45,11 +59,11 @@ class JsonEncoder(json.JSONEncoder):
             result = str(obj)
         elif isinstance(obj.__class__, DeclarativeMeta):
             result = dict()
-            # result = OrderedDict()
             ins = inspect(obj)
             for column in ins.mapper.column_attrs.keys():
                 result[column] = getattr(obj, column)
-            #TODO: inspect relationships
+        elif isinstance(obj, JsonEncodeMixin):
+            result = obj.json_encode()
         else:
             result = json.JSONEncoder.default(self, obj)
 
