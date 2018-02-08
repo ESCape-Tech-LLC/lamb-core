@@ -151,22 +151,37 @@ def paginated(data, request):
     result['offset'] = offset
     result['limit'] = limit
 
+    should_wrap_items = False
+    if request is not None and \
+            request.META is not None and \
+            'HTTP_ACCEPT' in request.META.keys() and \
+            request.META['HTTP_ACCEPT'] == 'application/xml':
+        should_wrap_items = True
+
+
     if isinstance(data, Query):
         result['total_count'] = data.count()
         if limit != -1:
             result['items'] = data.offset(offset).limit(limit).all()
         else:
             result['items'] = data.offset(offset).all()
-        return result
+
+        if should_wrap_items:
+            result['items'] = {'item':result['items']}
     elif isinstance(data, list):
         result['total_count'] = len(data)
         if limit != -1:
             result['items'] = data[ offset : offset+limit ]
         else:
             result['items'] = data[ offset : ]
-        return result
+        if should_wrap_items:
+            result['items'] = {'item': result['items']}
     else:
-        return data
+        result = data
+
+    # little hack for XML proper serialization
+    return result
+
 
 
 def string_to_uuid(value='', key=None):

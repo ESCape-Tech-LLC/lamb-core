@@ -10,7 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from lamb.rest.exceptions import ServerError
 
 __all__ = [
-    'DeclarativeBase', 'metadata', 'lamb_db_session_maker', '_engine'
+    'DeclarativeBase', 'metadata', 'lamb_db_session_maker', '_engine', 'declarative_base'
 ]
 
 try:

@@ -34,8 +34,6 @@ class LambRestApiJsonMiddleware(object):
         :param exception: Exception object
         :type exception: Exception
         """
-        logger.debug('LambRestApiJsonMiddleware. Processing exception: %s' % exception)
-
         # return if should nto catch exception
         try:
             if resolve(request.path).app_name not in apply_to_apps:
@@ -66,7 +64,7 @@ class LambRestApiJsonMiddleware(object):
         result['error_message'] = error_message
         result['error_details'] = error_details
 
-        return JsonResponse(result, status=status_code)
+        return JsonResponse(result, status=status_code, request=request)
 
     def process_response(self, request, response):
         """
@@ -78,7 +76,6 @@ class LambRestApiJsonMiddleware(object):
         # touch request params
         _ = request.POST
         _ = request.FILES
-        # logger.debug('LambRestApiJsonMiddleware. Processing response: %s' % response)
         try:
             if resolve(request.path).app_name not in apply_to_apps:
                 return response
@@ -87,7 +84,7 @@ class LambRestApiJsonMiddleware(object):
 
         if not isinstance(response, HttpResponse):
             try:
-                response = JsonResponse(response)
+                response = JsonResponse(response, request=request)
             except Exception as e:
                 return self._process_exception(request=request, exception=e)
 
@@ -101,4 +98,3 @@ class LambRestApiJsonMiddleware(object):
         :type exception: Exception
         """
         return self._process_exception(request=request, exception=exception)
-        logger.debug('LambRestApiJsonMiddleware. Processing exception: %s' % exception)

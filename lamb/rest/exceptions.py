@@ -6,7 +6,7 @@ from enum import IntEnum, unique
 __all__ = [
     'LambExceptionCodes',
     'ApiError', 'ServerError', 'ClientError',
-    'NotRealizedMethodError', 'NotAllowedMethodError', 'NotExistError',
+    'NotRealizedMethodError', 'NotAllowedMethodError', 'NotExistError', 'AlreadyExistError',
     'ExternalServiceError',
     'InvalidBodyStructureError', 'InvalidParamValueError', 'InvalidParamTypeError',
     'AuthCredentialsIsNotProvided', 'AuthCredentialsInvalid', 'AuthCredentialsExpired', 'AuthForbidden'
@@ -28,6 +28,7 @@ class LambExceptionCodes(IntEnum):
     NotExist            = 10
     ExternalService     = 11
     Database            = 12
+    AlreadyExist        = 13
 
 
 class ApiError(Exception):
@@ -109,6 +110,14 @@ class NotExistError(ClientError):
         super().__init__(*args, **kwargs)
         self.status_code = 404
         self.app_error_code = LambExceptionCodes.NotExist
+
+
+class AlreadyExistError(ClientError):
+    """ Client side error for already exist instance request"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.status_code = 400
+        self.app_error_code = LambExceptionCodes.AlreadyExist
 
 
 class AuthCredentialsIsNotProvided(ClientError):

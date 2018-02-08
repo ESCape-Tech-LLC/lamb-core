@@ -4,7 +4,18 @@ __author__ = 'KoNEW'
 from importlib import import_module
 from django.core.management.base import CommandError, LabelCommand
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
-from lamb.db.session import metadata
+from lamb.db.session import metadata, _engine
+
+from sqlalchemy.schema import DropTable, DropSequence
+from sqlalchemy.ext.compiler import compiles
+
+@compiles(DropTable, "postgresql")
+def _compile_drop_table(element, compiler, **kwargs):
+    return compiler.visit_drop_table(element) + " CASCADE"
+
+@compiles(DropSequence, "postgresql")
+def _compile_drop_table(element, compiler, **kwargs):
+    return compiler.visit_drop_sequence(element) + ' CASCADE'
 
 class Command(LabelCommand):
     help = 'Creates database table for provided modules'
