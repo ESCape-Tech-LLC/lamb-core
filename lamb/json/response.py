@@ -31,7 +31,7 @@ class JsonResponse(HttpResponse):
             encoder = JsonEncoder(callback, request)
             content = json.dumps(data, indent=2, ensure_ascii=False, default=encoder.default, sort_keys=False)
 
-            if request is not None and 'HTTP_ACCEPT' in request.META.keys() and request.META['HTTP_ACCEPT'] == 'application/xml':
+            if request is not None and 'HTTP_ACCEPT' in request.META.keys() and request.META['HTTP_ACCEPT'].lower().startswith('application/xml'):
                 encoded_data = json.loads(content)
                 content = json.loads(content)
                 content = {'response':content}
