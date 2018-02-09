@@ -18,7 +18,7 @@ class JsonResponse(HttpResponse):
 
         if request is not None and \
                 'HTTP_ACCEPT' in request.META.keys() \
-                and request.META['HTTP_ACCEPT'] == 'application/xml':
+                and request.META['HTTP_ACCEPT'].lower().startswith('application/xml'):
             content_type = 'application/xml; charset=utf8'
         else:
             content_type = 'application/json; charset=utf8'
