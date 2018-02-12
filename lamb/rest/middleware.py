@@ -12,6 +12,12 @@ from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from lamb.json import JsonResponse
 from lamb.rest.exceptions import *
 
+try:
+    from django.conf import settings
+    LAMB_REST_HTTP_STATUS_ALWAYS_200 = settings.LAMB_REST_HTTP_STATUS_ALWAYS_200
+except (ImportError, AttributeError):
+    LAMB_REST_HTTP_STATUS_ALWAYS_200 = False
+
 apply_to_apps = getattr(settings, 'LAMB_REST_APPLIED_APPS', [])
 
 logger = logging.getLogger(__name__)
@@ -63,6 +69,12 @@ class LambRestApiJsonMiddleware(object):
         result['error_code'] = error_code
         result['error_message'] = error_message
         result['error_details'] = error_details
+
+        print('Status code override: %s' % LAMB_REST_HTTP_STATUS_ALWAYS_200)
+        logger.info('Status code: %s' % LAMB_REST_HTTP_STATUS_ALWAYS_200)
+        if LAMB_REST_HTTP_STATUS_ALWAYS_200:
+            logger.info("Status override")
+            status_code = 200
 
         return JsonResponse(result, status=status_code, request=request)
 
