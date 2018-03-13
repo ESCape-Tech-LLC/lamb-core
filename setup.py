@@ -104,7 +104,7 @@ setup(
         'furl',
         'pushjack',
         'xmltodict',
-        'lazy'
+        'lazy',
 
         # optional packages
         'uwsgi',
