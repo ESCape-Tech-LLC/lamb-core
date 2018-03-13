@@ -102,10 +102,12 @@ setup(
         'ipaddress',
         'geopy',
         'furl',
-        'pushjack'
+        'pushjack',
+        'xmltodict',
+        'lazy'
 
         # optional packages
-        #'uwsgi',
+        'uwsgi',
 
         #'mysqlclient',
         #'psycopg2',

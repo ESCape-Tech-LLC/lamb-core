@@ -68,8 +68,6 @@ def dpath_value(dict_object=None, key_path=None, req_type=None, allow_none=False
     :type req_type: Class
     :param allow_none: Return None withour exception if leaf exist and equal to None
     :type allow_none: bool
-    :param kwargs: Additional params, only 'default' acceptable that will be return in case of not found key path
-    :type kwargs: dict
     :return: Extracted value
     :raises InvalidBodyStructureError: In case of non dict as first variable
     :raises InvalidParamTypeError: In case of extracted type impossible to convert in req_type
@@ -183,7 +181,6 @@ def paginated(data, request):
     return result
 
 
-
 def string_to_uuid(value='', key=None):
     """ Utility function to convert string into user id
 
@@ -220,6 +217,7 @@ def compact_dict(dct):
     :rtype: dict
     """
     return {k:v for k, v in dct.items() if v is not None}
+
 
 def clear_white_space(value):
     """ Clear whitespaces from string: from begining, from ending and repeat in body

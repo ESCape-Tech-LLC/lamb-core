@@ -70,10 +70,8 @@ class LambRestApiJsonMiddleware(object):
         result['error_message'] = error_message
         result['error_details'] = error_details
 
-        print('Status code override: %s' % LAMB_REST_HTTP_STATUS_ALWAYS_200)
-        logger.info('Status code: %s' % LAMB_REST_HTTP_STATUS_ALWAYS_200)
         if LAMB_REST_HTTP_STATUS_ALWAYS_200:
-            logger.info("Status override")
+            logger.info("Status code overriden due service config")
             status_code = 200
 
         return JsonResponse(result, status=status_code, request=request)

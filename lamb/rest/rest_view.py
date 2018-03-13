@@ -1,9 +1,10 @@
 __author__ = 'KoNEW'
 #-*- coding: utf-8 -*-
 
-from functools import update_wrapper
+from functools import update_wrapper, partial
 import six
 from django.utils.decorators import classonlymethod
+from django.http import HttpRequest
 from lamb.rest.exceptions import NotRealizedMethodError
 
 __all__ = [
@@ -14,6 +15,9 @@ class RestView(object):
     """ Abstract class for dispatching url requests in REST logic
 
     Class works in a similar way to django class based views to dispatch http methods.
+
+    Attributes:
+        request (HttpRequest): Http request of view
     """
 
     def __init__(self, **kwargs):
