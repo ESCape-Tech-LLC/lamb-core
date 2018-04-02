@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 import datetime
 import logging
@@ -12,9 +13,11 @@ from lamb.execution_time.model import LambExecutionTimeMetric, LambExecutionTime
 
 logger = logging.getLogger(__name__)
 
+
 __all__ = [
     'ExecutionTimeMiddleware'
 ]
+
 
 class ExecutionTimeMiddleware(object):
 
@@ -62,7 +65,6 @@ class ExecutionTimeMiddleware(object):
                     metric.markers.append(marker)
         except: pass
 
-
         # get app name and url name
         try:
             resolved = resolve(request.path)
@@ -79,7 +81,6 @@ class ExecutionTimeMiddleware(object):
         except Exception as e:
             logger.error('ExecutionMetrics store error: %s' % e)
             pass
-
 
     def process_request(self, request):
         """

@@ -13,13 +13,15 @@ __all__ = [
     'DbEnum', 'ConfigEnum'
 ]
 
+
 def get_class_by_name(base, classname):
     """
     :param base: Declarative model base
-    :param table: SQLAlchemy Table name
+    :param classname: SQLAlchemy Table name
     :return: Declarative class or None.
     """
     return base._decl_class_registry[classname]
+
 
 @enum.unique
 class DbEnum(enum.Enum):
@@ -143,6 +145,7 @@ class DbEnum(enum.Enum):
             return super().__dir__() + [str(k) for k in self.__class__.__attrib_mapping__.keys()]
         else:
             return super().__dir__()
+
 
 @enum.unique
 class ConfigEnum(DbEnum):

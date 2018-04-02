@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 #-*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 from datetime import datetime
 
@@ -10,9 +11,11 @@ from sqlalchemy.orm import relationship
 from lamb.db.session import DeclarativeBase
 from lamb.db.mixins import TableConfigMixin
 
+
 __all__ = [
     'LambExecutionTimeMarker', 'LambExecutionTimeMetric'
 ]
+
 
 class LambExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
     __tablename__ = 'lamb_execution_time_metric'
@@ -27,6 +30,8 @@ class LambExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
 
     # relations
     markers = relationship('LambExecutionTimeMarker', cascade='all', backref='metric')
+
+    # methods
     def __init__(self):
         self.app_name = 'INVALID'
         self.url_name = 'INVALID'

@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 import logging
 from collections import OrderedDict
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     'LambRestApiJsonMiddleware'
 ]
+
 
 class LambRestApiJsonMiddleware(object):
     """ Simple middleware that converts data to JSON.
@@ -71,7 +73,7 @@ class LambRestApiJsonMiddleware(object):
         result['error_details'] = error_details
 
         if LAMB_REST_HTTP_STATUS_ALWAYS_200:
-            logger.info("Status code overriden due service config")
+            logger.info("Status code override from %s to 200 due service config" % status_code)
             status_code = 200
 
         return JsonResponse(result, status=status_code, request=request)

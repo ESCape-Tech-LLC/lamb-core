@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 from django.conf import settings
 
@@ -9,9 +10,11 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from lamb.rest.exceptions import ServerError
 
+
 __all__ = [
     'DeclarativeBase', 'metadata', 'lamb_db_session_maker', '_engine', 'declarative_base'
 ]
+
 
 try:
     _USER = settings.DATABASES['default'].get('USER', None)
@@ -31,9 +34,11 @@ try:
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 
+
 DeclarativeBase = declarative_base()
 metadata = DeclarativeBase.metadata
 metadata.bind = _engine
+
 
 def lamb_db_session_maker():
     """ Constructor for database sqlalchemy sessions
@@ -43,4 +48,3 @@ def lamb_db_session_maker():
     maker = sessionmaker(bind=_engine)
     session = maker()
     return session
-

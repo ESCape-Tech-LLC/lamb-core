@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 from django.http import HttpResponse
 
@@ -10,11 +11,12 @@ __all__ = [
     'rest_allowed_http_methods'
 ]
 
+
 def rest_allowed_http_methods(method_list):
     def wrapper(wrapped_object):
         def inner(request, *args, **kwargs):
             # get method list in proper format
-            m_list = [ m.upper() for m in method_list ]
+            m_list = [m.upper() for m in method_list]
 
             # for OPTIONS method return only list of allowed methods
             if request.method == 'OPTIONS':

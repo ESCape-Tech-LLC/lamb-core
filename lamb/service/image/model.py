@@ -1,10 +1,16 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 from sqlalchemy import Column
 from sqlalchemy.dialects.mysql import BIGINT, TEXT, VARCHAR
 from lamb.db import DeclarativeBase
 from lamb.db.mixins import TableConfigMixin
+
+
+__all__ = [
+    'LambImage'
+]
 
 
 class LambImage(DeclarativeBase, TableConfigMixin):

@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+
+__author__ = 'KoNEW'
 
 import json
 import datetime
@@ -11,9 +12,11 @@ from collections import OrderedDict
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy import inspect
 
+
 __all__ = [
     'JsonMixin', 'JsonEncoder', 'JsonEncodeMixin'
 ]
+
 
 class JsonMixin(object):
     def json_advance_encode(self, encoded_object):
@@ -28,6 +31,7 @@ class JsonMixin(object):
         """
         raise NotImplementedError('JsonMixin json_advance_encode method is abstract '
                                   'and should be overridden in subclass')
+
 
 class JsonEncodeMixin(object):
     def json_encode(self):

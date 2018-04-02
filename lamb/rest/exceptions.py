@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 from enum import IntEnum, unique
 
@@ -15,20 +16,20 @@ __all__ = [
 
 @unique
 class LambExceptionCodes(IntEnum):
-    Unknown             = 0
-    NotAllowed          = 1
-    NotRealized         = 2
-    InvalidStructure    = 3
-    InvalidParamValue   = 4
-    InvalidParamType    = 5
-    AuthNotProvided     = 6
-    AuthInvalid         = 7
-    AuthExpired         = 8
-    AuthForbidden       = 9
-    NotExist            = 10
-    ExternalService     = 11
-    Database            = 12
-    AlreadyExist        = 13
+    Unknown = 0
+    NotAllowed = 1
+    NotRealized = 2
+    InvalidStructure = 3
+    InvalidParamValue = 4
+    InvalidParamType = 5
+    AuthNotProvided = 6
+    AuthInvalid = 7
+    AuthExpired = 8
+    AuthForbidden = 9
+    NotExist = 10
+    ExternalService = 11
+    Database = 12
+    AlreadyExist = 13
 
 
 class ApiError(Exception):

@@ -1,14 +1,18 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 import logging
+from lamb.db.session import lamb_db_session_maker
+
+
 logger = logging.getLogger(__name__)
 
-from lamb.db.session import lamb_db_session_maker
 
 __all__ = [
     'SQLAlchemyMiddleware'
 ]
+
 
 class SQLAlchemyMiddleware(object):
 

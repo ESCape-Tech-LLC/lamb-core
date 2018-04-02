@@ -105,15 +105,6 @@ setup(
         'pushjack',
         'xmltodict',
         'lazy',
-
-        # optional packages
         'uwsgi',
-
-        #'mysqlclient',
-        #'psycopg2',
-
-        #'itunes-iap',
-        #'django-ipware',
-        #'django-mobileesp',
     ]
 )

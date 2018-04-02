@@ -1,13 +1,16 @@
-__author__ = 'KoNEW'
 #-*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 import time
 import logging
 logger = logging.getLogger(__name__)
 
+
 __all__ = [
     'ExecutionTimeMeter'
 ]
+
 
 class ExecutionTimeMeter(object):
     """
@@ -24,7 +27,7 @@ class ExecutionTimeMeter(object):
             self.message = message
             self.timestamp = time.time()
 
-    def  __init__(self):
+    def __init__(self):
         self._markers = list()
         self.start_time = time.time()
 
@@ -34,7 +37,6 @@ class ExecutionTimeMeter(object):
         :type message: basestring
         """
         self._markers.append(ExecutionTimeMeter.Marker(message))
-
 
     def get_total_time(self):
         """
@@ -64,7 +66,6 @@ class ExecutionTimeMeter(object):
             result.append(m)
             previous_timestamp = marker.timestamp
         return result
-
 
     def log_marks(self, header=None):
         try:

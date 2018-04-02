@@ -1,14 +1,17 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 import re
 from datetime import datetime
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import Column, text, TIMESTAMP
 
+
 __all__ = [
     'TableConfigMixin', 'TimeMarksMixin'
 ]
+
 
 class TableConfigMixin(object):
 

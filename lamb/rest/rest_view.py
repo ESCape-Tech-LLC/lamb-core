@@ -1,7 +1,7 @@
-__author__ = 'KoNEW'
 #-*- coding: utf-8 -*-
+__author__ = 'KoNEW'
 
-from functools import update_wrapper, partial
+from functools import update_wrapper
 import six
 from django.utils.decorators import classonlymethod
 from django.http import HttpRequest
@@ -10,6 +10,7 @@ from lamb.rest.exceptions import NotRealizedMethodError
 __all__ = [
     'RestView'
 ]
+
 
 class RestView(object):
     """ Abstract class for dispatching url requests in REST logic
@@ -25,6 +26,9 @@ class RestView(object):
         Constructor. Called in the URLconf; can contain helpful extra
         keyword arguments, and other things.
         """
+        # assign for proper type hints
+        self.request = None
+
         # Go through keyword arguments, and either save their values to our
         # instance, or raise an error.
         for key, value in six.iteritems(kwargs):
