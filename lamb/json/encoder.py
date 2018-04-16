@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-
 __author__ = 'KoNEW'
+
 
 import json
 import datetime
@@ -11,37 +11,12 @@ from collections import OrderedDict
 
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy import inspect
+from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = [
-    'JsonMixin', 'JsonEncoder', 'JsonEncodeMixin'
+    'JsonEncoder'
 ]
-
-
-class JsonMixin(object):
-    def json_advance_encode(self, encoded_object):
-        """ Called after basic JSON encoding with Encoder finish process object
-
-        Method can be used for exmaple with declarative models to append relations in response
-
-        :param encoded_object:  Encoded to dictionary representation of self
-        :type encoded_object: dict
-        :return: Encoded representation with additional values or removed some values
-        :rtype: dict
-        """
-        raise NotImplementedError('JsonMixin json_advance_encode method is abstract '
-                                  'and should be overridden in subclass')
-
-
-class JsonEncodeMixin(object):
-    def json_encode(self):
-        """ Mixin to mark object support JSON serialization with JsonEncoder class
-
-        :return: Encoded represenation of object
-        :rtype: dict
-        """
-        raise NotImplementedError('JsonEncodeMixin json_encode method is abstract and '
-                                  'should be implemented in subclass')
 
 
 class JsonEncoder(json.JSONEncoder):
@@ -61,19 +36,10 @@ class JsonEncoder(json.JSONEncoder):
             result = float(obj)
         elif isinstance(obj, uuid.UUID):
             result = str(obj)
-        elif isinstance(obj.__class__, DeclarativeMeta):
-            result = dict()
-            ins = inspect(obj)
-            for column in ins.mapper.column_attrs.keys():
-                result[column] = getattr(obj, column)
-        elif isinstance(obj, JsonEncodeMixin):
-            result = obj.json_encode()
+        elif isinstance(obj, ResponseEncodableMixin):
+            result = obj.response_encode(self.request)
         else:
             result = json.JSONEncoder.default(self, obj)
-
-        # Advanced encoding for JsonMixin
-        if isinstance(obj, JsonMixin):
-            result = obj.json_advance_encode(result)
 
         # Advanced encoding for callback
         if self.callback is not None:

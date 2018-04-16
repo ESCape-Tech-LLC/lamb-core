@@ -17,8 +17,8 @@ __all__ = [
 ]
 
 
-class LambExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
-    __tablename__ = 'lamb_execution_time_metric'
+class LambExecutionTimeMetric(TableConfigMixin, DeclarativeBase):
+    # __tablename__ = 'lamb_execution_time_metric'
 
     # columns
     metric_id = Column(BIGINT(unsigned=True), nullable=False, primary_key=True, autoincrement=True)
@@ -40,8 +40,8 @@ class LambExecutionTimeMetric(DeclarativeBase, TableConfigMixin):
         self.elapsed_time = -1.0
 
 
-class LambExecutionTimeMarker(DeclarativeBase, TableConfigMixin):
-    __tablename__ = 'lamb_execution_time_marker'
+class LambExecutionTimeMarker(TableConfigMixin, DeclarativeBase):
+    # __tablename__ = 'lamb_execution_time_marker'
 
     #columns
     f_metric_id = Column(BIGINT(unsigned=True),

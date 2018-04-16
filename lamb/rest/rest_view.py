@@ -1,11 +1,16 @@
 #-*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
-from functools import update_wrapper
+
 import six
+
+from functools import update_wrapper
+from lazy import lazy
 from django.utils.decorators import classonlymethod
 from django.http import HttpRequest
+
 from lamb.rest.exceptions import NotRealizedMethodError
+from lamb.utils import get_request_body_encoding, parse_body_as_json, CONTENT_ENCODING_JSON, CONTENT_ENCODING_XML
 
 __all__ = [
     'RestView'
@@ -55,6 +60,26 @@ class RestView(object):
     def dispatch(self, request, *args, **kwargs):
         handler = getattr(self, request.method.lower(), self.http_method_not_realized)
         return handler(request, *args, **kwargs)
+
+    @lazy
+    def parsed_body(self):
+        """:rtype: dict"""
+        content_type = get_request_body_encoding(self.request)
+
+        if content_type == CONTENT_ENCODING_JSON:
+            result = parse_body_as_json(self.request)
+        elif content_type == CONTENT_ENCODING_XML:
+            try:
+                result = xmltodict.parse(self.request.body)
+                result = result['request']
+            except Exception as e:
+                logger.error('XML body parsing failed: %s. RAW: %s' % (e, self.request.body))
+                raise InvalidBodyStructureError('Could not parse body as JSON object') from e
+        else:
+            raise InvalidParamValueError('Unsupported Content-Type \'%s\'' % content_type)
+
+        return result
+
 
     @staticmethod
     def http_method_not_realized(request, *args, **kwargs):

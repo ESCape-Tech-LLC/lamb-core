@@ -30,16 +30,6 @@ class TableConfigMixin(object):
 
 class TimeMarksMixin(object):
     # columns
-    time_created = Column(
-        TIMESTAMP,
-        nullable=False,
-        default=datetime.now,
-        server_default=text('CURRENT_TIMESTAMP')
-    )
-    time_updated = Column(
-        TIMESTAMP,
-        nullable=False,
-        default=datetime.now,
-        server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
-        onupdate=datetime.now
-    )
+    time_created = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'))
+    time_updated = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'),
+                          onupdate=datetime.now)

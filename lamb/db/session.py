@@ -7,9 +7,10 @@ from django.conf import settings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import inspect
 
 from lamb.rest.exceptions import ServerError
-
+from lamb.json.mixins import ResponseEncodableMixin
 
 __all__ = [
     'DeclarativeBase', 'metadata', 'lamb_db_session_maker', '_engine', 'declarative_base'
