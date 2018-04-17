@@ -66,9 +66,7 @@ class RestView(object):
         """:rtype: dict"""
         content_type = get_request_body_encoding(self.request)
 
-        if content_type == CONTENT_ENCODING_JSON:
-            result = parse_body_as_json(self.request)
-        elif content_type == CONTENT_ENCODING_XML:
+        if content_type == CONTENT_ENCODING_XML:
             try:
                 result = xmltodict.parse(self.request.body)
                 result = result['request']
@@ -76,7 +74,8 @@ class RestView(object):
                 logger.error('XML body parsing failed: %s. RAW: %s' % (e, self.request.body))
                 raise InvalidBodyStructureError('Could not parse body as JSON object') from e
         else:
-            raise InvalidParamValueError('Unsupported Content-Type \'%s\'' % content_type)
+            # by default try to interpret as JSON
+            result = parse_body_as_json(self.request)
 
         return result
 
