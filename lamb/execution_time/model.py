@@ -10,6 +10,7 @@ from sqlalchemy.orm import relationship
 
 from lamb.db.session import DeclarativeBase
 from lamb.db.mixins import TableConfigMixin
+from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = [
@@ -17,7 +18,7 @@ __all__ = [
 ]
 
 
-class LambExecutionTimeMetric(TableConfigMixin, DeclarativeBase):
+class LambExecutionTimeMetric(TableConfigMixin, ResponseEncodableMixin, DeclarativeBase):
     # __tablename__ = 'lamb_execution_time_metric'
 
     # columns
@@ -40,7 +41,7 @@ class LambExecutionTimeMetric(TableConfigMixin, DeclarativeBase):
         self.elapsed_time = -1.0
 
 
-class LambExecutionTimeMarker(TableConfigMixin, DeclarativeBase):
+class LambExecutionTimeMarker(TableConfigMixin, ResponseEncodableMixin, DeclarativeBase):
     # __tablename__ = 'lamb_execution_time_marker'
 
     #columns

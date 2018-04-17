@@ -5,9 +5,10 @@ from sqlalchemy import Column
 from sqlalchemy.dialects.mysql import BIGINT, TEXT
 from lamb.db import DeclarativeBase
 from lamb.db.mixins import TableConfigMixin
+from lamb.json.mixins import ResponseEncodableMixin
 
 
-class LambLocalization(DeclarativeBase, TableConfigMixin):
+class LambLocalization(DeclarativeBase, TableConfigMixin, ResponseEncodableMixin):
     """ Class provide database model for store localized strings data
 
     At this moment class supports only two localizations: russian and english.
