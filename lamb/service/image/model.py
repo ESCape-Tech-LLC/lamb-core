@@ -6,6 +6,7 @@ from sqlalchemy import Column
 from sqlalchemy.dialects.mysql import BIGINT, TEXT, VARCHAR
 from lamb.db import DeclarativeBase
 from lamb.db.mixins import TableConfigMixin
+from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = [
@@ -13,7 +14,7 @@ __all__ = [
 ]
 
 
-class LambImage(DeclarativeBase, TableConfigMixin):
+class LambImage(DeclarativeBase, TableConfigMixin, ResponseEncodableMixin):
     """ Class provide database model for store images
 
     Class store information about image_id and several urls for different size of image.
