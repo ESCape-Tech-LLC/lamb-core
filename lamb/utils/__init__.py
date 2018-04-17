@@ -411,7 +411,7 @@ def compact_list(lst):
     :rtype: list
     """
     warnings.warn('compact_list depreacted, use compact instead', DeprecationWarning)
-    return compact(dct)
+    return compact(lst)
 
 
 # content/response encoding
