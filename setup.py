@@ -106,5 +106,6 @@ setup(
         'xmltodict',
         'lazy',
         'uwsgi',
+        'babel'
     ]
 )
