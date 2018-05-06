@@ -52,7 +52,7 @@ class LambRestApiJsonMiddleware(object):
             return exception
 
         # process exception to response
-        logger.exception("Handled exception: ")
+        logger.exception('Handled exception <%s>: %s' % (exception.__class__.__name__, exception))
         if isinstance(exception, (SQLAlchemyError, DBAPIError)):
             status_code = 500
             error_code = LambExceptionCodes.Database
