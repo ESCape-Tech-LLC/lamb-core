@@ -2,6 +2,8 @@
 __author__ = 'KoNEW'
 
 
+from lamb.types import LambLocale
+
 __all__ = [
     'DeviceInfo'
 ]
@@ -14,6 +16,7 @@ class DeviceInfo(object):
     :type device_os: str
     :type app_version: str
     :type app_build: int
+    :type device_locale: LambLocale
     """
     def __init__(self, device_family=None, device_platform=None, device_os=None,
                  device_locale=None, app_version=None, app_build=None):
