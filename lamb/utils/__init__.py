@@ -1,8 +1,4 @@
 #-*- coding: utf-8 -*-
-import enum
-
-from lamb.rest.middleware import logger
-
 __author__ = 'KoNEW'
 
 
