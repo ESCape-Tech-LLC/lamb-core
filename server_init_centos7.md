@@ -3,7 +3,7 @@
 ## Update system packages
 ```
 sudo yum update -y
-sudo yum install -y wget vim git zlib zlib-devel openssl openssl-devel bzip2 bzip2-devel zip gcc gcc-c++ libjpeg-devel libpng-devel libtiff-devel file-devel
+sudo yum install -y wget vim git zlib zlib-devel openssl openssl-devel bzip2 bzip2-devel zip gcc gcc-c++ libjpeg-devel libpng-devel libtiff-devel file-devel policycoreutils-python
 ```
 
 ## 1. NGINX
@@ -88,14 +88,14 @@ Compile python from sources. For last version visit: https://www.python.org/down
 
 ```
 cd ~
-wget https://www.python.org/ftp/python/3.6.4/Python-3.6.4.tgz
-tar -xzf Python-3.6.4.tgz
-cd Python-3.6.4
+wget https://www.python.org/ftp/python/3.6.5/Python-3.6.5.tgz
+tar -xzf Python-3.6.5.tgz
+cd Python-3.6.5
 ./configure --enable-optimizations
 make 
 sudo male altinstall
 cd ~
-sudo rm -rf Python-3.6.4*
+sudo rm -rf Python-3.6.5*
 ```
 
 ### Packages
@@ -108,7 +108,7 @@ sudo pip install virtualenv
 
 ## 3. PostgreSQL
 ### Server and client
-Install package and enable service. For last version visit: [https://www.postgresql.org/download/linux/redhat/]
+Install package and enable service. For last version visit [Download page](https://www.postgresql.org/download/linux/redhat/)
 
 ```
 sudo yum install -y https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm
@@ -125,7 +125,10 @@ sudo su postgres
 
 # run psql cli 
 psql
-# add password???
+
+# add password
+> ALTER USER postgres WITH PASSWORD '<password>';
+> \q
 
 # get out from postgres user shell
 exit
@@ -150,6 +153,7 @@ Auth section should looks like
 # maintenance (custom daily cronjobs, replication, and similar tasks).
 #
 # Database administrative login by Unix domain socket
+# disable on production stand
 local   all             postgres                                peer
 
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
@@ -173,12 +177,12 @@ host    replication     all             ::1/128                 md5
 Restart database server and leave root shell
 
 ```
-sudo systemctl restart postgresql
+sudo systemctl restart postgresql-10
 exit
 ```
 ## 4. RabbitMQ
 ### Add erlang repo
-For latest version visit: https://github.com/rabbitmq/erlang-rpm
+For latest version visit [Download page](https://github.com/rabbitmq/erlang-rpm)
 
 ```
 cat <<EOF | sudo tee /etc/yum.repos.d/rabbitmq-erlang.repo
@@ -198,14 +202,14 @@ sudo yum install -y erlang
 ```
 
 ### Install RabbitMQ
-For latest version visit: https://www.rabbitmq.com/install-rpm.html
+For latest version visit [Download page] (https://www.rabbitmq.com/install-rpm.html)
 
 ```
 cd ~
-wget https://dl.bintray.com/rabbitmq/all/rabbitmq-server/3.7.3/rabbitmq-server-3.7.3-1.el7.noarch.rpm
+wget https://dl.bintray.com/rabbitmq/all/rabbitmq-server/3.7.5/rabbitmq-server-3.7.5-1.el7.noarch.rpm
 rpm --import https://www.rabbitmq.com/rabbitmq-release-signing-key.asc
-sudo yum install -y rabbitmq-server-3.7.3-1.el7.noarch.rpm
-sudo rm -rf rabbitmq-server-3.7.3-1.el7.noarch.rpm
+sudo yum install -y rabbitmq-server-3.7.5-1.el7.noarch.rpm
+sudo rm -rf rabbitmq-server-3.7.5-1.el7.noarch.rpm
 ```
 
 ### Register and start daemon
@@ -238,32 +242,6 @@ sudo systemctl enable influxdb
 sudo systemctl start influxdb
 ```
 
-### Create InfluxDB users / databases
-Start InfluxDB shell and inside InfluxDB CLI created two users and database
-
-```
-influx
-
-CREATE USER admin WITH PASSWORD 'password' WITH ALL PRIVILEGES;
-CREATE USER monitoring WITH PASSWORD 'password';
-CREATE DATABASE monitoring;
-GRANT ALL ON monitoring TO monitoring;
-quit
-```
-
-Bind telegraf to new created database output
-
-```
-sudo vim /etc/telegraf/telegraf.conf
-
-# Configuration for influxdb server to send metrics to
-[[outputs.influxdb]]
-  ## The target database for metrics (telegraf will create it if not exists).
-  database = "monitoring" 
-  username = "monitoring"
-  password = "password"
-```
-
 ### Enable authentication on InfluxDB 
 ```
 sudo vim /etc/influxdb/influxdb.conf
@@ -280,6 +258,32 @@ Restart service to apply changes
 
 ```
 sudo systemctl restart influxdb
+```
+
+### Create InfluxDB users / databases
+Start InfluxDB shell and inside InfluxDB CLI created two users and database
+
+```
+influx
+
+CREATE USER monitoring WITH PASSWORD '<password>';
+CREATE USER admin WITH PASSWORD '<password>' WITH ALL PRIVILEGES;
+CREATE DATABASE monitoring;
+GRANT ALL ON monitoring TO monitoring;
+quit
+```
+
+Bind telegraf to new created database output
+
+```
+sudo vim /etc/telegraf/telegraf.conf
+
+# Configuration for influxdb server to send metrics to
+[[outputs.influxdb]]
+  ## The target database for metrics (telegraf will create it if not exists).
+  database = "monitoring" 
+  username = "monitoring"
+  password = "<password>"
 ```
 
 
@@ -310,18 +314,19 @@ sudo systemctl start grafana-server
 
 ### Open port 3000
 Grafana by default start on port 3000, if you would not run it under http-proxy - you need to enable port 3000.
+
 ```
 firewall-cmd --zone=public --add-port=3000/tcp --permanent
 firewall-cmd --reload
 ```
 
 ### Update grafana configs
-To finish configuration please, visit grafana on port 3000
+To finish configuration please, visit grafana on port 3000:
 
-* Change default admin password (default admin/admin)
+* Change admin credential pair in user preferences (default `admin/admin`)
 * Create new user if required
 * Config grafana to use influxdb as data source
-* Import dashboard
+* Import dashboards and config it
 
 ## 7. Memcached
 ```
@@ -329,4 +334,3 @@ sudo yum install -y memcached
 sudo systemctl enable memcached
 sudo systemctl restart memcached
 ```
-

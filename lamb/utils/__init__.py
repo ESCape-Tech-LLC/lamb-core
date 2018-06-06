@@ -70,6 +70,25 @@ def parse_body_as_json(request):
         raise InvalidBodyStructureError('Could not parse body as JSON object')
 
 
+# from lamb.utils import dpath_value
+
+# d = {
+#     'int': 1,
+#     'int_str': '123',
+#     'float': 2.034,
+#     'float_str'
+#     '1': 1,
+#     '2': 2.0,
+#     '3': '4.0',
+#     '4': 'ololo',
+#     '5': [1,2,3],
+#     '6': {'key': 'value'}
+# }
+#
+# assert isinstance(dpath_value(d, '1', int), int)
+# assert isinstance(dpath_value(d, '2', float), float)
+# assert isinstance(dpath_value(d, '3', float), float)
+# assert isinstance(dpath_value(d, '4', str), str)
 def dpath_value(dict_object=None, key_path=None, req_type=None, allow_none=False, **kwargs):
     """ Search for object in dictionary
     :param dict_object: Dictionary to find data
@@ -150,47 +169,6 @@ def paginated(data, request):
     """
     warnings.warn('paginated method is deprecated, use response_paginated version', DeprecationWarning)
     return response_paginated(data, request)
-    # # parse and check offset
-    # offset = dpath_value(request.GET, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
-    # if offset < 0:
-    #     raise InvalidParamValueError('Invalid offset value for pagination',
-    #                                  error_details=settings.LAMB_PAGINATION_KEY_OFFSET)
-    #
-    # # parse and check limit
-    # limit = dpath_value(request.GET, settings.LAMB_PAGINATION_KEY_LIMIT, int,
-    #                     default=settings.LAMB_PAGINATION_LIMIT_DEFAULT)
-    # if limit < -1:
-    #     raise InvalidParamValueError('Invalid limit value for pagination',
-    #                                  error_details=settings.LAMB_PAGINATION_KEY_LIMIT)
-    # if limit > settings.LAMB_PAGINATION_LIMIT_MAX:
-    #     raise InvalidParamValueError('Invalid limit value for pagination - exceed max available',
-    #                                  error_details=settings.LAMB_PAGINATION_KEY_LIMIT)
-    #
-    # # prepare result container
-    # result = OrderedDict()
-    # result[settings.LAMB_PAGINATION_KEY_OFFSET] = offset
-    # result[settings.LAMB_PAGINATION_KEY_LIMIT] = limit
-    #
-    # if isinstance(data, Query):
-    #     result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
-    #     result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).limit(limit).all()
-    # elif isinstance(data, list):
-    #     result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(data)
-    #     result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[ offset : offset+limit ]
-    # else:
-    #     result = data
-    #
-    # # little hack for XML proper serialization
-    # # TODO: migrate to determine in middleware
-    # if request is not None and \
-    #         request.META is not None and \
-    #         'HTTP_ACCEPT' in request.META.keys() and \
-    #         request.META['HTTP_ACCEPT'] == 'application/xml' and \
-    #         settings.LAMB_PAGINATION_KEY_ITEMS in result.keys():
-    #
-    #     result[settings.LAMB_PAGINATION_KEY_ITEMS] = {'item': result[settings.LAMB_PAGINATION_KEY_ITEMS]}
-    #
-    # return result
 
 
 def response_paginated(data, request):
@@ -223,10 +201,16 @@ def response_paginated(data, request):
 
     if isinstance(data, Query):
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
-        result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).limit(limit).all()
+        if limit == -1:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).all()
+        else:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).limit(limit).all()
     elif isinstance(data, list):
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(data)
-        result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[ offset : offset+limit ]
+        if limit == -1:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[ offset : ]
+        else:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[offset: offset + limit]
     else:
         result = data
 

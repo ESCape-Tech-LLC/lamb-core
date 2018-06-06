@@ -4,8 +4,8 @@
 Before installation of any pservices should update all system packages and install some common used packages.
 
 ```
-sudo apt-get update
-sudo apt-get upgrade
+sudo apt-get update -y
+sudo apt-get upgrade -y
 sudo apt-get install -y wget vim git zlib1g-dev openssl libssl-dev bzip2 libbz2-dev zip gcc build-essential g++ libjpeg-dev libpng-dev libtiff-dev libmagic-dev libreadline-gplv2-dev libncursesw5-dev libsqlite3-dev libgdbm-dev libc6-dev adduser libfontconfig
 ```
 
@@ -29,10 +29,10 @@ EOF
 
 ### Install and enable NGINX
 ```
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y nginx
 sudo systemctl enable nginx
-sudo systemctl start nginx
+sudo systemctl restart nginx
 ```
 
 ### Create default site folders
