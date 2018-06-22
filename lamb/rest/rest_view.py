@@ -3,14 +3,18 @@ __author__ = 'KoNEW'
 
 
 import six
+import logging
+import xmltodict
 
 from functools import update_wrapper
 from lazy import lazy
 from django.utils.decorators import classonlymethod
 from django.http import HttpRequest
 
-from lamb.rest.exceptions import NotRealizedMethodError
+from lamb.rest.exceptions import NotRealizedMethodError, InvalidBodyStructureError
 from lamb.utils import get_request_body_encoding, parse_body_as_json, CONTENT_ENCODING_JSON, CONTENT_ENCODING_XML
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     'RestView'
@@ -72,7 +76,7 @@ class RestView(object):
                 result = result['request']
             except Exception as e:
                 logger.error('XML body parsing failed: %s. RAW: %s' % (e, self.request.body))
-                raise InvalidBodyStructureError('Could not parse body as JSON object') from e
+                raise InvalidBodyStructureError('Could not parse body as XML tree') from e
         else:
             # by default try to interpret as JSON
             result = parse_body_as_json(self.request)
