@@ -105,7 +105,9 @@ setup(
         'pushjack',
         'xmltodict',
         'lazy',
+        'lxml',
         'uwsgi',
-        'babel'
+        'babel',
+        'django-crequest'
     ]
 )

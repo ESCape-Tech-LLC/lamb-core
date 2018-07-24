@@ -93,7 +93,7 @@ tar -xzf Python-3.6.5.tgz
 cd Python-3.6.5
 ./configure --enable-optimizations
 make 
-sudo male altinstall
+sudo make altinstall
 cd ~
 sudo rm -rf Python-3.6.5*
 ```

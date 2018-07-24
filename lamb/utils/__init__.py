@@ -200,6 +200,12 @@ def response_paginated(data, request):
     result[settings.LAMB_PAGINATION_KEY_LIMIT] = limit
 
     if isinstance(data, Query):
+        # def get_count(q):
+        #     count_q = q.statement.with_only_columns([func.count()]).order_by(None)
+        #     count = q.session.execute(count_q).scalar()
+        #     return count
+        #
+        # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
         if limit == -1:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).all()

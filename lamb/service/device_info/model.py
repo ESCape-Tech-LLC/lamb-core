@@ -28,6 +28,6 @@ class DeviceInfo(object):
         self.app_build = app_build
 
     def __str__(self):
-        return 'DeviceInfo: %s (%s)/%s:%s. App=%s(%s)' \
+        return 'OS=%s(%s) %s, Locale=%s, App=%s(%s)' \
                % (self.device_platform, self.device_os, self.device_family,
                   self.device_locale, self.app_version, self.app_build)
