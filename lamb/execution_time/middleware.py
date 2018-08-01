@@ -74,13 +74,17 @@ class ExecutionTimeMiddleware(object):
 
         # store
         try:
-            header = '%s %s' % (request.method, request.path)
-            request.lamb_execution_meter.log_marks(header=header)
+            # logging
+            logger.info('Elapsed: %s %s %.6f sec' % (metric.http_method, request.path, metric.elapsed_time))
+
+            # database
             request.lamb_db_session.add(metric)
             request.lamb_db_session.commit()
         except Exception as e:
             logger.error('ExecutionMetrics store error: %s' % e)
             pass
+
+
 
     def process_request(self, request):
         """
