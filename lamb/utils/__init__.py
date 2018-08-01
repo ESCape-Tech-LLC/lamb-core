@@ -70,25 +70,6 @@ def parse_body_as_json(request):
         raise InvalidBodyStructureError('Could not parse body as JSON object')
 
 
-# from lamb.utils import dpath_value
-
-# d = {
-#     'int': 1,
-#     'int_str': '123',
-#     'float': 2.034,
-#     'float_str'
-#     '1': 1,
-#     '2': 2.0,
-#     '3': '4.0',
-#     '4': 'ololo',
-#     '5': [1,2,3],
-#     '6': {'key': 'value'}
-# }
-#
-# assert isinstance(dpath_value(d, '1', int), int)
-# assert isinstance(dpath_value(d, '2', float), float)
-# assert isinstance(dpath_value(d, '3', float), float)
-# assert isinstance(dpath_value(d, '4', str), str)
 def dpath_value(dict_object=None, key_path=None, req_type=None, allow_none=False, **kwargs):
     """ Search for object in dictionary
     :param dict_object: Dictionary to find data
@@ -200,13 +181,13 @@ def response_paginated(data, request):
     result[settings.LAMB_PAGINATION_KEY_LIMIT] = limit
 
     if isinstance(data, Query):
-        # def get_count(q):
-        #     count_q = q.statement.with_only_columns([func.count()]).order_by(None)
-        #     count = q.session.execute(count_q).scalar()
-        #     return count
-        #
-        # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
-        result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
+        def get_count(q):
+            count_q = q.statement.with_only_columns([func.count()]).order_by(None)
+            count = q.session.execute(count_q).scalar()
+            return count
+
+        result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
+        # result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
         if limit == -1:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).all()
         else:
