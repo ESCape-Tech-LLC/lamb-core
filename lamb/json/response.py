@@ -4,6 +4,7 @@ __author__ = 'KoNEW'
 import json
 import xmltodict
 from django.http import HttpResponse
+from django.conf import settings
 from lamb.json.encoder import JsonEncoder
 
 
@@ -11,6 +12,7 @@ __all__ = [
     'JsonResponse'
 ]
 
+_response_indent = settings.LAMB_JSON_RESPONSE_INDENT
 
 class JsonResponse(HttpResponse):
 
@@ -29,7 +31,10 @@ class JsonResponse(HttpResponse):
         )
         if data is not None:
             encoder = JsonEncoder(callback, request)
-            content = json.dumps(data, indent=2, ensure_ascii=False, default=encoder.default, sort_keys=False)
+            if _response_indent is not None:
+                content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default, sort_keys=False)
+            else:
+                content = json.dumps(data, ensure_ascii=False, default=encoder.default, sort_keys=False)
 
             if request is not None \
                     and 'HTTP_ACCEPT' in request.META.keys() \
