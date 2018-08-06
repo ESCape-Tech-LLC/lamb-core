@@ -12,7 +12,7 @@ __all__ = [
     'JsonResponse'
 ]
 
-_response_indent = settings.LAMB_JSON_RESPONSE_INDENT
+# _response_indent = settings.LAMB_JSON_RESPONSE_INDENT
 
 class JsonResponse(HttpResponse):
 
@@ -31,6 +31,9 @@ class JsonResponse(HttpResponse):
         )
         if data is not None:
             encoder = JsonEncoder(callback, request)
+
+            _response_indent = settings.LAMB_JSON_RESPONSE_INDENT
+
             if _response_indent is not None:
                 content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default, sort_keys=False)
             else:

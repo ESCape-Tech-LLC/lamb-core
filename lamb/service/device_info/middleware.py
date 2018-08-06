@@ -52,7 +52,7 @@ class DeviceInfoMiddleware(object):
                 app_version=app_version,
                 app_build=app_build
             )
-            logger.info('Extracted device info: %s' % device_info)
+            logger.debug('Extracted device info: %s' % device_info)
         except Exception as e:
             logger.warning('Device info extract failed due: %s' % e)
             device_info = DeviceInfo()
