@@ -12,7 +12,7 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from typing import List, Callable
 
-from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError
+from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError, ApiError
 from lamb.utils import dpath_value, LambRequest
 from lamb.db.inspect import ModelInspector
 
@@ -65,6 +65,8 @@ class Filter(object):
         # convert according to required param type
         try:
             result = [self.req_type(r) if r.lower() != 'null' else None for r in result]
+        except ApiError:
+            raise
         except Exception as e:
             logger.warning('Param convert error: %s' % e)
             raise InvalidParamTypeError('Invalid data type for param %s' % key_path)
@@ -73,6 +75,8 @@ class Filter(object):
         if self.req_type_transformer is not None:
             try:
                 result = [self.req_type_transformer(r) if r is not None else None for r in result]
+            except ApiError:
+                raise
             except Exception as e:
                 logger.warning('Param convert error: %s' % e)
                 raise InvalidParamTypeError('Could not convert param type to required form %s' % key_path)
