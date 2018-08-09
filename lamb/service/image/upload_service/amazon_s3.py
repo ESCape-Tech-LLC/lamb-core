@@ -7,7 +7,7 @@ import logging
 from boto3.session import Session
 from django.conf import settings
 
-from lamb.rest.exceptions import ServerError, ExternalServiceError
+from lamb.exc import ServerError, ExternalServiceError
 from lamb.service.image.upload_service.abstract import ImageUploadServiceAbstract
 
 logger = logging.getLogger(__name__)

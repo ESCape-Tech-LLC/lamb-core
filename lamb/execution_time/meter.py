@@ -1,15 +1,16 @@
 #-*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
-
 import time
 import logging
+
+from typing import List, Tuple
+
+
 logger = logging.getLogger(__name__)
 
 
-__all__ = [
-    'ExecutionTimeMeter'
-]
+__all__ = [ 'ExecutionTimeMeter' ]
 
 
 class ExecutionTimeMeter(object):
@@ -20,7 +21,7 @@ class ExecutionTimeMeter(object):
 
     class Marker(object):
         """
-        :type message: unicode | None
+        :type message: str
         :type timestamp: float
         """
         def __init__(self, message = None):
@@ -31,27 +32,16 @@ class ExecutionTimeMeter(object):
         self._markers = list()
         self.start_time = time.time()
 
-    def append_marker(self, message=None):
-        """ Appends new marker to measures series
-        :param message: String message to append to marker
-        :type message: basestring
-        """
+    def append_marker(self, message: str = None):
+        """ Appends new marker to measures series """
         self._markers.append(ExecutionTimeMeter.Marker(message))
 
-    def get_total_time(self):
-        """
-        :return: Total elapsed time interval
-        :rtype: float
-        :raises IndexError: In case of null count of records
-        """
+    def get_total_time(self) -> float:
+        """ Total elapsed time interval """
         return self._markers[len(self._markers) - 1].timestamp - self.start_time
 
-    def get_measurements(self):
-        """
-        :return: List of measured values - tuple (message, absolute, relative, percentage)
-        :rtype: list( (unicode, float, float, float) )
-        :raises IndexError: In case of null count of records
-        """
+    def get_measurements(self) -> List[Tuple[str, float, float, float]]:
+        """ List of measured values - tuple (message, absolute, relative, percentage) """
 
         total_elapsed = self.get_total_time()
 
@@ -67,7 +57,8 @@ class ExecutionTimeMeter(object):
             previous_timestamp = marker.timestamp
         return result
 
-    def log_marks(self, header=None):
+    def log_marks(self, header: str = None):
+        """ Log collected markers using standard logging module """
         try:
             total_elapsed = self.get_total_time()
             measurements = self.get_measurements()

@@ -1,5 +1,6 @@
-__author__ = 'KoNEW'
 # -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+
 
 from .model import LambImage
 from .upload_service.disk import ImageUploadServiceDisk

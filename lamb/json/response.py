@@ -3,16 +3,17 @@ __author__ = 'KoNEW'
 
 import json
 import xmltodict
+
 from django.http import HttpResponse
 from django.conf import settings
+from lazy import lazy
+from functools import partial
+
 from lamb.json.encoder import JsonEncoder
 
 
-__all__ = [
-    'JsonResponse'
-]
+__all__ = [ 'JsonResponse' ]
 
-# _response_indent = settings.LAMB_JSON_RESPONSE_INDENT
 
 class JsonResponse(HttpResponse):
 
@@ -25,26 +26,28 @@ class JsonResponse(HttpResponse):
         else:
             content_type = 'application/json; charset=utf8'
 
-        super(JsonResponse, self).__init__(
-            content_type = content_type,
-            status=status
-        )
+        super().__init__(content_type=content_type, status=status)
+
         if data is not None:
+            # encode response in form of json
             encoder = JsonEncoder(callback, request)
 
-            _response_indent = settings.LAMB_JSON_RESPONSE_INDENT
+            _response_indent = settings.LAMB_RESPONSE_JSON_INDENT
 
             if _response_indent is not None:
                 content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default, sort_keys=False)
             else:
                 content = json.dumps(data, ensure_ascii=False, default=encoder.default, sort_keys=False)
 
+            # reparese in form of XML
             if request is not None \
                     and 'HTTP_ACCEPT' in request.META.keys() \
                     and request.META['HTTP_ACCEPT'].lower().startswith('application/xml'):
                 content = json.loads(content)
                 content = {'response':content}
                 content = xmltodict.unparse(content)
+
+            # return result
             self.content = content
 
     @staticmethod

@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
+import logging
 
 from importlib import import_module
 from django.core.management.base import CommandError, LabelCommand
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
-from lamb.db.session import metadata, _engine
-
 from sqlalchemy.schema import DropTable, DropSequence
 from sqlalchemy.ext.compiler import compiles
+
+from lamb.db.session import metadata, _engine
+
+
+logger = logging.getLogger(__name__)
 
 
 @compiles(DropTable, "postgresql")
@@ -25,12 +29,14 @@ class Command(LabelCommand):
     help = 'Creates database table for provided modules'
 
     def add_arguments(self, parser):
-        super(Command, self).add_arguments(parser)
-        parser.add_argument('--force',
-                            action='store_true',
-                            dest='force',
-                            default=False,
-                            help='Force drop all before create')
+        super().add_arguments(parser)
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            dest='force',
+            default=False,
+            help='Force drop all before create'
+        )
 
     def handle_label(self, label, **options):
         try:
@@ -39,8 +45,8 @@ class Command(LabelCommand):
                 metadata.drop_all()
             metadata.create_all()
         except ImportError as e:
-            print(e)
+            logging.warning('Module import failed: %s' % e)
             raise CommandError('Failed to import module. \"%s\"' % e)
         except (SQLAlchemyError, DBAPIError) as e:
-            print(e)
+            logger.warning('Database commit failed: %s' % e)
             raise CommandError('Database error occurred. \"%s\"' % e)

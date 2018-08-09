@@ -2,20 +2,20 @@
 __author__ = 'KoNEW'
 
 import logging
+import sqlalchemy as sa
+
 from .session import lamb_db_session_maker
 
 
 logger = logging.getLogger(__name__)
 
 
-__all__ = [
-    'lamb_db_context'
-]
+__all__ = [ 'lamb_db_context' ]
 
 
 class lamb_db_context:
 
-    def __enter__(self):
+    def __enter__(self) -> sa.orm.session.Session:
         logger.debug('Enter lamb database context')
         self.db_session = lamb_db_session_maker()
         return self.db_session

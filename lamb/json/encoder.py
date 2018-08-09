@@ -6,23 +6,23 @@ import json
 import datetime
 import time
 import uuid
+
+from django.conf import settings
 from decimal import Decimal
 from collections import OrderedDict
-
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy import inspect
+
 from lamb.json.mixins import ResponseEncodableMixin
 
 
-__all__ = [
-    'JsonEncoder'
-]
+__all__ = [ 'JsonEncoder' ]
 
 
 class JsonEncoder(json.JSONEncoder):
 
     def __init__(self, callback=None, request=None, **kwargs):
-        super(JsonEncoder, self).__init__()
+        super().__init__(**kwargs)
         self.callback = callback
         self.request = request
 
@@ -31,7 +31,7 @@ class JsonEncoder(json.JSONEncoder):
         if isinstance(obj, datetime.datetime):
             result = int(time.mktime(obj.timetuple()))
         elif isinstance(obj, datetime.date):
-            result = obj.strftime('%Y-%m-%d')
+            result = obj.strftime(settings.LAMB_RESPONSE_DATE_FORMAT)
         elif isinstance(obj, Decimal):
             result = float(obj)
         elif isinstance(obj, uuid.UUID):

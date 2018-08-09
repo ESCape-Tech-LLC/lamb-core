@@ -7,7 +7,7 @@ from sqlalchemy import Column, Enum
 from sqlalchemy_utils import get_primary_keys
 from lamb.db.session import DeclarativeBase
 from lamb.db.context import lamb_db_context
-from lamb.rest.exceptions import ServerError
+from lamb.exc import *
 
 __all__ = [
     'DbEnum', 'ConfigEnum'

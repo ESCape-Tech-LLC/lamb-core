@@ -11,7 +11,7 @@ from lazy import lazy
 from django.utils.decorators import classonlymethod
 from django.http import HttpRequest
 
-from lamb.rest.exceptions import NotRealizedMethodError, InvalidBodyStructureError
+from lamb.exc import NotRealizedMethodError, InvalidBodyStructureError
 from lamb.utils import get_request_body_encoding, parse_body_as_json, CONTENT_ENCODING_JSON, CONTENT_ENCODING_XML
 
 logger = logging.getLogger(__name__)

@@ -19,7 +19,7 @@ from sqlalchemy.inspection import inspect
 from django.http import HttpRequest
 from django.conf import settings
 
-from lamb.rest.exceptions import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError
+from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError
 
 
 __all__ = [

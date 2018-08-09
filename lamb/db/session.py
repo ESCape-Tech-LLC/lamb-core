@@ -4,12 +4,13 @@ __author__ = 'KoNEW'
 
 from django.conf import settings
 
+import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import inspect
 
-from lamb.rest.exceptions import ServerError
+from lamb.exc import ServerError
 from lamb.json.mixins import ResponseEncodableMixin
 
 __all__ = [
@@ -29,7 +30,7 @@ try:
     _CONNECTION_STRING = '%s://%s:%s@%s/%s?%s' % (_ENGINE, _USER, _PASS, _HOST, _NAME, _OPTS)
     _engine = create_engine(
         _CONNECTION_STRING,
-        echo=getattr(settings, 'LAMB_SQLALCHEMY_ECHO', False),
+        echo=settings.LAMB_SQLALCHEMY_ECHO,
         pool_recycle=3600
     )
 except KeyError as e:
@@ -41,11 +42,8 @@ metadata = DeclarativeBase.metadata
 metadata.bind = _engine
 
 
-def lamb_db_session_maker():
-    """ Constructor for database sqlalchemy sessions
-    :return: Instance of session object
-    :rtype: sqlalchemy.orm.Session
-    """
+def lamb_db_session_maker() -> sa.orm.session.Session:
+    """ Constructor for database sqlalchemy sessions """
     maker = sessionmaker(bind=_engine)
     session = maker()
     return session

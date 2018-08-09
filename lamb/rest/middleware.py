@@ -1,33 +1,47 @@
 # -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
-
 import logging
 import enum
-from collections import OrderedDict
+import warnings
 
+from collections import OrderedDict
 from django.conf import settings
 from django.core.urlresolvers import resolve, Resolver404
 from django.http import HttpResponse
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 
 from lamb.json import JsonResponse
-from lamb.rest.exceptions import *
+from lamb.exc import *
 from lamb.utils import *
 
-try:
-    from django.conf import settings
-    LAMB_REST_HTTP_STATUS_ALWAYS_200 = settings.LAMB_REST_HTTP_STATUS_ALWAYS_200
-except (ImportError, AttributeError):
-    LAMB_REST_HTTP_STATUS_ALWAYS_200 = False
 
-apply_to_apps = getattr(settings, 'LAMB_REST_APPLIED_APPS', [])
+# parse http status overriding options
+try:
+    # backward compatibility
+    _should_override_status = settings.LAMB_REST_HTTP_STATUS_ALWAYS_200
+    warnings.warn(
+        'Use of deprecated settings param LAMB_REST_HTTP_STATUS_ALWAYS_200, use LAMB_RESPONSE_OVERRIDE_STATUS_200 instead',
+        DeprecationWarning)
+except (ImportError, AttributeError):
+    _should_override_status = settings.LAMB_RESPONSE_OVERRIDE_STATUS_200
+
+# parse apps to apply
+try:
+    # backward compatibility
+    _apply_to_apps = settings.LAMB_REST_APPLIED_APPS
+
+    warnings.warn(
+        'Use of deprecated settings param LAMB_REST_APPLIED_APPS, use LAMB_RESPONSE_APPLY_TO_APPS instead',
+        DeprecationWarning)
+except (ImportError, AttributeError):
+    _apply_to_apps = settings.LAMB_RESPONSE_APPLY_TO_APPS
+
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    'LambRestApiJsonMiddleware'
-]
+
+__all__ = [ 'LambRestApiJsonMiddleware' ]
 
 
 class LambRestApiJsonMiddleware(object):
@@ -37,22 +51,17 @@ class LambRestApiJsonMiddleware(object):
     2. For response that is not subclass of HttpResponse also try to create JsonResponse object
     """
 
-    def _process_exception(self, request, exception):
-        """
-        :param request: Request object
-        :type request: pynm.utils.LambRequest
-        :param exception: Exception object
-        :type exception: Exception
-        """
-        # return if should nto catch exception
+    def _process_exception(self, request: LambRequest, exception: Exception):
+        """ Internal service for process exception and convert it for proper response info """
+        # early return if should not catch exception
         try:
-            if resolve(request.path).app_name not in apply_to_apps:
+            if resolve(request.path).app_name not in _apply_to_apps:
                 return exception
         except Resolver404:
             return exception
 
         # process exception to response
-        logger.exception('Handled exception <%s>: %s' % (exception.__class__.__name__, exception))
+        logger.exception('Handled exception:')
         if isinstance(exception, (SQLAlchemyError, DBAPIError)):
             status_code = 500
             error_code = LambExceptionCodes.Database
@@ -69,46 +78,44 @@ class LambRestApiJsonMiddleware(object):
             error_message = 'Unknown server side error occurred'
             error_details = None
 
+        # envelope error
         result = OrderedDict()
         result['error_code'] = error_code
         result['error_message'] = error_message
         result['error_details'] = error_details
 
-        if LAMB_REST_HTTP_STATUS_ALWAYS_200:
-            logger.info("Status code override from %s to 200 due service config" % status_code)
+        # override status if required and return
+        if _should_override_status:
             status_code = 200
 
         return JsonResponse(result, status=status_code, request=request)
 
-    def process_response(self, request, response):
-        """
-        :param request: Request object
-        :type request: pynm.utils.LambRequest
-        :param response: Response object
-        :type response: django.http.HttpResponse
-        """
-        # touch request params
+    def process_response(self, request: LambRequest, response: HttpResponse) -> HttpResponse:
+        """ Process response handler. Also touchs request.POST/FILES fields for proper work """
+        # touch request body
         _ = request.POST
         _ = request.FILES
+
+        # early return if should not catch exception
         try:
-            if resolve(request.path).app_name not in apply_to_apps:
+            if resolve(request.path).app_name not in _apply_to_apps:
                 return response
         except Resolver404:
             return response
 
+        # try to encode response
         if not isinstance(response, HttpResponse):
             try:
                 response = JsonResponse(response, request=request)
             except Exception as e:
-                return self._process_exception(request=request, exception=e)
+                response = self._process_exception(request=request, exception=e)
+
+        # override status if required and return
+        if _should_override_status:
+            response.status_code = 200
 
         return response
 
-    def process_exception(self, request, exception):
-        """
-        :param request: Request object
-        :type request: pynm.utils.LambRequest
-        :param exception: Exception object
-        :type exception: Exception
-        """
+    def process_exception(self, request: LambRequest, exception: Exception):
+        """ Process expcetion handler """
         return self._process_exception(request=request, exception=exception)

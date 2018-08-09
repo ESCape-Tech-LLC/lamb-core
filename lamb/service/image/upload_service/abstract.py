@@ -8,7 +8,7 @@ from PIL import Image
 from django.conf import settings
 
 from lamb.service.image.model import LambImage
-from lamb.rest.exceptions import InvalidParamTypeError, ServerError
+from lamb.exc import InvalidParamTypeError, ServerError
 
 logger = logging.getLogger(__name__)
 

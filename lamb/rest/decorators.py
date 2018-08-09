@@ -5,11 +5,9 @@ __author__ = 'KoNEW'
 from django.http import HttpResponse
 
 from lamb.rest.rest_view import RestView
-from lamb.rest.exceptions import NotAllowedMethodError
+from lamb.exc import NotAllowedMethodError
 
-__all__ = [
-    'rest_allowed_http_methods'
-]
+__all__ = [ 'rest_allowed_http_methods' ]
 
 
 def rest_allowed_http_methods(method_list):

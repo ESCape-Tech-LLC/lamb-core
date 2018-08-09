@@ -6,7 +6,7 @@ import logging
 from django.conf import settings
 from lamb.utils import dpath_value
 from lamb.types import LambLocale
-from lamb.rest.exceptions import ApiError, ServerError, InvalidParamValueError
+from lamb.exc import ApiError, ServerError, InvalidParamValueError
 from .model import DeviceInfo
 
 logger = logging.getLogger(__name__)
