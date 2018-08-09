@@ -159,11 +159,17 @@ class ColumnValueFilter(FieldValueFilter):
         ins = sa.inspect(column)
         column_name = ins.name
         column_type = ins.type.python_type
-        updated_kwargs = {
-            'arg_name': ins.name,
-            'req_type': ins.type.python_type
-        }
+        # updated_kwargs = {
+        #     'arg_name': ins.name,
+        #     'req_type': ins.type.python_type
+        # }
 
         # update params and call super
-        updated_kwargs.update(kwargs)
-        super().__init__(**kwargs)
+        # updated_kwargs.update(kwargs)
+        super().__init__(
+            arg_name=column_name,
+            req_type=column_type,
+            comparing_field=column,
+            **kwargs
+        )
+        # super().__init__(**kwargs)
