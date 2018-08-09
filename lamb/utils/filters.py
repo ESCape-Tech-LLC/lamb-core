@@ -5,6 +5,7 @@ import logging
 import abc
 import operator
 
+import sqlalchemy as sa
 from sqlalchemy.orm.session import Session as SASession
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -166,16 +167,3 @@ class ColumnValueFilter(FieldValueFilter):
         # update params and call super
         updated_kwargs.update(kwargs)
         super().__init__(**kwargs)
-
-
-# class HandbookFilter(FieldValueFilter):
-#
-#     def __init__(self, arg_name, model_class, comparing_field):
-#         super().__init__(
-#             arg_name=arg_name,
-#             req_type=ModelInspector(model_class).pkey_type.python_type,
-#             comparing_field=comparing_field,
-#             req_type_transformer=None,
-#             allowed_compares=['__eq__', '__ne__']
-#         )
-#         self.model_class = model_class
