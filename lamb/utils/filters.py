@@ -73,7 +73,7 @@ class Filter(object):
         if self.req_type_transformer is not None:
             try:
                 result = [self.req_type_transformer(r) if r is not None else None for r in result]
-            except:
+            except Exception as e:
                 logger.warning('Param convert error: %s' % e)
                 raise InvalidParamTypeError('Could not convert param type to required form %s' % key_path)
 
@@ -142,10 +142,14 @@ class FieldValueFilter(Filter):
         # check for lower or equal
         if '__le__' in self.allowed_compares:
             param_value = self.get_param_value(request.GET, key_path=self.arg_name + '.max')
+            logger.warning('Param value 1: %s' % param_value)
             if param_value is not None:
+                logger.warning('Param value 2: %s' % param_value)
                 if len(param_value) > 1:
                     raise InvalidParamValueError('Invalid param \'%s\' type for lower/equal compare' % self.arg_name)
                 param_value = param_value[0]
+                logger.warning('Param value 3: %s' % param_value)
+                logger.warning('Field: %s' % self.comparing_field)
                 query = query.filter(self.comparing_field.__le__(param_value))
 
         return query
@@ -154,22 +158,22 @@ class FieldValueFilter(Filter):
 class ColumnValueFilter(FieldValueFilter):
     """ Syntax sugar for column based simple filter"""
 
-    def __init__(self, column, **kwargs):
+    def __init__(self, column, arg_name=None, req_type=None, **kwargs):
         # predefine params
         ins = sa.inspect(column)
-        column_name = ins.name
-        column_type = ins.type.python_type
-        # updated_kwargs = {
-        #     'arg_name': ins.name,
-        #     'req_type': ins.type.python_type
-        # }
 
-        # update params and call super
-        # updated_kwargs.update(kwargs)
+        if arg_name is None:
+            arg_name = ins.name
+
+        if req_type is None:
+            req_type = ins.type.python_type
+
+        # column_name = ins.name
+        # column_type = ins.type.python_type
+
         super().__init__(
-            arg_name=column_name,
-            req_type=column_type,
+            arg_name=arg_name,
+            req_type=req_type,
             comparing_field=column,
             **kwargs
         )
-        # super().__init__(**kwargs)
