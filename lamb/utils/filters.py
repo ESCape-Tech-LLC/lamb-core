@@ -146,14 +146,10 @@ class FieldValueFilter(Filter):
         # check for lower or equal
         if '__le__' in self.allowed_compares:
             param_value = self.get_param_value(request.GET, key_path=self.arg_name + '.max')
-            logger.warning('Param value 1: %s' % param_value)
             if param_value is not None:
-                logger.warning('Param value 2: %s' % param_value)
                 if len(param_value) > 1:
                     raise InvalidParamValueError('Invalid param \'%s\' type for lower/equal compare' % self.arg_name)
                 param_value = param_value[0]
-                logger.warning('Param value 3: %s' % param_value)
-                logger.warning('Field: %s' % self.comparing_field)
                 query = query.filter(self.comparing_field.__le__(param_value))
 
         return query
@@ -171,9 +167,6 @@ class ColumnValueFilter(FieldValueFilter):
 
         if req_type is None:
             req_type = ins.type.python_type
-
-        # column_name = ins.name
-        # column_type = ins.type.python_type
 
         super().__init__(
             arg_name=arg_name,

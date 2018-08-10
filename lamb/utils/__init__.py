@@ -8,8 +8,10 @@ import json
 import dpath
 import uuid
 import warnings
+import logging
 import re
 
+from typing import List
 from urllib.parse import urlsplit, urlunsplit
 from collections import OrderedDict
 from sqlalchemy import asc, desc, func, or_, any_
@@ -26,11 +28,14 @@ __all__ = [
     'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'validated_interval',
     'random_string','url_append_components', 'clear_white_space',
     'compact_dict', 'compact_list', 'compact',
-    'paginated', 'response_paginated', 'response_sorted',
+    'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
 
     'get_request_body_encoding', 'get_request_accept_encoding',
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON'
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 class LambRequest(HttpRequest):
@@ -148,7 +153,7 @@ def paginated(data, request):
     :param request: Http request
     :type request: pynm.utils.LambRequest
     """
-    warnings.warn('paginated method is deprecated, use response_paginated version', DeprecationWarning)
+    warnings.warn('paginated method is deprecated, use response_paginated version', DeprecationWarning, stacklevel=2)
     return response_paginated(data, request)
 
 
@@ -214,18 +219,15 @@ def response_paginated(data, request):
     return result
 
 
-def response_sorted(query, model_class, params_dict, default_sorting=None):
-    """
-    :param query: SQLAlchemy session query instance to be sorted
-    :type query: sqlalchemy.orm.Query
+def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dict,
+                    default_sorting: str = None, **kwargs):
+    """ Apply order by sortings to sqlalchemy query instance from params dictionary
+    :param query: SQLAlchemy query instance to be sorted
     :param model_class: Model class for columns introspection
-    :type model_class: DeclarativeMeta
     :param params_dict: Dictionary that contains params of sorting
-    :type params_dict: dict
-    :param default_sorting: Default sorting descriptions
-    :type default_sorting: str | None
-    :return: Modified query item
-    :rtype: sqlalchemy.orm.Query
+    :param default_sorting: Default sorting descriptors
+    :param final_sorting: Final step sorting - if provided in kwargs it would be parsed as descriptor andd applied
+        to query. By default final step of sorting - is to sort via primary key of model class.
     """
     def extract_sorting_params(_sorting_description, _model_inspection):
         """
@@ -296,12 +298,44 @@ def response_sorted(query, model_class, params_dict, default_sorting=None):
         applied_fields.append(sorting_field)
         query = query.order_by(sorting_function(getattr(model_class, sorting_field)))
 
-    # finally sort via primary key fields to guarantee order
-    primary_key_columns = [c.name for c in model_inspection.primary_key]
-    for pk_column in primary_key_columns:
-        if pk_column in applied_fields:
-            continue
-        query = query.order_by(desc(getattr(model_class, pk_column)))
+    # discover final sorting attribute
+    if 'final_sorting' in kwargs.keys():
+        # final_sorting exist - should parse and apply descritors
+        f_sorting_descriptors = kwargs['final_sorting']
+        if not isinstance(f_sorting_descriptors, str):
+            raise ServerError('Improperly configured final sorting descriptor')
+        f_sorting_descriptors = f_sorting_descriptors.split(',')
+        f_sorting_descriptors = [f for f in f_sorting_descriptors if len(f_sorting_descriptors) > 0]
+        for f_descriptor in f_sorting_descriptors:
+            _sorting_field, _sorting_function = extract_sorting_params(f_descriptor, model_inspection)
+            applied_fields.append(_sorting_field)
+            query = query.order_by(_sorting_function(getattr(model_class, _sorting_field)))
+    else:
+        # if final sorting omitted - use primary key
+        primary_key_columns = [c.name for c in model_inspection.primary_key]
+        for pk_column in primary_key_columns:
+            if pk_column in applied_fields:
+                continue
+            query = query.order_by(desc(getattr(model_class, pk_column)))
+
+    return query
+
+
+def response_filtered(query, filters, request = None) -> Query:
+    # check params
+    from lamb.utils.filters import Filter
+    if not isinstance(query, Query):
+        logger.warning('Invalid query data type: %s' % query)
+        raise ServerError('Improperly configured query item for filterong')
+    for f in filters:
+
+        if not isinstance(f, Filter):
+            logger.warning('Invalid filters item data type: %s' % f)
+            raise ServerError('Improperly configured filters for filtering')
+
+    # apply filters
+    for f in filters:
+        query = f.apply_to_query(query=query, request=request)
 
     return query
 
