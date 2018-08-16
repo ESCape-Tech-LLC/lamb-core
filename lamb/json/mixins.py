@@ -3,6 +3,7 @@ __author__ = 'KoNEW'
 
 from sqlalchemy import inspect
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 __all__ = [
@@ -21,9 +22,16 @@ class ResponseEncodableMixin(object):
         """
         if isinstance(self.__class__, DeclarativeMeta):
             result = dict()
+            # append plain columns
             ins = inspect(self)
             for column in ins.mapper.column_attrs.keys():
                 result[column] = getattr(self, column)
+
+            # append hybrid properties
+            ins = inspect(self.__class__)
+            for i in inspect(self.__class__).all_orm_descriptors:
+                if isinstance(i, hybrid_property):
+                    result[i.__name__] = getattr(self, i.__name__)
             return result
         else:
             raise NotImplementedError('ResponseEncodableMixin response_encode method on non DeclarativeMeta '
