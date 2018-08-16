@@ -8,7 +8,8 @@ import operator
 import sqlalchemy as sa
 from sqlalchemy.orm.session import Session as SASession
 from sqlalchemy.orm.query import Query
-from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.orm.attributes import QueryableAttribute
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from typing import List, Callable
 
@@ -92,14 +93,15 @@ class Filter(object):
 class FieldValueFilter(Filter):
     """ Basic sqlalchemy attribute comparing filter """
 
-    def __init__(self, arg_name: str, req_type: type, comparing_field: InstrumentedAttribute,
+    def __init__(self, arg_name: str, req_type: type, comparing_field: QueryableAttribute,
                  req_type_transformer: Callable = None,
                  allowed_compares: List[str] = ['__eq__', '__ne__', '__ge__', '__le__']):
         super().__init__(arg_name, req_type, req_type_transformer)
 
         # check params
-        if not isinstance(comparing_field, InstrumentedAttribute):
-            logger.warning('Filter comparing_field invalid data type: %s' % comparing_field)
+        if not isinstance(comparing_field, QueryableAttribute):
+            logger.warning('Filter comparing_field invalid data type: %s %s'
+                           % (comparing_field, comparing_field.__class__.__name__))
             raise ServerError('Improperly configured filter')
 
         for c in allowed_compares:
