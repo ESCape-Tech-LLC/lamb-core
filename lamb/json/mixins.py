@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
+import logging
+
 from sqlalchemy import inspect
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -10,6 +12,7 @@ __all__ = [
     'ResponseEncodableMixin'
 ]
 
+logger = logging.getLogger(__name__)
 
 class ResponseEncodableMixin(object):
 
@@ -30,7 +33,7 @@ class ResponseEncodableMixin(object):
             # append hybrid properties
             ins = inspect(self.__class__)
             for i in inspect(self.__class__).all_orm_descriptors:
-                if isinstance(i, hybrid_property):
+                if type(i) == hybrid_property:
                     result[i.__name__] = getattr(self, i.__name__)
             return result
         else:
