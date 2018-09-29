@@ -187,12 +187,13 @@ def response_paginated(data, request):
 
     if isinstance(data, Query):
         def get_count(q):
+            # TODO: modify query - returns invalid count in case of join with one-to-many objects
             count_q = q.statement.with_only_columns([func.count()]).order_by(None)
             count = q.session.execute(count_q).scalar()
             return count
 
-        result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
-        # result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
+        # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
+        result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
         if limit == -1:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).all()
         else:
@@ -327,8 +328,8 @@ def response_filtered(query, filters, request = None) -> Query:
     if not isinstance(query, Query):
         logger.warning('Invalid query data type: %s' % query)
         raise ServerError('Improperly configured query item for filterong')
+    
     for f in filters:
-
         if not isinstance(f, Filter):
             logger.warning('Invalid filters item data type: %s' % f)
             raise ServerError('Improperly configured filters for filtering')
