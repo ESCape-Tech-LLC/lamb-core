@@ -29,7 +29,6 @@ __all__ = [
     'random_string','url_append_components', 'clear_white_space',
     'compact_dict', 'compact_list', 'compact',
     'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
-
     'get_request_body_encoding', 'get_request_accept_encoding',
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON'
 ]

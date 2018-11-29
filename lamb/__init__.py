@@ -1,6 +1,6 @@
 __author__ = 'KoNEW'
 
-__version__ = '1.0.30'
+__version__ = '1.0.31'
 
 
 import logging

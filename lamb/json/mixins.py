@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ResponseEncodableMixin(object):
 
-    def response_encode(self, request=None):
+    def response_encode(self, request=None) -> dict:
         """ Mixin to mark object support JSON serialization with JsonEncoder class
 
         :type request: lamb.utils.LambRequest
