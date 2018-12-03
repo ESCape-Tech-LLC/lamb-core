@@ -12,7 +12,7 @@ import logging
 import re
 
 from typing import List
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from sqlalchemy import asc, desc, func, or_, any_
 from sqlalchemy.orm import Query
@@ -284,6 +284,7 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
 
     # extract sorting descriptions
     sorting_descriptions = dpath_value(params_dict, settings.LAMB_SORTING_KEY, str, default=default_sorting)
+    sorting_descriptions = unquote(sorting_descriptions)  # dirty hack for invalid arg transfer
     if sorting_descriptions is None:
         sorting_descriptions = ''
     else:
