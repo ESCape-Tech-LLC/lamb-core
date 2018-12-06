@@ -11,7 +11,7 @@ import warnings
 import logging
 import re
 
-from typing import List
+from typing import List, Union, TypeVar, Optional
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from sqlalchemy import asc, desc, func, or_, any_
@@ -29,8 +29,11 @@ __all__ = [
     'random_string','url_append_components', 'clear_white_space',
     'compact_dict', 'compact_list', 'compact',
     'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
+
     'get_request_body_encoding', 'get_request_accept_encoding',
-    'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON'
+    'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
+
+    'import_class_by_name'
 ]
 
 
@@ -51,13 +54,13 @@ class LambRequest(HttpRequest):
 
 
 # parsing
-def parse_body_as_json(request):
+def parse_body_as_json(request: HttpRequest) -> dict:
     """  Parse request object to dictionary as JSON
 
     :param request: Request object
-    :type request: django.http.HttpRequest
+
     :return:  Body parsed as JSON object
-    :rtype: dict
+
     :raises InvalidBodyStructureError: In case of parsing failed or parsed object is not dictionary
     """
     try:
@@ -74,20 +77,21 @@ def parse_body_as_json(request):
         raise InvalidBodyStructureError('Could not parse body as JSON object')
 
 
-def dpath_value(dict_object=None, key_path=None, req_type=None, allow_none=False, **kwargs):
+def dpath_value(dict_object: dict = None, key_path: str = None, req_type: type = None, allow_none: bool = False, **kwargs):
     """ Search for object in dictionary
     :param dict_object: Dictionary to find data
-    :type dict_object: dict
     :param key_path: Query string, separated via /
-    :type key_path: basestring
     :param req_type: Type of argument that expected
-    :type req_type: Class
     :param allow_none: Return None withour exception if leaf exist and equal to None
-    :type allow_none: bool
+
     :return: Extracted value
+
     :raises InvalidBodyStructureError: In case of non dict as first variable
     :raises InvalidParamTypeError: In case of extracted type impossible to convert in req_type
     :raises ServerError: In case of invalid key_path type
+
+    : TODO: add single parser for different containers(dict, xml, json...)
+    : TODO: add transformer support
     """
     def type_convert(req_type, value):
         if req_type is None:
@@ -123,7 +127,25 @@ def dpath_value(dict_object=None, key_path=None, req_type=None, allow_none=False
         raise ServerError('Invalid key_path type for querying in dict', error_details={'key_path': key_path}) from e
 
 
-def validated_interval(value, bottom, top, key=None, allow_none=False):
+VT = TypeVar('VT')
+
+
+def validated_interval(value: Optional[VT],
+                       bottom: VT,
+                       top: VT,
+                       key: str = None,
+                       allow_none: bool = False) -> Optional[VT]:
+    """ Value within interval validator
+
+    :param value: Value to be checked
+    :param bottom: Interval bottom limit
+    :param top: Interval top limit
+    :param key: Optional key to include in exception description as details
+    :param allow_none: Flag to make None value valid returnoing None
+
+    :raises InvalidParamValueError: In case of value out of interval
+    :raises InvalidParamTypeError: In case of any other exception
+    """
     if value is None and allow_none == True:
         return value
 
@@ -131,37 +153,35 @@ def validated_interval(value, bottom, top, key=None, allow_none=False):
         if value < bottom or value > top:
             raise InvalidParamValueError('Invalid param %s value or type, should be between %s and %s' % (key, bottom, top), error_details=key)
         return value
-    except InvalidParamValueError as e:
-        raise e
+    except InvalidParamValueError:
+        raise
     except:
         raise InvalidParamTypeError('Invalid param type for %s' % key, error_details=key)
 
 
 # reponse utilities
-def random_string(length=10, char_set = string.ascii_letters + string.digits):
-    result = ''
-    for _ in range(length):
-        result += random.choice(char_set)
-    return result
+PV = TypeVar('PV', list, Query)
 
+def paginated(data: PV, request: LambRequest) -> dict:
+    """ Deprected version of pagination utility
 
-def paginated(data, request):
-    """
     :param data: Instance of list or query to be paginated
-    :type data: (list | Query)
     :param request: Http request
-    :type request: pynm.utils.LambRequest
     """
     warnings.warn('paginated method is deprecated, use response_paginated version', DeprecationWarning, stacklevel=2)
     return response_paginated(data, request)
 
 
-def response_paginated(data, request):
-    """
+def response_paginated(data: PV, request: LambRequest, add_extended_query: bool = False) -> dict:
+    """ Pagination utility
+
+    Will search for limit/offset params in `request.GET` object and apply it to data, returning
+    dictionary that includes info about real offset, limit, total_count, items.
+
     :param data: Instance of list or query to be paginated
-    :type data: (list | Query)
     :param request: Http request
-    :type request: pynm.utils.LambRequest
+    :param add_extended_query: Flag to add to result extended version of data slice
+        (including one more item from begin and and of slice)
     """
     # parse and check offset
     offset = dpath_value(request.GET, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
@@ -179,12 +199,27 @@ def response_paginated(data, request):
         raise InvalidParamValueError('Invalid limit value for pagination - exceed max available',
                                      error_details=settings.LAMB_PAGINATION_KEY_LIMIT)
 
+    # calculate extended values
+    extended_additional_count = 0
+    if offset > 0:
+        extended_offset = offset - 1
+        extended_additional_count = extended_additional_count + 1
+    else:
+        extended_offset = offset
+
+    if limit != -1:
+        extended_additional_count = extended_additional_count + 1
+        extended_limit = limit + extended_additional_count
+    else:
+        extended_limit = limit
+
     # prepare result container
     result = OrderedDict()
     result[settings.LAMB_PAGINATION_KEY_OFFSET] = offset
     result[settings.LAMB_PAGINATION_KEY_LIMIT] = limit
 
     if isinstance(data, Query):
+        # TODO: Add dynamic count function choose based on any join presented in query
         def get_count(q):
             # TODO: modify query - returns invalid count in case of join with one-to-many objects
             count_q = q.statement.with_only_columns([func.count()]).order_by(None)
@@ -197,17 +232,28 @@ def response_paginated(data, request):
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).all()
         else:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).limit(limit).all()
+
+        if add_extended_query:
+            if extended_limit == -1:
+                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data.offset(extended_offset).all()
+            else:
+                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data.offset(extended_offset).limit(extended_limit).all()
     elif isinstance(data, list):
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(data)
         if limit == -1:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[ offset : ]
         else:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[offset: offset + limit]
+
+        if add_extended_query:
+            if extended_limit == -1:
+                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data[ offset : ]
+            else:
+                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data[ extended_offset : extended_offset + extended_limit]
     else:
         result = data
 
     # little hack for XML proper serialization
-    # TODO: migrate to determine in middleware
     if request is not None and \
             request.META is not None and \
             'HTTP_ACCEPT' in request.META.keys() and \
@@ -220,8 +266,9 @@ def response_paginated(data, request):
 
 
 def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dict,
-                    default_sorting: str = None, **kwargs):
+                    default_sorting: str = None, **kwargs) -> Query:
     """ Apply order by sortings to sqlalchemy query instance from params dictionary
+
     :param query: SQLAlchemy query instance to be sorted
     :param model_class: Model class for columns introspection
     :param params_dict: Dictionary that contains params of sorting
@@ -322,7 +369,7 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
     return query
 
 
-def response_filtered(query, filters, request = None) -> Query:
+def response_filtered(query: Query, filters: List['lamb.utils.Filter'], request: LambRequest = None) -> Query:
     # check params
     from lamb.utils.filters import Filter
     if not isinstance(query, Query):
@@ -341,18 +388,107 @@ def response_filtered(query, filters, request = None) -> Query:
     return query
 
 
-def string_to_uuid(value='', key=None):
-    """ Utility function to convert string into user id
+
+# compacting
+def compact(obj: Union[list, dict]) -> Union[list, dict]:
+    """ Compact version of container """
+    if isinstance(obj, list):
+        return [o for o in obj if o is not None]
+    elif isinstance(obj, dict):
+        return {k:v for k, v in obj.items() if v is not None}
+    else:
+        return obj
+
+
+def compact_dict(dct: dict) -> dict:
+    """ Compact dict by removing keys with None value """
+    warnings.warn('compact_dict depreacted, use compact instead', DeprecationWarning)
+    return compact(dct)
+
+
+def compact_list(lst: list) -> list:
+    """ Compact list by removing None values """
+    warnings.warn('compact_list depreacted, use compact instead', DeprecationWarning)
+    return compact(lst)
+
+
+# content/response encoding
+CONTENT_ENCODING_JSON = 'application/json'
+CONTENT_ENCODING_XML = 'application/xml'
+CONTENT_ENCODING_MULTIPART = 'multipart/form-data'
+
+
+def _get_encoding_for_header(request: HttpRequest, header: str) -> str:
+    """" Extract header value from request and interpret it as encoding value
+
+    :raises InvalidParamTypeError: In case header value is not of type string
+    """
+    # check param types
+    if not isinstance(request, HttpRequest):
+        raise InvalidParamTypeError('Invalid request instance datatype to determine encoding')
+    if not isinstance(header, str):
+        raise InvalidParamTypeError('Invalid header datatype to determine encoding')
+
+    # extract header
+    header = header.upper()
+    header_value = request.META.get(header, 'application/json')
+    if not isinstance(header_value, str):
+        raise InvalidParamTypeError('Invalid datatype of header value to determine encoding')
+
+    header_value = header_value.lower()
+    prefix_mapping = {
+        'application/json': CONTENT_ENCODING_JSON,
+        'application/xml': CONTENT_ENCODING_XML,
+        'text/xml': CONTENT_ENCODING_XML,
+        'multipart/form-data': CONTENT_ENCODING_MULTIPART,
+        'application/x-www-form-urlencoded': CONTENT_ENCODING_MULTIPART
+    }
+    result = header_value
+    for key, value in prefix_mapping.items():
+        if header_value.startswith(key):
+            result = value
+            break
+    # if header_value.startswith('application/json'):
+    #     result = CONTENT_ENCODING_JSON
+    # elif header_value.startswith('application/xml') or header_value.startswith('text/xml'):
+    #     result = CONTENT_ENCODING_XML
+    # elif header_value.startswith('multipart/form-data') or header_value.startswith('application/x-www-form-urlencoded'):
+    #     result = CONTENT_ENCODING_MULTIPART
+    # else:
+    #     result = header_value
+
+    return result
+
+
+def get_request_body_encoding(request: HttpRequest) -> str:
+    """ Extract request body encoding operating over Content-Type HTTP header """
+    return _get_encoding_for_header(request, 'CONTENT_TYPE')
+
+
+def get_request_accept_encoding(request: HttpRequest) -> str:
+    """ Extract request accept encoding operating over Http-Accept HTTP header """
+    return _get_encoding_for_header(request, 'HTTP_ACCEPT')
+
+
+# other
+def import_class_by_name(name):
+    components = name.split('.')
+    mod = __import__(components[0])
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+    return mod
+
+def string_to_uuid(value: str = '', key: Optional[str] = None) -> uuid.UUID:
+    """ Convert string into UUID value
 
     :param value: Value to convert in uuid object
-    :return: Converted uuid object
-    :rtype: uuid.UUID
+    :param key: Optional key value to include in exception details info
+
     :raises InvalidParamValueError: If converting process failed
     """
-    try:
-        return uuid.UUID(value)
-    except ValueError:
-        raise InvalidParamValueError('Invalid value for uuid field', error_details=key)
+    from lamb.utils.transformers import transform_uuid
+    warnings.warn('string_to_uuid depreacted, use lamb.utils.transformers.transform_uuid instead', DeprecationWarning)
+    return transform_uuid(value, key)
 
 
 def url_append_components(baseurl='', components=list()):
@@ -371,11 +507,10 @@ def url_append_components(baseurl='', components=list()):
     return result
 
 
-def clear_white_space(value):
+def clear_white_space(value: Optional[str]) -> Optional[str]:
     """ Clear whitespaces from string: from begining, from ending and repeat in body
-    :param value: String to clear
-    :type value: str
-    :rtype: str
+
+    :raises InvalidParamTypeError: In case of value is not string
     """
     if value is None:
         return value
@@ -384,83 +519,13 @@ def clear_white_space(value):
     return ' '.join(value.split())
 
 
-# other
-def compact(obj):
+def random_string(length: int = 10, char_set: str = string.ascii_letters + string.digits) -> str:
+    """ Generate random string
+
+    :param length: Length of string to generate, by default 10
+    :param char_set: Character set as string to be used as source for random, by default alphanumeric
     """
-    :type obj: list | dict
-    :return: list | dict
-    """
-    if isinstance(obj, list):
-        return [o for o in obj if o is not None]
-    elif isinstance(obj, dict):
-        return {k:v for k, v in obj.items() if v is not None}
-    else:
-        return obj
-
-
-def compact_dict(dct):
-    """
-    :type dct: dict
-    :rtype: dict
-    """
-    warnings.warn('compact_dict depreacted, use compact instead', DeprecationWarning)
-    return compact(dct)
-
-
-def compact_list(lst):
-    """ Remove None items from list
-    :type lst: list
-    :rtype: list
-    """
-    warnings.warn('compact_list depreacted, use compact instead', DeprecationWarning)
-    return compact(lst)
-
-
-# content/response encoding
-CONTENT_ENCODING_JSON = 'application/json'
-CONTENT_ENCODING_XML = 'application/xml'
-
-
-def _get_request_encdoing(request, header):
-    """"
-    :type request: lamb.utils.LambRequest
-    :type header: str
-    :rtype: str
-    """
-    # check param types
-    if not isinstance(request, HttpRequest):
-        raise InvalidParamTypeError('Invalid request instance datatype to determine encoding')
-    if not isinstance(header, str):
-        raise InvalidParamTypeError('Invalid header datatype to determine encoding')
-
-    # extract header
-    header = header.upper()
-    header_value = request.META.get(header, 'application/json')
-    if not isinstance(header_value, str):
-        raise InvalidParamTypeError('Invalid datatype of header value to determine encoding')
-
-    header_value = header_value.lower()
-    if header_value.startswith('application/json'):
-        result = CONTENT_ENCODING_JSON
-    elif header_value.startswith('application/xml') or header_value.startswith('text/xml'):
-        result = CONTENT_ENCODING_XML
-    else:
-        result = header_value
-
+    result = ''
+    for _ in range(length):
+        result += random.choice(char_set)
     return result
-
-
-def get_request_body_encoding(request):
-    """"
-    :type request: lamb.utils.LambRequest
-    :rtype: ContentEncoding
-    """
-    return _get_request_encdoing(request, 'CONTENT_TYPE')
-
-
-def get_request_accept_encoding(request):
-    """"
-    :type request: lamb.utils.LambRequest
-    :rtype: ContentEncoding
-    """
-    return _get_request_encdoing(request, 'HTTP_ACCEPT')

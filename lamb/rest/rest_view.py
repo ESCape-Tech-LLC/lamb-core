@@ -4,6 +4,7 @@ __author__ = 'KoNEW'
 
 import six
 import logging
+import json
 import xmltodict
 
 from functools import update_wrapper
@@ -12,7 +13,8 @@ from django.utils.decorators import classonlymethod
 from django.http import HttpRequest
 
 from lamb.exc import NotRealizedMethodError, InvalidBodyStructureError
-from lamb.utils import get_request_body_encoding, parse_body_as_json, CONTENT_ENCODING_JSON, CONTENT_ENCODING_XML
+from lamb.utils import get_request_body_encoding, parse_body_as_json, CONTENT_ENCODING_JSON, CONTENT_ENCODING_XML, \
+    CONTENT_ENCODING_MULTIPART, dpath_value, get_request_accept_encoding
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +68,17 @@ class RestView(object):
         return handler(request, *args, **kwargs)
 
     @lazy
-    def parsed_body(self):
-        """:rtype: dict"""
-        content_type = get_request_body_encoding(self.request)
+    def request_content_type(self) -> str:
+        return get_request_body_encoding(self.request)
+
+    @lazy
+    def response_content_type(self) -> str:
+        return get_request_accept_encoding(self.request)
+
+    @lazy
+    def parsed_body(self) -> dict:
+        content_type = self.request_content_type
+        logger.debug('Request body encoding discovered: %s' % content_type)
 
         if content_type == CONTENT_ENCODING_XML:
             try:
@@ -77,6 +87,15 @@ class RestView(object):
             except Exception as e:
                 logger.error('XML body parsing failed: %s. RAW: %s' % (e, self.request.body))
                 raise InvalidBodyStructureError('Could not parse body as XML tree') from e
+        elif content_type == CONTENT_ENCODING_MULTIPART:
+            payload = dpath_value(self.request.POST, 'payload', str)
+            try:
+                result = json.loads(payload)
+                if not isinstance(result, dict):
+                    raise InvalidBodyStructureError(
+                        'JSON payload part of request should be represented in a form of dictionary')
+            except ValueError as e:
+                raise InvalidBodyStructureError('Could not parse body as JSON object')
         else:
             # by default try to interpret as JSON
             result = parse_body_as_json(self.request)

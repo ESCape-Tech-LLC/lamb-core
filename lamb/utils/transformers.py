@@ -3,20 +3,27 @@ __author__ = 'KoNEW'
 
 import logging
 import enum
+import uuid
 
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Optional
 from datetime import datetime
 from django.conf import settings
 
 from lamb.exc import InvalidParamValueError
 
 __all__ = [
-    'transform_boolean', 'transform_date', 'transform_string_enum',
+    'transform_boolean', 'transform_date', 'transform_string_enum', 'transform_uuid'
 ]
 
 logger = logging.getLogger(__name__)
 
-def transform_boolean(value):
+"""
+
+Transformer - is any callable that accepts `value` as first positional orgument and converts it to another value
+
+"""
+
+def transform_boolean(value) -> bool:
     if isinstance(value, bool):
         return value
     elif isinstance(value, str):
@@ -35,7 +42,8 @@ def transform_boolean(value):
     else:
         raise InvalidParamTypeError('Invalid data type for boolean convert')
 
-def transform_date(value, format=settings.LAMB_RESPONSE_DATE_FORMAT):
+
+def transform_date(value, format=settings.LAMB_RESPONSE_DATE_FORMAT) -> datetime.date:
     if isinstance(value, datetime):
         return value
     elif isinstance(value, str):
@@ -52,9 +60,9 @@ def transform_date(value, format=settings.LAMB_RESPONSE_DATE_FORMAT):
         raise InvalidParamTypeError('Invalid data type for date convert')
 
 
-T = TypeVar('T')
+ET = TypeVar('ET')
 
-def transform_string_enum(value: str, enum_class: Type[T]) -> T:
+def transform_string_enum(value: str, enum_class: Type[ET]) -> ET:
     if isinstance(value, enum_class):
         return value
 
@@ -75,3 +83,13 @@ def transform_string_enum(value: str, enum_class: Type[T]) -> T:
         raise
     except Exception as e:
         raise InvalidParamValueError('Failed to convert enum value %s' % value) from e
+
+
+def transform_uuid(value: str, key: Optional[str] = None) -> uuid.UUID:
+    """ Transofrms value into UUID version """
+    if isinstance(value, uuid.UUID):
+        return value
+    try:
+        return uuid.UUID(value)
+    except (TypeError, ValueError) as e:
+        raise InvalidParamValueError('Invalid value for uuid field', error_details=key) from e
