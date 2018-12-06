@@ -441,21 +441,12 @@ def _get_encoding_for_header(request: HttpRequest, header: str) -> str:
         'application/xml': CONTENT_ENCODING_XML,
         'text/xml': CONTENT_ENCODING_XML,
         'multipart/form-data': CONTENT_ENCODING_MULTIPART,
-        'application/x-www-form-urlencoded': CONTENT_ENCODING_MULTIPART
     }
     result = header_value
     for key, value in prefix_mapping.items():
         if header_value.startswith(key):
             result = value
             break
-    # if header_value.startswith('application/json'):
-    #     result = CONTENT_ENCODING_JSON
-    # elif header_value.startswith('application/xml') or header_value.startswith('text/xml'):
-    #     result = CONTENT_ENCODING_XML
-    # elif header_value.startswith('multipart/form-data') or header_value.startswith('application/x-www-form-urlencoded'):
-    #     result = CONTENT_ENCODING_MULTIPART
-    # else:
-    #     result = header_value
 
     return result
 
