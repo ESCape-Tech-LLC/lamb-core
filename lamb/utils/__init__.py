@@ -5,7 +5,6 @@ __author__ = 'KoNEW'
 import random
 import string
 import json
-import dpath
 import uuid
 import warnings
 import logging
@@ -22,7 +21,7 @@ from django.http import HttpRequest
 from django.conf import settings
 
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError
-
+from .dpath import dpath_value
 
 __all__ = [
     'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'validated_interval',
@@ -32,6 +31,7 @@ __all__ = [
 
     'get_request_body_encoding', 'get_request_accept_encoding',
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
+    'dpath_value',
 
     'import_class_by_name'
 ]
@@ -75,56 +75,6 @@ def parse_body_as_json(request: HttpRequest) -> dict:
         return data
     except ValueError as e:
         raise InvalidBodyStructureError('Could not parse body as JSON object')
-
-
-def dpath_value(dict_object: dict = None, key_path: str = None, req_type: type = None, allow_none: bool = False, **kwargs):
-    """ Search for object in dictionary
-    :param dict_object: Dictionary to find data
-    :param key_path: Query string, separated via /
-    :param req_type: Type of argument that expected
-    :param allow_none: Return None withour exception if leaf exist and equal to None
-
-    :return: Extracted value
-
-    :raises InvalidBodyStructureError: In case of non dict as first variable
-    :raises InvalidParamTypeError: In case of extracted type impossible to convert in req_type
-    :raises ServerError: In case of invalid key_path type
-
-    : TODO: add single parser for different containers(dict, xml, json...)
-    : TODO: add transformer support
-    """
-    def type_convert(req_type, value):
-        if req_type is None:
-            return value
-        if isinstance(value, req_type):
-            return value
-        try:
-            value = req_type(value)
-            return value
-        except (ValueError, TypeError) as e:
-            raise InvalidParamTypeError('Invalid data type for param %s' % key_path, error_details={'key_path': key_path}) from e
-    try:
-        items = dpath.util.values(dict_object, key_path)
-        result = items[0]
-
-        if req_type is None:
-            return result
-
-        if result is None:
-            if allow_none:
-                return None
-            else:
-                raise InvalidParamTypeError('Invalid data type for param %s' % key_path, error_details={'key_path': key_path})
-
-        result = type_convert(req_type, result)
-        return result
-    except IndexError as e:
-        if 'default' in kwargs.keys():
-            return kwargs['default']
-        else:
-            raise InvalidBodyStructureError('Could not extract param for key_path %s from provided dict data' % key_path, error_details={'key_path': key_path}) from e
-    except AttributeError as e:
-        raise ServerError('Invalid key_path type for querying in dict', error_details={'key_path': key_path}) from e
 
 
 VT = TypeVar('VT')

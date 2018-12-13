@@ -9,7 +9,7 @@ from typing import Type, TypeVar, Optional
 from datetime import datetime
 from django.conf import settings
 
-from lamb.exc import InvalidParamValueError
+from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError, ApiError
 
 __all__ = [
     'transform_boolean', 'transform_date', 'transform_string_enum', 'transform_uuid'

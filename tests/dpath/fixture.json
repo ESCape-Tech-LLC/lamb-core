@@ -1,0 +1,29 @@
+{
+  "date": "2017-04-20",
+  "boolean1":  "1",
+  "boolean0":  "0",
+  "true": "true",
+  "enum_first": "first",
+  "enum_second": "second",
+  "uuid": "2752051C-1EEA-4B8C-A29C-A9C72B7DB727",
+  "actors": {
+    "actor": [
+      {
+        "name": "John Cleese",
+        "character": [
+          "Lancelot",
+          "Archie Leach"
+        ]
+      },
+      {
+        "name": "Eric Idle",
+        "character": [
+          "Sir Robin",
+          "Gunther",
+          "Commander Clement"
+        ],
+        "none-val": null
+      }
+    ]
+  }
+}
