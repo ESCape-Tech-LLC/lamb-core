@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<actors>
+    <actor>
+        <name>John Cleese</name>
+        <character>Lancelot</character>
+        <character>Archie Leach</character>
+    </actor>
+    <actor>
+        <name>Eric Idle</name>
+        <character>Sir Robin</character>
+        <character>Gunther</character>
+        <character>Commander Clement</character>
+        <none-val />
+    </actor>
+</actors>
