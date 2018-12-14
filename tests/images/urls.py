@@ -1,6 +1,5 @@
-from django.conf.urls import url
-from .views import SimpleImageListView
+from django.conf.urls import url, include
 
 urlpatterns = [
-    url(r'^simple_images/?$', SimpleImageListView, name='simple_images_list'),
+    url(r'^', include('tests.images.test_urls', namespace='images')),
 ]
