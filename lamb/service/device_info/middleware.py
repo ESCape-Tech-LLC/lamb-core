@@ -4,9 +4,11 @@ __author__ = 'KoNEW'
 import logging
 
 from django.conf import settings
+from django.utils.deprecation import MiddlewareMixin
+
 from lamb.utils import dpath_value
 from lamb.types import LambLocale
-from lamb.exc import ApiError, ServerError, InvalidParamValueError
+
 from .model import DeviceInfo
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ __all__ = [
 ]
 
 
-class DeviceInfoMiddleware(object):
+class DeviceInfoMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
         """

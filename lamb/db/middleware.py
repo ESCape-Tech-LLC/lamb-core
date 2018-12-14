@@ -5,6 +5,7 @@ __author__ = 'KoNEW'
 import logging
 
 from django.http import HttpResponse
+from django.utils.deprecation import MiddlewareMixin
 
 from lamb.db.session import lamb_db_session_maker
 from lamb.utils import LambRequest
@@ -17,13 +18,12 @@ logger = logging.getLogger(__name__)
 __all__ = [ 'SQLAlchemyMiddleware' ]
 
 
-class SQLAlchemyMiddleware(object):
+class SQLAlchemyMiddleware(MiddlewareMixin):
 
     def process_request(self, request: LambRequest):
         """ Appends lamb_db_session object to request instance """
         logger.debug('Appending lamb database session to request: %s %s' % (request.method, request.path))
         request.lamb_db_session = lamb_db_session_maker()
-
 
     def process_response(self, request: LambRequest, response: HttpResponse) -> HttpResponse:
         """ Closes database connection session attached to request """

@@ -9,10 +9,10 @@ LAMB_SQLALCHEMY_ECHO = False
 SECRET_KEY = 'fake-key'
 INSTALLED_APPS = [
     'lamb',
-    'tests',
+    'tests.images'
 ]
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'lamb.db.middleware.SQLAlchemyMiddleware',
     'lamb.rest.middleware.LambRestApiJsonMiddleware',
@@ -24,7 +24,6 @@ LAMB_SQLITE_TEST_DB = 'test.db'
 LAMB_RESPONSE_OVERRIDE_STATUS_200 = False
 LAMB_RESPONSE_APPLY_TO_APPS = [
     'tests',
-    ''
 ]
 
 TEMPLATES = [
