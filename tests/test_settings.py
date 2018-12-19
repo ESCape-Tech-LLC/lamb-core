@@ -18,7 +18,7 @@ MIDDLEWARE_CLASSES = [
     'lamb.rest.middleware.LambRestApiJsonMiddleware',
 ]
 
-ROOT_URLCONF = 'api.urls'
+ROOT_URLCONF = 'tests.api.urls'
 
 LAMB_SQLITE_TEST_DB = 'test.db'
 LAMB_RESPONSE_OVERRIDE_STATUS_200 = False
@@ -61,3 +61,37 @@ LAMB_AWS_ACCESS_KEY = 'test'
 LAMB_AWS_SECRET_KEY = 'test'
 LAMB_AWS_BUCKET_NAME = 'lamb_images'
 LAMB_AWS_BUCKET_ZONE = 's3-ap-southeast-1'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'propagate': True,
+            'level': 'WARNING'
+        },
+        'api': {
+            'handlers': ['console'],
+            'propagate': True,
+            'level': 'DEBUG'
+        },
+        'lamb': {
+            'handlers': ['console'],
+            'propagate': True,
+            'level': 'WARNING'
+        },
+        'py.warnings': {
+            'handlers': ['console'],
+            'propagate': True,
+            'level': 'WARNING'
+        }
+    },
+}
+
