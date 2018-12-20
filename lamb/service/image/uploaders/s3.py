@@ -1,8 +1,10 @@
-import logging
-from typing import Optional
-import tempfile
-from django.conf import settings
+# -*- coding: utf-8 -*-
 
+import logging
+import tempfile
+
+from typing import Optional
+from django.conf import settings
 from boto3.session import Session as AWSSession
 
 from lamb import exc

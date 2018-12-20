@@ -2,20 +2,14 @@
 __author__ = 'KoNEW'
 
 import logging
-import abc
-import operator
 
+from typing import List, Callable, Optional
 import sqlalchemy as sa
-from sqlalchemy.orm.session import Session as SASession
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.attributes import QueryableAttribute
-from sqlalchemy.ext.hybrid import hybrid_property
-
-from typing import List, Callable
 
 from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError, ApiError
 from lamb.utils import dpath_value, LambRequest
-from lamb.db.inspect import ModelInspector
 
 
 __all__ = [
@@ -23,6 +17,7 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
 
 # abstract
 class Filter(object):
@@ -46,7 +41,7 @@ class Filter(object):
         self.req_type_transformer = req_type_transformer
 
     # def get_param_value(self, params: dict, key_path: str | List[str] = None) -> List[object]:
-    def get_param_value(self, params: dict, key_path: str = None) -> List[object]:
+    def get_param_value(self, params: dict, key_path: str = None) -> Optional[List[object]]:
         """ Extracts and convert param value from dictionary """
         # handle key_path default as arg_name
         if key_path is None:
@@ -72,7 +67,7 @@ class Filter(object):
             logger.warning('Param convert error: %s' % e)
             raise InvalidParamTypeError('Invalid data type for param %s' % key_path)
 
-        # convert according to required tramsformer
+        # convert according to required transformer
         if self.req_type_transformer is not None:
             try:
                 result = [self.req_type_transformer(r) if r is not None else None for r in result]
@@ -113,11 +108,7 @@ class FieldValueFilter(Filter):
         self.comparing_field = comparing_field
         self.allowed_compares = allowed_compares
 
-    def apply_to_query(self, query, request):
-        """
-        :type query: sqlalchemy.orm.query.Query
-        :type request: F2CRequest
-        """
+    def apply_to_query(self, query: sa.orm.Query, request: LambRequest):
         # check for equality
         if '__eq__' in self.allowed_compares:
             param_value = self.get_param_value(request.GET, key_path=self.arg_name)
