@@ -21,7 +21,7 @@ class DictionaryTestCase(LambTestCase):
         self.assertEqual(dpath_value(JSON_DOC, ['actors', 'actor', 1, 'character', 0]), 'Sir Robin')
 
     def test_none_val(self):
-        self.assertEqual(dpath_value(JSON_DOC, '/actors/actor/1/none-val'), None)
+        self.assertEqual(dpath_value(JSON_DOC, '/actors/actor/1/none-val', allow_none=True), None)
 
     def test_disallowed_none_raises(self):
         with self.assertRaises(exc.InvalidParamTypeError):
@@ -125,3 +125,70 @@ class EtreeTestCase(TestCase):
     def test_invalid_reqtype_wo_default_raises(self):
         with self.assertRaises(exc.InvalidParamTypeError):
             dpath_value(XML_DOC, '/actor[1]/character[1]', req_type=int)
+
+    def test_auto_typehint(self):
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/auto_bool'),
+            True
+        )
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/auto_float'),
+            2.345
+        )
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/auto_integer'),
+            120
+        )
+
+    def test_transformers(self):
+        from lamb.utils import transformers
+
+        # Datetime (?)
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/date', transform=transformers.transform_date, format='%Y-%m-%d'),
+            datetime(2017, 4, 20)
+        )
+
+        # Boolean
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/boolean1', transform=transformers.transform_boolean),
+            True
+        )
+
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/boolean0', transform=transformers.transform_boolean),
+            False
+        )
+
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/true', transform=transformers.transform_boolean),
+            True
+        )
+
+        # Enum
+        import enum
+
+        @enum.unique
+        class StringEnum(str, enum.Enum):
+            FIRST = 'first'
+            SECOND = 'second'
+
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/enum_first', transform=transformers.transform_string_enum, enum_class=StringEnum),
+            StringEnum.FIRST
+        )
+
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/enum_second', transform=transformers.transform_string_enum, enum_class=StringEnum),
+            StringEnum.SECOND
+        )
+
+        # UUID
+        import uuid
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/uuid', transform=transformers.transform_uuid),
+            uuid.UUID('2752051C-1EEA-4B8C-A29C-A9C72B7DB727')
+        )
+
+    # TODO: add test with namespace
+    # TODO: add test with auto typeHinting
