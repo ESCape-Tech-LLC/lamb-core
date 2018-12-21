@@ -54,7 +54,7 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
     # query
     try:
         # get internal result
-        result = _dpath_find_impl(dict_object, path=key_path, **kwargs)
+        result = _dpath_find_impl(dict_object, key_path=key_path, **kwargs)
 
         # check for none
         if result is None:
@@ -72,72 +72,80 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
             return transform(result, **kwargs)
 
         return result
-
-    except IndexError as e:
+    except Exception as e:
         if 'default' in kwargs.keys():
             return kwargs['default']
+        elif isinstance(e, exc.ApiError):
+            raise
         else:
-            raise exc.InvalidBodyStructureError(
-                'Could not extract param for key_path %s from provided dict data' % key_path,
-                error_details={'key_path': key_path}) from e
+            raise exc.ServerError('Failed to parse params due unknown error') from e
+    # except IndexError as e:
+    #     if 'default' in kwargs.keys():
+    #         return kwargs['default']
+    #     else:
+    #         raise exc.InvalidBodyStructureError(
+    #             'Could not extract param for key_path %s from provided dict data' % key_path,
+    #             error_details={'key_path': key_path}) from e
+    # except AttributeError as e:
+    #     raise exc.ServerError('Invalid key_path type for querying in dict',
+    #                           error_details={'key_path': key_path}) from e
+
+
+@singledispatch
+def _dpath_find_impl(dict_object: Optional[dict] = None,
+                     key_path: Union[str, List[str]] = None,
+                     **_) -> Any:
+    """
+    Implementation for dict
+    :param dict_object: Dict to find data
+    :param key_path: Query string
+    :return: Extracted value
+    """
+
+    try:
+        items = dpath.util.values(dict_object, key_path)  # type: List[Any]
+        result = items[0]
+        return result
+    except IndexError as e:
+        raise exc.InvalidBodyStructureError(
+            'Could not locate field for key_path %s from provided dict data' % key_path,
+            error_details={'key_path': key_path}) from e
     except AttributeError as e:
         raise exc.ServerError('Invalid key_path type for querying in dict',
                               error_details={'key_path': key_path}) from e
 
 
-@singledispatch
-def _dpath_find_impl(dict_object: Optional[dict] = None,
-                     path: Union[str, List[str]] = None,
-                     **_) -> Any:
-    """
-    Implementation for dict
-    :param dict_object: Dict to find data
-    :param path: Query string
-    :return: Extracted value
-    """
-
-    try:
-        items = dpath.util.values(dict_object, path)  # type: List[Any]
-        result = items[0]
-        return result
-    except IndexError as e:
-        raise exc.InvalidBodyStructureError(
-            'Could not extract param for key_path %s from provided dict data' % path,
-            error_details={'key_path': path}) from e
-    except AttributeError as e:
-        raise exc.ServerError('Invalid key_path type for querying in dict',
-                              error_details={'key_path': path}) from e
-
-
 @_dpath_find_impl.register(EtreeElement)
 @_dpath_find_impl.register(Etree)
 def _etree_find_impl(element: Union[EtreeElement, Etree],
-                     path: str,
+                     key_path: str,
                      namespaces: Optional[dict] = None,
                      **_) -> Any:
     """
     :param element: Element object to extract value
-    :param path: Subtag name
+    :param key_path: Subtag name
     :param namespaces: Namespaces for XML find mapping
     :return: Extracted value
     """
     if not isinstance(element, (EtreeElement, Etree)):
-        raise exc.InvalidParamTypeError(
-            'Etree subtag query. Improperly configured element param data type: %s' % element)
-    if not isinstance(path, str):
-        raise exc.InvalidParamTypeError(
-            'Etree subtag query. Improperly configured path param data type: %s' % path)
+        logger.warning('Improperly configured element param data type: %s' % element)
+        raise exc.InvalidParamTypeError('ArgParsing. Improperly configured param source')
+    if not isinstance(key_path, str):
+        logger.warning('Improperly configured key_path param data type: %s' % key_path)
+        raise exc.InvalidParamTypeError('ArgParsing. Improperly configured param search key_path')
 
     try:
         # extract child and text
-        child = element.find(path, namespaces=namespaces)
+        child = element.find(key_path, namespaces=namespaces)
         if child is None:
-            raise exc.InvalidBodyStructureError('Etree subtag query. Could not locate child path with name = %s' % path)
+            raise exc.InvalidBodyStructureError(
+                'Could not extract param for key_path %s from provided XML data' % key_path,
+                error_details={'key_path': key_path})
         result = child.text
 
         # try auto-discover data type
         if result is not None:
-            # validate result type through typeHint detecting in path and converting to ot
+            # validate result type through typeHint detecting in key_path and converting to ot
             hinted_type = child.get('typeHint')
             if hinted_type is not None and hinted_type in __lxml_hints_reverse_map__.keys():
                 try:
@@ -150,8 +158,8 @@ def _etree_find_impl(element: Union[EtreeElement, Etree],
         raise
     except Etree.ParseError as e:
         raise exc.InvalidBodyStructureError(
-            'Could not extract param for key_path %s from provided XML data' % path,
-            error_details={'key_path': path}) from e
+            'Could not extract param for key_path %s from provided XML data' % key_path,
+            error_details={'key_path': key_path}) from e
     except Exception as e:
         raise exc.ServerError(
             'Etree subtag query. Could not locate extract value with some unhandled exception.') from e

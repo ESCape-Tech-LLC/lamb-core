@@ -31,6 +31,9 @@ class DictionaryTestCase(LambTestCase):
         with self.assertRaises(exc.InvalidBodyStructureError):
             dpath_value(JSON_DOC, '/actors/bad_actor/1/character/0')
 
+    def test_not_found_default(self):
+        self.assertEqual(dpath_value(JSON_DOC, '/actors/bad_actor/1/character/0', default=10), 10)
+
     def test_bad_dpath_type_raises(self):
         with self.assertRaises(exc.ServerError):
             dpath_value(JSON_DOC, None)
@@ -41,7 +44,7 @@ class DictionaryTestCase(LambTestCase):
 
     def test_invalid_reqtype_raises(self):
         with self.assertRaises(exc.InvalidParamTypeError):
-            dpath_value(JSON_DOC, '/actors/actor/1/character/0', req_type=int, default=1)
+            dpath_value(JSON_DOC, '/actors/actor/1/character/0', req_type=int)
 
     def test_transformers(self):
         from lamb.utils import transformers
@@ -113,6 +116,13 @@ class EtreeTestCase(TestCase):
     def test_not_found_raises(self):
         with self.assertRaises(exc.InvalidBodyStructureError):
             dpath_value(XML_DOC, '/actor[1]/character[22]')
+
+    def test_not_found_default(self):
+        self.assertEqual(
+            dpath_value(XML_DOC, '/actor[1]/character[22]', default=10),
+            10
+        )
+
 
     def test_bad_dpath_raises(self):
         with self.assertRaises(exc.InvalidParamTypeError):
