@@ -32,7 +32,7 @@ class BaseUploader(object):
 
     def process_image(self, source_image: Union[PILImage.Image, str],
                       request: LambRequest,
-                      slices: Iterable[ImageUploadSlice] = ()) -> List[dict]:
+                      slices: Iterable[ImageUploadSlice] = ()) -> List[UploadedSlice]:
         """
         Processes single images
         :param source_image: PIL Image or file
@@ -83,14 +83,19 @@ class BaseUploader(object):
             # store info about new slice
             image_url = self.store_image(image_copy, proposed_file_name, request)
 
-            result.append(
-                asdict(UploadedSlice(s.title, s.mode.value, image_url, image_copy.size[0], image_copy.size[1])))
+            result.append(UploadedSlice(
+                title=s.title,
+                mode=s.mode,
+                url=image_url,
+                width=image_copy.size[0],
+                height=image_copy.size[1]
+            ))
 
         return result
 
     def process_request(self, request: LambRequest,
                         slicing: Iterable[ImageUploadSlice] = (),
-                        required_count: Optional[int] = None) -> List[List[dict]]:
+                        required_count: Optional[int] = None) -> List[List[UploadedSlice]]:
         """
         Performs uploading of request's image files.
         :param request: Request

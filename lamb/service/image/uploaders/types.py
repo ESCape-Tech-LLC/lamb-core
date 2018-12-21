@@ -3,8 +3,9 @@
 import enum
 import logging
 # noinspection PyCompatibility
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
+from lamb.json.mixins import ResponseEncodableMixin
 from lamb import exc
 
 __all__ = ['ImageUploadMode', 'ImageUploadSlice', 'UploadedSlice']
@@ -45,9 +46,12 @@ class ImageUploadSlice:
 
 
 @dataclass(frozen=True)
-class UploadedSlice:
+class UploadedSlice(ResponseEncodableMixin):
     title: str
     mode: ImageUploadMode
     url: str
     width: int
     height: int
+
+    def response_encode(self, request=None):
+        return asdict(self)
