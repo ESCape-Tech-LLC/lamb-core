@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<actors>
+    <actor>
+        <name>John Cleese</name>
+        <character>Lancelot</character>
+        <character>Archie Leach</character>
+        <date>2017-04-20</date>
+        <boolean1>1</boolean1>
+        <boolean0>0</boolean0>
+        <true>true</true>
+        <enum_first>first</enum_first>
+        <enum_second>second</enum_second>
+        <uuid>2752051C-1EEA-4B8C-A29C-A9C72B7DB727</uuid>
+        <auto_bool typeHint="boolean">1</auto_bool>
+        <auto_float typeHint="float">2.345</auto_float>
+        <auto_integer typeHint="integer">120</auto_integer>
+    </actor>
+    <actor>
+        <name>Eric Idle</name>
+        <character>Sir Robin</character>
+        <character>Gunther</character>
+        <character>Commander Clement</character>
+        <none-val />
+    </actor>
+</actors>

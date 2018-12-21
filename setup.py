@@ -109,6 +109,7 @@ setup(
         'uwsgi',
         'babel',
         'django-crequest',
-        'pymemcache'
+        'pymemcache',
+        'dataclasses',
     ]
 )

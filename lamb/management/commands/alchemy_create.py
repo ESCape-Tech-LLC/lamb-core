@@ -9,23 +9,23 @@ from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from sqlalchemy.schema import DropTable, DropSequence
 from sqlalchemy.ext.compiler import compiles
 
-from lamb.db.session import metadata, _engine
-
+from lamb.db.session import metadata
+from lamb.management.base import LambLoglevelMixin
 
 logger = logging.getLogger(__name__)
 
 
 @compiles(DropTable, "postgresql")
-def _compile_drop_table(element, compiler, **kwargs):
+def _compile_drop_table(element, compiler, **_):
     return compiler.visit_drop_table(element) + " CASCADE"
 
 
 @compiles(DropSequence, "postgresql")
-def _compile_drop_table(element, compiler, **kwargs):
+def _compile_drop_table(element, compiler, **_):
     return compiler.visit_drop_sequence(element) + ' CASCADE'
 
 
-class Command(LabelCommand):
+class Command(LambLoglevelMixin, LabelCommand):
     help = 'Creates database table for provided modules'
 
     def add_arguments(self, parser):
