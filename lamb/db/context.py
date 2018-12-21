@@ -10,7 +10,7 @@ from .session import lamb_db_session_maker
 logger = logging.getLogger(__name__)
 
 
-__all__ = [ 'lamb_db_context' ]
+__all__ = ['lamb_db_context']
 
 
 class lamb_db_context:

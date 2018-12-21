@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
-from abc import ABCMeta, ABC
-
 __authors__ = 'KoNEW'
 
 import logging
-from typing import Optional
 
+from typing import Optional
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
-
 import sqlalchemy.orm
 
 from lamb.db.session import lamb_db_session_maker
@@ -61,4 +58,3 @@ class LambCommand(LambLoglevelMixin, BaseCommand):
 
     def handle(self, *args, **options):
         raise NotImplementedError('subclasses of BaseCommand must provide a handle() method')
-

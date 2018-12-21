@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
 
@@ -13,7 +13,7 @@ import re
 from typing import List, Union, TypeVar, Optional
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
-from sqlalchemy import asc, desc, func, or_, any_
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
@@ -23,9 +23,10 @@ from django.conf import settings
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError
 from .dpath import dpath_value
 
+
 __all__ = [
     'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'validated_interval',
-    'random_string','url_append_components', 'clear_white_space',
+    'random_string', 'url_append_components', 'clear_white_space',
     'compact_dict', 'compact_list', 'compact',
     'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
 
@@ -33,7 +34,7 @@ __all__ = [
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
     'dpath_value',
 
-    'import_class_by_name'
+    'import_class_by_name', 'inject_app_defaults'
 ]
 
 
@@ -65,8 +66,8 @@ def parse_body_as_json(request: HttpRequest) -> dict:
     """
     try:
         body = request.body
-    except:
-        raise ServerError('Invalid request object')
+    except Exception as e:
+        raise ServerError('Invalid request object') from e
 
     try:
         data = json.loads(body)
@@ -74,7 +75,7 @@ def parse_body_as_json(request: HttpRequest) -> dict:
             raise InvalidBodyStructureError('JSON body of request should be represented in a form of dictionary')
         return data
     except ValueError as e:
-        raise InvalidBodyStructureError('Could not parse body as JSON object')
+        raise InvalidBodyStructureError('Could not parse body as JSON object') from e
 
 
 VT = TypeVar('VT')
@@ -96,21 +97,24 @@ def validated_interval(value: Optional[VT],
     :raises InvalidParamValueError: In case of value out of interval
     :raises InvalidParamTypeError: In case of any other exception
     """
-    if value is None and allow_none == True:
+    if value is None and allow_none:
         return value
 
     try:
         if value < bottom or value > top:
-            raise InvalidParamValueError('Invalid param %s value or type, should be between %s and %s' % (key, bottom, top), error_details=key)
+            raise InvalidParamValueError(
+                'Invalid param %s value or type, should be between %s and %s' % (key, bottom, top),
+                error_details=key)
         return value
     except InvalidParamValueError:
         raise
-    except:
-        raise InvalidParamTypeError('Invalid param type for %s' % key, error_details=key)
+    except Exception as e:
+        raise InvalidParamTypeError('Invalid param type for %s' % key, error_details=key) from e
 
 
 # reponse utilities
 PV = TypeVar('PV', list, Query)
+
 
 def paginated(data: PV, request: LambRequest) -> dict:
     """ Deprected version of pagination utility
@@ -169,12 +173,12 @@ def response_paginated(data: PV, request: LambRequest, add_extended_query: bool 
     result[settings.LAMB_PAGINATION_KEY_LIMIT] = limit
 
     if isinstance(data, Query):
-        # TODO: Add dynamic count function choose based on any join presented in query
-        def get_count(q):
-            # TODO: modify query - returns invalid count in case of join with one-to-many objects
-            count_q = q.statement.with_only_columns([func.count()]).order_by(None)
-            count = q.session.execute(count_q).scalar()
-            return count
+        # def get_count(q):
+        #     # TODO: Add dynamic count function choose based on any join presented in query
+        #     # TODO: modify query - returns invalid count in case of join with one-to-many objects
+        #     count_q = q.statement.with_only_columns([func.count()]).order_by(None)
+        #     count = q.session.execute(count_q).scalar()
+        #     return count
 
         # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
@@ -187,19 +191,22 @@ def response_paginated(data: PV, request: LambRequest, add_extended_query: bool 
             if extended_limit == -1:
                 result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data.offset(extended_offset).all()
             else:
-                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data.offset(extended_offset).limit(extended_limit).all()
+                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data.offset(extended_offset)\
+                    .limit(extended_limit)\
+                    .all()
     elif isinstance(data, list):
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(data)
         if limit == -1:
-            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[ offset : ]
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[offset:]
         else:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[offset: offset + limit]
 
         if add_extended_query:
             if extended_limit == -1:
-                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data[ offset : ]
+                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data[offset:]
             else:
-                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data[ extended_offset : extended_offset + extended_limit]
+                result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = \
+                    data[extended_offset: extended_offset + extended_limit]
     else:
         result = data
 
@@ -259,7 +266,7 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
         _function = _function.lower()
         if _function not in ['asc', 'desc']:
             raise InvalidParamValueError(
-                'Invalid sorting_direction value for descriptor %s. Should be one of [asc, desc]' % _sorting_description,
+                'Invalid sorting_direction value for descriptor %s. Should be one [asc or desc]' % _sorting_description,
                 error_details={'key_path': 'sorting', 'descriptor': _sorting_description})
 
         _function = asc if _function == 'asc' else desc
@@ -300,7 +307,7 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
 
     # discover final sorting attribute
     if 'final_sorting' in kwargs.keys():
-        # final_sorting exist - should parse and apply descritors
+        # final_sorting exist - should parse and apply descriptors
         f_sorting_descriptors = kwargs['final_sorting']
         if not isinstance(f_sorting_descriptors, str):
             raise ServerError('Improperly configured final sorting descriptor')
@@ -321,12 +328,12 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
     return query
 
 
-def response_filtered(query: Query, filters: List['lamb.utils.Filter'], request: LambRequest = None) -> Query:
+def response_filtered(query: Query, filters: List['lamb.utils.filters.Filter'], request: LambRequest = None) -> Query:
     # check params
     from lamb.utils.filters import Filter
     if not isinstance(query, Query):
         logger.warning('Invalid query data type: %s' % query)
-        raise ServerError('Improperly configured query item for filterong')
+        raise ServerError('Improperly configured query item for filtering')
     
     for f in filters:
         if not isinstance(f, Filter):
@@ -340,27 +347,26 @@ def response_filtered(query: Query, filters: List['lamb.utils.Filter'], request:
     return query
 
 
-
 # compacting
 def compact(obj: Union[list, dict]) -> Union[list, dict]:
     """ Compact version of container """
     if isinstance(obj, list):
         return [o for o in obj if o is not None]
     elif isinstance(obj, dict):
-        return {k:v for k, v in obj.items() if v is not None}
+        return {k: v for k, v in obj.items() if v is not None}
     else:
         return obj
 
 
 def compact_dict(dct: dict) -> dict:
     """ Compact dict by removing keys with None value """
-    warnings.warn('compact_dict depreacted, use compact instead', DeprecationWarning)
+    warnings.warn('compact_dict deprecated, use compact instead', DeprecationWarning)
     return compact(dct)
 
 
 def compact_list(lst: list) -> list:
     """ Compact list by removing None values """
-    warnings.warn('compact_list depreacted, use compact instead', DeprecationWarning)
+    warnings.warn('compact_list deprecated, use compact instead', DeprecationWarning)
     return compact(lst)
 
 
@@ -421,6 +427,32 @@ def import_class_by_name(name):
         mod = getattr(mod, comp)
     return mod
 
+
+def inject_app_defaults(application: str):
+    """Inject an application's default settings"""
+    try:
+        __import__('%s.settings' % application)
+        import sys
+
+        # Import our defaults, project defaults, and project settings
+        _app_settings = sys.modules['%s.settings' % application]
+        _def_settings = sys.modules['django.conf.global_settings']
+        _settings = sys.modules['django.conf'].settings
+
+        # Add the values from the application.settings module
+        for _k in dir(_app_settings):
+            if _k.isupper():
+                # Add the value to the default settings module
+                setattr(_def_settings, _k, getattr(_app_settings, _k))
+
+                # Add the value to the settings, if not already present
+                if not hasattr(_settings, _k):
+                    setattr(_settings, _k, getattr(_app_settings, _k))
+    except ImportError:
+        # Silently skip failing settings modules
+        pass
+
+
 def string_to_uuid(value: str = '', key: Optional[str] = None) -> uuid.UUID:
     """ Convert string into UUID value
 
@@ -430,7 +462,7 @@ def string_to_uuid(value: str = '', key: Optional[str] = None) -> uuid.UUID:
     :raises InvalidParamValueError: If converting process failed
     """
     from lamb.utils.transformers import transform_uuid
-    warnings.warn('string_to_uuid depreacted, use lamb.utils.transformers.transform_uuid instead', DeprecationWarning)
+    warnings.warn('string_to_uuid deprecated, use lamb.utils.transformers.transform_uuid instead', DeprecationWarning)
     return transform_uuid(value, key)
 
 

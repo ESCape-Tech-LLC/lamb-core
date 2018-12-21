@@ -11,11 +11,10 @@ from lamb.db.session import lamb_db_session_maker
 from lamb.utils import LambRequest
 
 
-
 logger = logging.getLogger(__name__)
 
 
-__all__ = [ 'SQLAlchemyMiddleware' ]
+__all__ = ['SQLAlchemyMiddleware']
 
 
 class SQLAlchemyMiddleware(MiddlewareMixin):
@@ -37,7 +36,8 @@ class SQLAlchemyMiddleware(MiddlewareMixin):
 
     def process_exception(self, request: LambRequest, exception: Exception):
         """ Rollback and closes database connection session attached from request """
-        logger.debug('Rolling back anc closing lamb database session from request: %s %s' % (request.method, request.path))
+        logger.debug(
+            'Rolling back anc closing lamb database session from request: %s %s' % (request.method, request.path))
         try:
             request.lamb_db_session.rollback()
             request.lamb_db_session.close()

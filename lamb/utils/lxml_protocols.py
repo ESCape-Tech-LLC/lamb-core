@@ -1,5 +1,8 @@
-from datetime import datetime, date
+# -*- coding: utf-8 -*-
+
 import enum
+
+from datetime import datetime, date
 
 
 # utilities
@@ -23,7 +26,6 @@ def __add_string__(elem, item):
 
 
 def __add_datetime__(elem, item):
-    # import pytz
     elem.text = item.strftime('%Y-%m-%d %H:%M:%S')
 
 
@@ -31,7 +33,7 @@ def __add_date__(elem, item):
     elem.text = item.strftime('%Y-%m-%d')
 
 
-def __add_none__(elem, item):
+def __add_none__(_, __):
     pass
 
 
@@ -50,4 +52,4 @@ __lxml_mapping__ = {
 
 __lxml_types_map__ = {k: v[0] for k, v in __lxml_mapping__.items()}
 __lxml_hints_map__ = {k: v[1] for k, v in __lxml_mapping__.items()}
-__lxml_hints_reverse_map__ = {v[1]: k for k, v in __lxml_mapping__.items() if k in [int,float, bool, str]}
+__lxml_hints_reverse_map__ = {v[1]: k for k, v in __lxml_mapping__.items() if k in [int, float, bool, str]}

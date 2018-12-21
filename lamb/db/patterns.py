@@ -2,8 +2,6 @@
 __author__ = 'KoNEW'
 
 import enum
-from sqlalchemy.dialects.mysql import INTEGER, VARCHAR
-from sqlalchemy import Column, Enum
 from sqlalchemy_utils import get_primary_keys
 from lamb.db.session import DeclarativeBase
 from lamb.db.context import lamb_db_context
@@ -109,7 +107,7 @@ class DbEnum(enum.Enum):
 
     @classmethod
     def db_map(cls, db_session):
-        return {c:c._db_item(db_session) for c in cls}
+        return {c: c._db_item(db_session) for c in cls}
 
     def db_flush(self):
         """

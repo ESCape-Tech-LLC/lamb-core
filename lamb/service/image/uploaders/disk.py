@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
+
 import os
 from urllib.parse import urljoin
-
 from django.conf import settings
 
 from lamb.utils import LambRequest

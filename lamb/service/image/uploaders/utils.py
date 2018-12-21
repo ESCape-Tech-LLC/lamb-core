@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import logging
 from typing import List, Type, Optional
 
@@ -12,10 +14,10 @@ from ..model import AbstractImage
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['get_uploader_class', 'upload_images']
+__all__ = ['get_default_uploader_class', 'upload_images']
 
 
-def get_uploader_class() -> Type[BaseUploader]:
+def get_default_uploader_class() -> Type[BaseUploader]:
     """
     Load module for image uploading.
 
@@ -48,7 +50,7 @@ def upload_images(request: LambRequest,
     """
     # upload images
     if uploader_class is None:
-        uploader_class = get_uploader_class()
+        uploader_class = get_default_uploader_class()
 
     uploader = uploader_class(envelope_folder=envelope_folder)
     stored_slices = uploader.process_request(
