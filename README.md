@@ -19,7 +19,7 @@
     	'lamb'
 	]
 	
-	MIDDLEWARE_CLASSES = [
+	MIDDLEWARE = [
     	'django.middleware.common.CommonMiddleware',
     	...
     	'lamb.db.middleware.SQLAlchemyMiddleware',
@@ -34,13 +34,7 @@ Also example would require some additional data in `settings.py`:
 	LAMB_TEMPLATES_FOLDER = os.path.join(LAMB_SYSTEM_STATIC_FOLDER, 'templates/')
 	LAMB_LOGS_FOLDER = os.path.join(BASE_DIR, 'logs')
 	
-	# Image uploading
-	LAMB_IMAGE_SIZE_THUMBNAIL = 100
-	LAMB_IMAGE_SIZE_SMALL = 200
-	LAMB_IMAGE_SIZE_MEDIUM = 400
-	LAMB_IMAGE_SIZE_LARGE = 800
-	LAMB_IMAGE_UPLOAD_QUALITY = 95
-	LAMB_IMAGE_UPLOAD_SERVICE = 'lamb.service.image.ImageUploadServiceDisk'
+	LAMB_IMAGE_UPLOAD_ENGINE = 'lamb.service.image.uploaders.ImageUploadServiceDisk'
 	
 	LAMB_REST_APPLIED_APPS = [
 	    'api'
@@ -67,52 +61,40 @@ Add this module to `INSTALLED_APPS`:
 ### B. Declare your model in `model.py`
 Let's decalre for example simple model for books with zero or more optional illustrations:
 	
-	import uuid
-	
-	from sqlalchemy.ext.declarative import declared_attr
-	from sqlalchemy import Column, VARCHAR, ForeignKey
-	from sqlalchemy.dialects.mysql import BIGINT
-	from sqlalchemy.orm import relationship
-	
-	from sqlalchemy_utils import UUIDType
-	
-	from lamb.db.session import DeclarativeBase
-	from lamb.db.mixins import TableConfigMixin
-	from lamb.service.image import LambImage
-	
-	
-	class TablePrefixMixin(TableConfigMixin):
-	    @declared_attr
-	    def __tablename__(cls):
-	        result = super(TablePrefixMixin, cls).__tablename__
-	        return "example_" + result
-	
-	
-	class Book(DeclarativeBase, TablePrefixMixin):
-	    # columns
-	    book_id = Column(UUIDType(binary=False, native=True), nullable=False, default=uuid.uuid4, primary_key=True)
-	    title = Column(VARCHAR(300), nullable=False)
-	    isbn = Column(VARCHAR(100), nullable=False)
-	
-	    # relations
-	    illustrations = relationship('Illustration', cascade='all')
-	
-	
-	class Illustration(LambImage, TablePrefixMixin):
-	    # columns
-	    illustration_id = Column(BIGINT(unsigned=True),
-	                             ForeignKey(LambImage.image_id, ondelete='CASCADE', onupdate='CASCADE'),
-	                             nullable=False,
-	                             primary_key=True)
-	    book_id = Column(UUIDType(binary=False, native=True),
-	                     ForeignKey(Book.book_id, onupdate='CASCADE', ondelete='CASCADE'),
-	                     nullable=False)
-	
-	    # metadata
-	    __tablename__ = 'example_illustration'
-	    __mapper_args__ = {
-	        'polymorphic_identity': 'illustration'
-	    }
+    class TablePrefixMixin(TableConfigMixin):
+        @declared_attr
+        def __tablename__(cls):
+            result = super(TablePrefixMixin, cls).__tablename__
+            return "test_app_" + result
+    
+    
+    class Book(ResponseEncodableMixin, TablePrefixMixin, DeclarativeBase):
+        # columns
+        book_id = Column(UUIDType(binary=False, native=True), nullable=False, default=uuid.uuid4, primary_key=True)
+        title = Column(VARCHAR(300), nullable=False)
+        isbn = Column(VARCHAR(100), nullable=False)
+    
+        # relations
+        illustrations = relationship('Illustration', cascade='all')
+    
+    
+    class Illustration(TablePrefixMixin, AbstractImage):
+        __slicing__: List[ImageUploadSlice] = [
+            ImageUploadSlice('origin', -1, ImageUploadMode.NoAction, ''),
+            ImageUploadSlice('small', 100, ImageUploadMode.Resize, 'small'),
+            ImageUploadSlice('thumb', 50, ImageUploadMode.Crop, 'thumb')
+        ]
+    
+        # columns
+        book_id = Column(UUIDType(binary=False, native=True),
+                         ForeignKey(Book.book_id, onupdate='CASCADE', ondelete='CASCADE'),
+                         nullable=False)
+    
+        __mapper_args__ = {
+            'polymorphic_identity': 'illustration',
+            'polymorphic_on': AbstractImage.image_type,
+        }
+
 	    
 ### C. Create your model in database
 
@@ -213,11 +195,13 @@ In api/views.py declare:
 	from django.conf.urls import url
 	from api.views import *
 	
+	app_name = 'api'
+
 	urlpatterns = [
 	    url(r'^books/?$', BookListView, name='book_list'),
-	    url(r'^books/(?P<book_id>[\w-]+)/$?', BookView, name='book')
+	    url(r'^books/(?P<book_id>[\w-]+)/?$', BookView, name='book')
 	]
-
+	
 Also include API urls in project url configs in `<project_name>/urls.py`:
 
 	from django.conf.urls import url,include
@@ -227,6 +211,13 @@ Also include API urls in project url configs in `<project_name>/urls.py`:
 	    # API
 	    url(r'^api/', include('api.urls', namespace='api', app_name='api')),
 	]
+	
+	handler404 = 'lamb.utils.default_views.page_not_found'
+
+	handler400 = 'lamb.utils.default_views.bad_request'
+
+	handler500 = 'lamb.utils.default_views.server_error'
+
 	
 ### F. Check work
 Run your server and try send some requests to declared endpoints for testing purpose.

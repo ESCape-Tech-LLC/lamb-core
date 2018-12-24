@@ -5,9 +5,10 @@ __author__ = 'KoNEW'
 import datetime
 import logging
 
-from django.core.urlresolvers import resolve
+from django.urls import resolve
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils.deprecation import MiddlewareMixin
 
 from lamb.execution_time.meter import ExecutionTimeMeter
 from lamb.execution_time.model import LambExecutionTimeMetric, LambExecutionTimeMarker
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 __all__ = [ 'ExecutionTimeMiddleware' ]
 
 
-class ExecutionTimeMiddleware(object):
+class ExecutionTimeMiddleware(MiddlewareMixin):
 
     @classmethod
     def append_mark(cls, request: LambRequest, message: str):

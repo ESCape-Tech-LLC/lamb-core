@@ -6,13 +6,11 @@ import xmltodict
 
 from django.http import HttpResponse
 from django.conf import settings
-from lazy import lazy
-from functools import partial
 
 from lamb.json.encoder import JsonEncoder
 
 
-__all__ = [ 'JsonResponse' ]
+__all__ = ['JsonResponse']
 
 
 class JsonResponse(HttpResponse):
