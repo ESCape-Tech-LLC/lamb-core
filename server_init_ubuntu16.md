@@ -265,6 +265,70 @@ sudo systemctl enable influxdb
 sudo systemctl start influxdb
 ```
 
+### Configure telegraf inputs, bind telegraf to database output
+
+```
+# Enable rabbitmq plugin for monitoring
+sudo rabbitmq-plugins enable rabbitmq_management
+
+# Set nginx logs owner
+sudo vim /etc/logrotate.d/nginx
+
+/var/log/nginx/*.log {
+        daily
+        missingok
+        rotate 52
+        compress
+        delaycompress
+        notifempty
+        # change to this from nginx adm:
+        create 640 nginx nginx
+        sharedscripts
+        postrotate
+                if [ -f /var/run/nginx.pid ]; then
+                        kill -USR1 `cat /var/run/nginx.pid`
+                fi
+        endscript
+        ...
+
+sudo chown -R nginx:nginx /var/log/nginx
+
+# Add telegraf user to nginx group, so it can read nginx logs
+sudo usermod -a -G nginx telegraf
+
+# Update telegraf config
+sudo vim /etc/telegraf/telegraf.conf
+
+## Read Nginx's basic status information (ngx_http_stub_status_module)
+[[inputs.nginx]]
+  urls = ["http://localhost/server-status/"]
+  
+## Parse Nginx's access logs
+[[inputs.logparser]]
+  files = ["/var/log/nginx/*access.log"]
+  [inputs.logparser.grok]
+    patterns = ['%{HOSTNAME:remote_addr} - %{USERNAME:remote_user} \[%{HTTPDATE:time_local}\] \"%{DATA:request}\" %{INT:status:int} %{INT:bytes_sent} \"%{DATA:http_referer}\" \"%{DATA:http_user_agent}\" \"%{DATA:http_x_forwarded_for}\" \[ %{NUMBER:request_time:float} sec \]']
+    measurement = "nginx_access_log"
+    
+## Reads metrics from RabbitMQ servers via the Management Plugin
+[[inputs.rabbitmq]]
+    url = "http://localhost:15672"
+    username = "guest"
+    password = "guest"
+
+## Configuration for influxdb server to send metrics to
+[[outputs.influxdb]]
+  ## The target database for metrics (telegraf will create it if not exists).
+  database = "monitoring" 
+  username = "monitoring"
+  password = "<password>"
+  
+  
+# Reload agent settings
+sudo systemctl reload telegraf
+```
+
+
 ## 6. Grafana
 ### Add signing key
 ```
