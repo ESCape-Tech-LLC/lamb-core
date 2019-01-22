@@ -6,7 +6,7 @@ import logging
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 
-from lamb.utils import dpath_value
+from lamb.utils import dpath_value, LambRequest
 from lamb.types import LambLocale
 
 from .model import DeviceInfo
@@ -21,11 +21,8 @@ __all__ = [
 
 class DeviceInfoMiddleware(MiddlewareMixin):
 
-    def process_request(self, request):
-        """
-        :param request: Request object
-        :type request: F2CRequest
-        """
+    def process_request(self, request: LambRequest):
+        """ Middleware parse and append device info version to request """
         # device locale
         try:
             # extract info
@@ -38,8 +35,6 @@ class DeviceInfoMiddleware(MiddlewareMixin):
             app_build = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_BUILD, int, default=None)
 
             # normalize values
-            if device_family is not None:
-                device_family = device_family.lower()
             if device_platform is not None:
                 device_platform = device_platform.lower()
             if device_locale is not None:
@@ -56,6 +51,6 @@ class DeviceInfoMiddleware(MiddlewareMixin):
             )
             logger.debug('Extracted device info: %s' % device_info)
         except Exception as e:
-            logger.warning('Device info extract failed due: %s' % e)
+            logger.debug('Device info extract failed due: %s' % e)
             device_info = DeviceInfo()
         request.lamb_device_info = device_info

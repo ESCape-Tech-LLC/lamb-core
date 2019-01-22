@@ -10,6 +10,7 @@ import warnings
 import logging
 import re
 
+from datetime import datetime, date
 from typing import List, Union, TypeVar, Optional
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
@@ -34,7 +35,9 @@ __all__ = [
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
     'dpath_value',
 
-    'import_class_by_name', 'inject_app_defaults'
+    'import_class_by_name', 'inject_app_defaults',
+
+    'datetime_end', 'datetime_begin',
 ]
 
 
@@ -419,6 +422,39 @@ def get_request_accept_encoding(request: HttpRequest) -> str:
     return _get_encoding_for_header(request, 'HTTP_ACCEPT')
 
 
+# datetime
+def datetime_end(value: Union[date, datetime]) -> datetime:
+    if not isinstance(value, (date, datetime)):
+        raise InvalidParamTypeError('Invalid data type for date/datetime convert')
+
+    return datetime(
+        year=value.year,
+        month=value.month,
+        day=value.day,
+        hour=23,
+        minute=59,
+        second=59,
+        microsecond=999,
+        tzinfo=getattr(value, 'tzinfo', None)
+    )
+
+
+def datetime_begin(value: Union[date, datetime]) -> datetime:
+    if not isinstance(value, (date, datetime)):
+        raise InvalidParamTypeError('Invalid data type for date/datetime convert')
+
+    return datetime(
+        year=value.year,
+        month=value.month,
+        day=value.day,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+        tzinfo=getattr(value, 'tzinfo', None)
+    )
+
+
 # other
 def import_class_by_name(name):
     components = name.split('.')
@@ -466,12 +502,8 @@ def string_to_uuid(value: str = '', key: Optional[str] = None) -> uuid.UUID:
     return transform_uuid(value, key)
 
 
-def url_append_components(baseurl='', components=list()):
-    """
-    :type baseurl: basestring
-    :type components: list[basestring]
-    :rtype: basestring
-    """
+def url_append_components(baseurl: str = '', components: List[str] =list()) -> str:
+    """ Append path components to url """
     components = [str(c) for c in components]
     split = urlsplit(baseurl)
     scheme, netloc, path, query, fragment = (split[:])
@@ -504,3 +536,4 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
     for _ in range(length):
         result += random.choice(char_set)
     return result
+
