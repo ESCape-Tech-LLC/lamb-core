@@ -69,7 +69,7 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
 
         # apply transform
         if transform is not None:
-            return transform(result, **kwargs)
+            return transform(result)
 
         return result
     except Exception as e:

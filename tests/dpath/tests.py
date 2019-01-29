@@ -1,6 +1,7 @@
 import os
 import json
-from datetime import datetime
+from datetime import date
+from functools import partial
 from unittest import TestCase
 
 # noinspection PyUnresolvedReferences
@@ -51,8 +52,8 @@ class DictionaryTestCase(LambTestCase):
 
         # Datetime (?)
         self.assertEqual(
-            dpath_value(JSON_DOC, '/date', transform=transformers.transform_date, format='%Y-%m-%d'),
-            datetime(2017, 4, 20)
+            dpath_value(JSON_DOC, '/date', transform=partial(transformers.transform_date, format='%Y-%m-%d')),
+            date(2017, 4, 20)
         )
 
         # Boolean
@@ -80,13 +81,27 @@ class DictionaryTestCase(LambTestCase):
             SECOND = 'second'
 
         self.assertEqual(
-            dpath_value(JSON_DOC, '/enum_first', transform=transformers.transform_string_enum, enum_class=StringEnum),
+            dpath_value(JSON_DOC, '/enum_first', transform=partial(transformers.transform_string_enum, enum_class=StringEnum)),
             StringEnum.FIRST
         )
 
         self.assertEqual(
-            dpath_value(JSON_DOC, '/enum_second', transform=transformers.transform_string_enum, enum_class=StringEnum),
+            dpath_value(JSON_DOC, '/enum_second', transform=partial(transformers.transform_string_enum, enum_class=StringEnum)),
             StringEnum.SECOND
+        )
+
+        # Enum with default and allow_none
+        self.assertEqual(
+            dpath_value(JSON_DOC, '/enum_second', transform=partial(transformers.transform_string_enum, enum_class=StringEnum),
+                        default=None, allow_none=True),
+            StringEnum.SECOND
+        )
+
+        # Enum with default and allow_none (return default)
+        self.assertEqual(
+            dpath_value(JSON_DOC, '/no-such-key', transform=partial(transformers.transform_string_enum, enum_class=StringEnum),
+                        default=5, allow_none=True),
+            5
         )
 
         # UUID
@@ -156,7 +171,7 @@ class EtreeTestCase(TestCase):
         # Datetime (?)
         self.assertEqual(
             dpath_value(XML_DOC, '/actor[1]/date', transform=transformers.transform_date, format='%Y-%m-%d'),
-            datetime(2017, 4, 20)
+            date(2017, 4, 20)
         )
 
         # Boolean
@@ -184,12 +199,12 @@ class EtreeTestCase(TestCase):
             SECOND = 'second'
 
         self.assertEqual(
-            dpath_value(XML_DOC, '/actor[1]/enum_first', transform=transformers.transform_string_enum, enum_class=StringEnum),
+            dpath_value(XML_DOC, '/actor[1]/enum_first', transform=partial(transformers.transform_string_enum, enum_class=StringEnum)),
             StringEnum.FIRST
         )
 
         self.assertEqual(
-            dpath_value(XML_DOC, '/actor[1]/enum_second', transform=transformers.transform_string_enum, enum_class=StringEnum),
+            dpath_value(XML_DOC, '/actor[1]/enum_second', transform=partial(transformers.transform_string_enum, enum_class=StringEnum)),
             StringEnum.SECOND
         )
 
