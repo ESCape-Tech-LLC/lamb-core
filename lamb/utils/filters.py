@@ -2,28 +2,39 @@
 __author__ = 'KoNEW'
 
 import logging
-
-from typing import List, Callable, Optional
+import warnings
 import sqlalchemy as sa
+
+from typing import List, Callable, Optional, Type, Dict, TypeVar, Union
+from functools import partial
+from datetime import date, datetime
+from django.conf import settings
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.attributes import QueryableAttribute
 
 from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError, ApiError
-from lamb.utils import dpath_value, LambRequest
+from lamb.utils import dpath_value, LambRequest, datetime_begin, datetime_end
+from lamb.utils.transformers import transform_date
 
 
 __all__ = [
-    'Filter', 'FieldValueFilter', 'ColumnValueFilter'
+    'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter'
 ]
 
 logger = logging.getLogger(__name__)
 
 
 # abstract
+T = TypeVar('T')
+
 class Filter(object):
     """ Abstract filter for model query """
 
-    def __init__(self, arg_name: str, req_type: type, req_type_transformer: Callable =None):
+    arg_name: str
+    req_type: Type
+    req_type_transformer: Optional[Callable]
+
+    def __init__(self, arg_name: str, req_type: Type, req_type_transformer: Callable = None):
         # check params
         if not isinstance(arg_name, str):
             logger.warning('Filter arg_name invalid data type: %s' % arg_name)
@@ -40,8 +51,7 @@ class Filter(object):
         self.req_type = req_type
         self.req_type_transformer = req_type_transformer
 
-    # def get_param_value(self, params: dict, key_path: str | List[str] = None) -> List[object]:
-    def get_param_value(self, params: dict, key_path: str = None) -> Optional[List[object]]:
+    def get_param_value(self, params: Dict, key_path: str = None) -> Optional[List[object]]:
         """ Extracts and convert param value from dictionary """
         # handle key_path default as arg_name
         if key_path is None:
@@ -80,13 +90,22 @@ class Filter(object):
         # return result
         return result
 
-    def apply_to_query(self, query: Query, request: LambRequest) -> Query:
+    def vary_param_value_max(self, value: T) -> T:
+        return value
+
+    def vary_param_value_min(self, value: T) -> T:
+        return value
+
+    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
         """ Apply filter to query """
         return query
 
 
 class FieldValueFilter(Filter):
     """ Basic sqlalchemy attribute comparing filter """
+
+    comparing_field: QueryableAttribute
+    allowed_compares: List[str]
 
     def __init__(self, arg_name: str, req_type: type, comparing_field: QueryableAttribute,
                  req_type_transformer: Callable = None,
@@ -108,10 +127,17 @@ class FieldValueFilter(Filter):
         self.comparing_field = comparing_field
         self.allowed_compares = allowed_compares
 
-    def apply_to_query(self, query: sa.orm.Query, request: LambRequest):
+    # def apply_to_query(self, query: Query, request: LambRequest = None, params: Dict = None) -> Query:
+    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
+        # check deprecation
+        if 'request' in kwargs and params is None:
+            warnings.warn('apply_to_query `request` param is deprecated, use `params` instead', DeprecationWarning,
+                          stacklevel=2)
+            params = kwargs.pop('request').GET
+
         # check for equality
         if '__eq__' in self.allowed_compares:
-            param_value = self.get_param_value(request.GET, key_path=self.arg_name)
+            param_value = self.get_param_value(params, key_path=self.arg_name)
             if param_value is not None:
                 if len(param_value) > 1:
                     query = query.filter(self.comparing_field.in_(param_value))
@@ -120,7 +146,7 @@ class FieldValueFilter(Filter):
 
         # check for non equality
         if '__ne__' in self.allowed_compares:
-            param_value = self.get_param_value(request.GET, key_path=self.arg_name + '.exclude')
+            param_value = self.get_param_value(params, key_path=self.arg_name + '.exclude')
             if param_value is not None:
                 if len(param_value) > 1:
                     query = query.filter(~self.comparing_field.in_(param_value))
@@ -129,20 +155,22 @@ class FieldValueFilter(Filter):
 
         # check for greater or equal
         if '__ge__' in self.allowed_compares:
-            param_value = self.get_param_value(request.GET, key_path=self.arg_name + '.min')
+            param_value = self.get_param_value(params, key_path=self.arg_name + '.min')
             if param_value is not None:
                 if len(param_value) > 1:
                     raise InvalidParamValueError('Invalid param \'%s\' type for greater/equal compare' % self.arg_name)
                 param_value = param_value[0]
+                param_value = self.vary_param_value_min(value=param_value)
                 query = query.filter(self.comparing_field.__ge__(param_value))
 
         # check for lower or equal
         if '__le__' in self.allowed_compares:
-            param_value = self.get_param_value(request.GET, key_path=self.arg_name + '.max')
+            param_value = self.get_param_value(params, key_path=self.arg_name + '.max')
             if param_value is not None:
                 if len(param_value) > 1:
                     raise InvalidParamValueError('Invalid param \'%s\' type for lower/equal compare' % self.arg_name)
                 param_value = param_value[0]
+                param_value = self.vary_param_value_max(value=param_value)
                 query = query.filter(self.comparing_field.__le__(param_value))
 
         return query
@@ -167,3 +195,21 @@ class ColumnValueFilter(FieldValueFilter):
             comparing_field=column,
             **kwargs
         )
+
+
+# special syntax sugars
+class DatetimeFilter(ColumnValueFilter):
+
+    def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):
+        super().__init__(
+            *args,
+            req_type=str,
+            req_type_transformer=partial(transform_date, format=fmt),
+            **kwargs
+        )
+
+    def vary_param_value_min(self, value: Union[datetime, date]) -> datetime:
+        return datetime_begin(value)
+
+    def vary_param_value_max(self, value: Union[datetime, date]) -> datetime:
+        return datetime_end(value)

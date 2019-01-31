@@ -11,7 +11,7 @@ import logging
 import re
 
 from datetime import datetime, date
-from typing import List, Union, TypeVar, Optional
+from typing import List, Union, TypeVar, Optional, Dict
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from sqlalchemy import asc, desc
@@ -129,25 +129,30 @@ def paginated(data: PV, request: LambRequest) -> dict:
     return response_paginated(data, request)
 
 
-def response_paginated(data: PV, request: LambRequest, add_extended_query: bool = False) -> dict:
+def response_paginated(data: PV, request: LambRequest = None, params: Dict = None, add_extended_query: bool = False) -> dict:
     """ Pagination utility
 
     Will search for limit/offset params in `request.GET` object and apply it to data, returning
     dictionary that includes info about real offset, limit, total_count, items.
 
     :param data: Instance of list or query to be paginated
-    :param request: Http request
+    :param request: Http request (deprecated version)
+    :param params: Dictionary with params of pagination
     :param add_extended_query: Flag to add to result extended version of data slice
         (including one more item from begin and and of slice)
     """
+    # check params override
+    if request is not None and params is None:
+        params = request.GET
+
     # parse and check offset
-    offset = dpath_value(request.GET, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
+    offset = dpath_value(params, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
     if offset < 0:
         raise InvalidParamValueError('Invalid offset value for pagination',
                                      error_details=settings.LAMB_PAGINATION_KEY_OFFSET)
 
     # parse and check limit
-    limit = dpath_value(request.GET, settings.LAMB_PAGINATION_KEY_LIMIT, int,
+    limit = dpath_value(params, settings.LAMB_PAGINATION_KEY_LIMIT, int,
                         default=settings.LAMB_PAGINATION_LIMIT_DEFAULT)
     if limit < -1:
         raise InvalidParamValueError('Invalid limit value for pagination',
@@ -225,8 +230,12 @@ def response_paginated(data: PV, request: LambRequest, add_extended_query: bool 
     return result
 
 
-def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dict,
-                    default_sorting: str = None, **kwargs) -> Query:
+def response_sorted(
+        query: Query,
+        model_class: DeclarativeMeta,
+        params: dict = None,
+        default_sorting: str = None,
+        **kwargs) -> Query:
     """ Apply order by sortings to sqlalchemy query instance from params dictionary
 
     :param query: SQLAlchemy query instance to be sorted
@@ -276,10 +285,16 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
 
         return _field, _function
 
+    # check deprecation
+    if 'params_dict' in kwargs and params is None:
+        warnings.warn('response_sorted `params_dict` param is deprecated, use `params` instead', DeprecationWarning,
+                      stacklevel=2)
+        params = kwargs.pop('params_dict')
+
     # check params
     if default_sorting is not None and not isinstance(default_sorting, str):
         raise ServerError('Improperly configured default_sorting descriptors')
-    if not isinstance(params_dict, dict):
+    if not isinstance(params, dict):
         raise ServerError('Improperly configured sorting params dictionary')
     if not isinstance(model_class, DeclarativeMeta):
         raise ServerError('Improperly configured model class meta-data for sorting introspection')
@@ -290,7 +305,7 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
     model_inspection = inspect(model_class)
 
     # extract sorting descriptions
-    sorting_descriptions = dpath_value(params_dict, settings.LAMB_SORTING_KEY, str, default=default_sorting)
+    sorting_descriptions = dpath_value(params, settings.LAMB_SORTING_KEY, str, default=default_sorting)
     if sorting_descriptions is not None:
         sorting_descriptions = unquote(sorting_descriptions)  # dirty hack for invalid arg transfer
 
@@ -331,7 +346,15 @@ def response_sorted(query: Query, model_class: DeclarativeMeta, params_dict: dic
     return query
 
 
-def response_filtered(query: Query, filters: List['lamb.utils.filters.Filter'], request: LambRequest = None) -> Query:
+def response_filtered(
+        query: Query,
+        filters: List['lamb.utils.filters.Filter'],
+        request: LambRequest = None,
+        params: Dict = None) -> Query:
+    # check params override
+    if request is not None and params is None:
+        params = request.GET
+
     # check params
     from lamb.utils.filters import Filter
     if not isinstance(query, Query):
@@ -345,7 +368,7 @@ def response_filtered(query: Query, filters: List['lamb.utils.filters.Filter'], 
 
     # apply filters
     for f in filters:
-        query = f.apply_to_query(query=query, request=request)
+        query = f.apply_to_query(query=query, params=params)
 
     return query
 
@@ -363,13 +386,13 @@ def compact(obj: Union[list, dict]) -> Union[list, dict]:
 
 def compact_dict(dct: dict) -> dict:
     """ Compact dict by removing keys with None value """
-    warnings.warn('compact_dict deprecated, use compact instead', DeprecationWarning)
+    warnings.warn('compact_dict deprecated, use compact instead', DeprecationWarning, stacklevel=2)
     return compact(dct)
 
 
 def compact_list(lst: list) -> list:
     """ Compact list by removing None values """
-    warnings.warn('compact_list deprecated, use compact instead', DeprecationWarning)
+    warnings.warn('compact_list deprecated, use compact instead', DeprecationWarning, stacklevel=2)
     return compact(lst)
 
 
@@ -498,7 +521,8 @@ def string_to_uuid(value: str = '', key: Optional[str] = None) -> uuid.UUID:
     :raises InvalidParamValueError: If converting process failed
     """
     from lamb.utils.transformers import transform_uuid
-    warnings.warn('string_to_uuid deprecated, use lamb.utils.transformers.transform_uuid instead', DeprecationWarning)
+    warnings.warn('string_to_uuid deprecated, use lamb.utils.transformers.transform_uuid instead', DeprecationWarning,
+                  stacklevel=2)
     return transform_uuid(value, key)
 
 

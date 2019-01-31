@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
-__version__ = '2.0.2'
+__version__ = '2.0.3'
 
 
 import logging
+
 from django.apps import AppConfig
 
 from lamb.utils import inject_app_defaults

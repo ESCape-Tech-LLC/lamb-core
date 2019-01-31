@@ -5,8 +5,8 @@ import logging
 import enum
 import uuid
 
-from typing import Type, TypeVar, Optional
-from datetime import datetime
+from typing import Type, TypeVar, Optional, Union
+from datetime import datetime, date
 from django.conf import settings
 
 from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError, ApiError
@@ -44,16 +44,18 @@ def transform_boolean(value) -> bool:
         raise InvalidParamTypeError('Invalid data type for boolean convert')
 
 
-def transform_date(value, format=settings.LAMB_RESPONSE_DATE_FORMAT) -> datetime.date:
+def transform_date(value: Union[datetime, date, str], format=settings.LAMB_RESPONSE_DATE_FORMAT) -> datetime.date:
     if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
         return value
     elif isinstance(value, str):
         try:
             if value.lower() == 'today':
-                result = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999)
+                result = datetime.now()
             else:
                 result = datetime.strptime(value, format)
-            return result
+            return result.date()
         except Exception as e:
             raise InvalidParamValueError(
                 'Invalid to convert date from string=%s according to format=%s' % (value, format)) from e
@@ -65,6 +67,7 @@ ET = TypeVar('ET')
 
 
 def transform_string_enum(value: str, enum_class: Type[ET]) -> ET:
+    """ Transforms string version into string based Enum """
     if isinstance(value, enum_class):
         return value
 
