@@ -9,16 +9,17 @@ from typing import List, Callable, Optional, Type, Dict, TypeVar, Union
 from functools import partial
 from datetime import date, datetime
 from django.conf import settings
+from dataclasses import dataclass
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.attributes import QueryableAttribute
 
 from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError, ApiError
 from lamb.utils import dpath_value, LambRequest, datetime_begin, datetime_end
-from lamb.utils.transformers import transform_date
+from lamb.utils.transformers import transform_date, transform_string_enum
 
 
 __all__ = [
-    'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter'
+    'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter', 'EnumFilter'
 ]
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 # abstract
 T = TypeVar('T')
 
+# TODO: migrate to dataclasses
 class Filter(object):
     """ Abstract filter for model query """
 
@@ -99,6 +101,9 @@ class Filter(object):
     def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
         """ Apply filter to query """
         return query
+
+    # def __str__(self):
+    #     return f'Filter (arg_name={self.arg_name}, req_type={self.req_type}, transformer={self.req_type_transformer})'
 
 
 class FieldValueFilter(Filter):
@@ -213,3 +218,25 @@ class DatetimeFilter(ColumnValueFilter):
 
     def vary_param_value_max(self, value: Union[datetime, date]) -> datetime:
         return datetime_end(value)
+
+
+class EnumFilter(ColumnValueFilter):
+
+    def __init__(self, column, **kwargs):
+        # predefine params
+        ins = sa.inspect(column)
+
+        # replace params
+        kwargs.pop('req_type', None)
+        kwargs.pop('req_type_transformer', None)
+        if 'req_type' not in kwargs:
+            kwargs['req_type'] = str
+
+        if 'req_type_transformer' not in kwargs:
+            ins = sa.inspect(column)
+            kwargs['req_type_transformer'] = partial(transform_string_enum, enum_class=ins.type.python_type)
+
+        if 'allowed_compares' not in kwargs:
+            kwargs['allowed_compares'] = ['__eq__', '__ne__']
+
+        super().__init__(column, **kwargs)

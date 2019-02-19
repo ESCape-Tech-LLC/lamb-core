@@ -14,7 +14,7 @@ from datetime import datetime, date
 from typing import List, Union, TypeVar, Optional, Dict
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
@@ -187,7 +187,7 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
         #     count_q = q.statement.with_only_columns([func.count()]).order_by(None)
         #     count = q.session.execute(count_q).scalar()
         #     return count
-
+        #
         # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
         if limit == -1:
@@ -226,6 +226,7 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
             settings.LAMB_PAGINATION_KEY_ITEMS in result.keys():
 
         result[settings.LAMB_PAGINATION_KEY_ITEMS] = {'item': result[settings.LAMB_PAGINATION_KEY_ITEMS]}
+        tm.append_marker('vary based on header')
 
     return result
 
