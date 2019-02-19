@@ -145,6 +145,11 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
     if request is not None and params is None:
         params = request.GET
 
+    # parse omit total
+    from lamb.utils.transformers import transform_boolean
+    total_omit  = dpath_value(params, settings.LAMB_PAGINATION_KEY_OMIT_TOTAL, str,
+                              transform=transform_boolean, default=False)
+
     # parse and check offset
     offset = dpath_value(params, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
     if offset < 0:
@@ -189,7 +194,11 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
         #     return count
         #
         # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
-        result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
+        if not total_omit:
+            result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
+        else:
+            result[settings.LAMB_PAGINATION_KEY_TOTAL] = None
+
         if limit == -1:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.offset(offset).all()
         else:
@@ -203,7 +212,11 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
                     .limit(extended_limit)\
                     .all()
     elif isinstance(data, list):
-        result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(data)
+        if not total_omit:
+            result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(data)
+        else:
+            result[settings.LAMB_PAGINATION_KEY_TOTAL] = None
+
         if limit == -1:
             result[settings.LAMB_PAGINATION_KEY_ITEMS] = data[offset:]
         else:
