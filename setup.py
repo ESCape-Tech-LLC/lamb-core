@@ -104,5 +104,6 @@ setup(
         'django-crequest',
         'pymemcache',
         'dataclasses',
+        'openpyxl'
     ]
 )
