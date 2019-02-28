@@ -5,11 +5,13 @@ import logging
 import warnings
 import sqlalchemy as sa
 
-from typing import List, Callable, Optional, Type, Dict, TypeVar, Union
+from typing import List, Callable, Optional, Type, Dict, TypeVar, Union, Iterable, Any
 from functools import partial
 from datetime import date, datetime
 from django.conf import settings
 from dataclasses import dataclass
+from sqlalchemy import func
+from sqlalchemy.sql.functions import Function
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.attributes import QueryableAttribute
 
@@ -19,7 +21,8 @@ from lamb.utils.transformers import transform_date, transform_string_enum
 
 
 __all__ = [
-    'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter', 'EnumFilter'
+    'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter', 'EnumFilter',
+    'PostgresqlFastTextSearchFilter',
 ]
 
 logger = logging.getLogger(__name__)
@@ -101,9 +104,6 @@ class Filter(object):
     def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
         """ Apply filter to query """
         return query
-
-    # def __str__(self):
-    #     return f'Filter (arg_name={self.arg_name}, req_type={self.req_type}, transformer={self.req_type_transformer})'
 
 
 class FieldValueFilter(Filter):
@@ -240,3 +240,72 @@ class EnumFilter(ColumnValueFilter):
             kwargs['allowed_compares'] = ['__eq__', '__ne__']
 
         super().__init__(column, **kwargs)
+
+
+class PostgresqlFastTextSearchFilter(Filter):
+    """
+    Fast text search for PostgreSQL filter.
+    # TODO: add description
+    """
+
+    _tsquery_func: Callable
+    _tsvector_expr: Callable
+    _reconfig: str
+
+    def __init__(self,
+                 columns: Optional[Union[QueryableAttribute, List[QueryableAttribute]]] = None,
+                 tsvector_expr: Optional[Any] = None,
+                 tsquery_func: Callable[[str], Function] = None,
+                 reconfig='russian',
+                 arg_name='search_text'
+                 ):
+        super().__init__(arg_name=arg_name, req_type=str, req_type_transformer=None)
+
+        self._reconfig = reconfig
+
+        # parse tsvector_expr
+        if tsvector_expr is not None:
+            self._tsvector_expr = tsvector_expr
+        elif columns is not None:
+            # construct tsvector_expr based on columns
+            if not isinstance(columns, (list, tuple)):
+                columns = [columns]
+
+            _expr = func.COALESCE(columns[0], '')
+            for c in columns[1:]:
+                _expr = _expr + ' ' + func.COALESCE(c, '')
+
+            _expr = func.to_tsvector(self._reconfig, _expr)
+
+            self._tsvector_expr = _expr
+        else:
+            logger.warning('Full text search filter should be initialized with tsvector_expr object or columns')
+            raise ServerError('Improperly confiogured full text search filter')
+
+        # parse tsquery_func
+        if tsquery_func is None:
+            self._tsquery_func = lambda search_string: func.websearch_to_tsquery(self._reconfig, search_string)
+        else:
+            self._tsquery_func = tsquery_func
+
+    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
+        # extract param
+        param_value = self.get_param_value(params=params)
+        if param_value is None:
+            return query
+
+        # apply search
+        if len(param_value) > 0:
+            param_value = ','.join(param_value)
+        else:
+            param_value = param_value[0]
+
+        # do not search over empty
+        if len(param_value) == 0:
+            return query
+
+        # apply to columns
+        query = query.filter(
+            self._tsvector_expr.op('@@')(self._tsquery_func(param_value))
+        )
+        return query
