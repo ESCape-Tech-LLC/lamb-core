@@ -79,7 +79,7 @@ class Worksheet(object):
     @property
     def rows(self) -> Generator['Row', None, None]:
         max_row = self._wrapped_worksheet.max_row
-        for row_index in range(0, max_row - 1):
+        for row_index in range(0, max_row):
             yield Row(worksheet=self, row_index=row_index)
 
     # cell access
