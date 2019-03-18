@@ -10,7 +10,8 @@ __all__ = [
     'NotRealizedMethodError', 'NotAllowedMethodError', 'NotExistError', 'AlreadyExistError',
     'ExternalServiceError',
     'InvalidBodyStructureError', 'InvalidParamValueError', 'InvalidParamTypeError',
-    'AuthCredentialsIsNotProvided', 'AuthCredentialsInvalid', 'AuthCredentialsExpired', 'AuthForbidden'
+    'AuthCredentialsIsNotProvided', 'AuthCredentialsInvalid', 'AuthCredentialsExpired', 'AuthForbidden',
+    'ImproperlyConfiguredError'
 ]
 
 
@@ -60,6 +61,7 @@ class ClientError(ApiError):
         self.app_error_code = LambExceptionCodes.Unknown
 
 
+# server errors
 class NotRealizedMethodError(ServerError):
     """ Server side error for not realized functional """
     def __init__(self, *args, **kwargs):
@@ -76,6 +78,18 @@ class ExternalServiceError(ServerError):
         self.app_error_code = LambExceptionCodes.ExternalService
 
 
+class ImproperlyConfiguredError(ServerError):
+    """ Syntax sugar for improperly configured server params """
+    def __init__(self, *args, message='Improperly configured server side call', **kwargs):
+        if len(args) == 0:
+            kwargs.update({
+                'message': message
+            })
+        super().__init__(*args, **kwargs)
+        self.status_code = 500
+        self.app_error_code = LambExceptionCodes.Unknown
+
+# client errors
 class NotAllowedMethodError(ClientError):
     """ Client side error for requesting not allowed HTTP method """
     def __init__(self, *args, **kwargs):
