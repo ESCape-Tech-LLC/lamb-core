@@ -55,7 +55,7 @@ class RBSCallError(ExternalServiceError):
 
     def __init__(self, *args, rbs_response: RBSResponse, **kwargs):
         super().__init__(*args, **kwargs)
-        self.rbs_error_info = rbs_error_info
+        self.rbs_response = rbs_response
 
 
 def _default_currency_multiplier_callback(currency_iso4217: int) -> int:
