@@ -3,6 +3,7 @@ __author__ = 'KoNEW'
 
 import logging
 import warnings
+import uuid
 
 from collections import OrderedDict
 from django.conf import settings
@@ -39,7 +40,7 @@ except (ImportError, AttributeError):
 logger = logging.getLogger(__name__)
 
 
-__all__ = [ 'LambRestApiJsonMiddleware' ]
+__all__ = [ 'LambRestApiJsonMiddleware' , 'LambTracingMiddleware' ]
 
 
 class LambRestApiJsonMiddleware:
@@ -118,3 +119,17 @@ class LambRestApiJsonMiddleware:
     def process_exception(self, request: LambRequest, exception: Exception):
         """ Process expcetion handler """
         return self._process_exception(request=request, exception=exception)
+
+
+class LambTracingMiddleware(object):
+    """ Simple millware that will generate and attach to request trace_id - formatted uuid string """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: LambRequest) -> HttpResponse:
+
+        request.lamb_trace_id = str(uuid.uuid4()).replace('-', '')
+        logger.debug(f'request trace_id attached: {request.lamb_trace_id}')
+        response = self.get_response(request)
+        return response

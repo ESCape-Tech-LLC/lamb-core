@@ -49,12 +49,14 @@ class LambRequest(HttpRequest):
     :type lamb_db_session: sqlalchemy.orm.Session | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     :type lamb_device_info: lamb.service.device_info.model.DeviceInfo
+    :type lamb_trace_id: str
     """
     def __init__(self):
         super(LambRequest, self).__init__()
         self.lamb_db_session = None
         self.lamb_execution_meter = None
         self.lamb_device_info = None
+        self.lamb_trace_id = None
 
 
 # parsing
