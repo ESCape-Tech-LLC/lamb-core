@@ -6,8 +6,8 @@ import openpyxl
 
 
 from typing import Optional, List, Generator, Tuple, Dict, Union, Callable
-from openpyxl.cell import Cell as OpenpyxlCell
-from openpyxl.worksheet import Worksheet as OpenpyxlWorksheet
+from openpyxl.cell.cell import Cell as OpenpyxlCell
+from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet
 from openpyxl.workbook import Workbook as OpenpyxlWorkbook
 
 from lamb.exc import InvalidParamTypeError, InvalidParamValueError, ApiError, InvalidBodyStructureError
