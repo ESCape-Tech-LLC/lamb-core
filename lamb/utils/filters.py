@@ -17,12 +17,12 @@ from sqlalchemy.orm.attributes import QueryableAttribute
 
 from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError, ApiError
 from lamb.utils import dpath_value, LambRequest, datetime_begin, datetime_end
-from lamb.utils.transformers import transform_date, transform_string_enum
+from lamb.utils.transformers import transform_date, transform_string_enum, transform_boolean
 
 
 __all__ = [
     'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter', 'EnumFilter',
-    'PostgresqlFastTextSearchFilter',
+    'PostgresqlFastTextSearchFilter', 'ColumnBooleanFilter'
 ]
 
 logger = logging.getLogger(__name__)
@@ -219,6 +219,18 @@ class DatetimeFilter(ColumnValueFilter):
     def vary_param_value_max(self, value: Union[datetime, date]) -> datetime:
         return datetime_end(value)
 
+
+class ColumnBooleanFilter(ColumnValueFilter):
+    def __init__(self, *args, **kwargs):
+        if 'req_type' not in kwargs:
+            kwargs['req_type'] = str
+        if 'req_type_transformer' not in kwargs:
+            kwargs['req_type_transformer'] = transform_boolean
+        if 'allowed_compares' not in kwargs:
+            kwargs['allowed_compares'] = ['__eq__', '__ne__']
+
+        super().__init__(*args, **kwargs)
+        # kwargs['req_type']
 
 class EnumFilter(ColumnValueFilter):
 
