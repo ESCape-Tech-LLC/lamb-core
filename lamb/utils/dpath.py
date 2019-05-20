@@ -6,6 +6,7 @@ import dpath
 from typing import Callable, Optional, Union, List, Any
 from functools import singledispatch
 from lxml.etree import _Element as EtreeElement, _ElementTree as Etree
+from django.conf import Settings
 
 from lamb import exc
 
@@ -54,6 +55,7 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
     # query
     try:
         # get internal result
+        logger.warning(f'parsing {dict_object.__class__.__name__}')
         result = _dpath_find_impl(dict_object, key_path=key_path, **kwargs)
 
         # check for none
@@ -79,16 +81,6 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
             raise
         else:
             raise exc.ServerError('Failed to parse params due unknown error') from e
-    # except IndexError as e:
-    #     if 'default' in kwargs.keys():
-    #         return kwargs['default']
-    #     else:
-    #         raise exc.InvalidBodyStructureError(
-    #             'Could not extract param for key_path %s from provided dict data' % key_path,
-    #             error_details={'key_path': key_path}) from e
-    # except AttributeError as e:
-    #     raise exc.ServerError('Invalid key_path type for querying in dict',
-    #                           error_details={'key_path': key_path}) from e
 
 
 @singledispatch
@@ -163,3 +155,19 @@ def _etree_find_impl(element: Union[EtreeElement, Etree],
     except Exception as e:
         raise exc.ServerError(
             'Etree subtag query. Could not locate extract value with some unhandled exception.') from e
+
+
+@_dpath_find_impl.register(Settings)
+def _django_conf_impl(settings: Settings, key_path: str) -> Any:
+    """
+    Implementation to query and parse djnago configs
+    :param settings: Initialized Settings object
+    :param key_path: Variable name
+    :return: Extracted value
+    """
+    try:
+        result = getattr(settings, key_path)  # type: Any
+        return result
+    except Exception as e:
+        raise exc.InvalidBodyStructureError(f'Could not locate field for key_path = {key_path} from settings object',
+                                            error_details={'key_path': key_path}) from e
