@@ -55,7 +55,6 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
     # query
     try:
         # get internal result
-        logger.warning(f'parsing {dict_object.__class__.__name__}')
         result = _dpath_find_impl(dict_object, key_path=key_path, **kwargs)
 
         # check for none
