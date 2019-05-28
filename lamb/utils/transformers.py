@@ -8,6 +8,7 @@ import uuid
 from typing import Type, TypeVar, Optional, Union
 from datetime import datetime, date
 from django.conf import settings
+from furl import furl
 
 from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError, ApiError
 

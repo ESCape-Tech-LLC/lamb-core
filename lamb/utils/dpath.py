@@ -10,7 +10,7 @@ from django.conf import Settings
 
 from lamb import exc
 
-from .lxml_protocols import __lxml_hints_reverse_map__
+from lamb.ext.lxml import __lxml_hints_reverse_map__
 
 logger = logging.getLogger(__name__)
 
