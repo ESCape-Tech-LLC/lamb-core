@@ -14,7 +14,7 @@ from datetime import datetime, date
 from typing import List, Union, TypeVar, Optional, Dict
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
-from sqlalchemy import asc, desc, func
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
@@ -26,8 +26,7 @@ from .dpath import dpath_value
 
 
 __all__ = [
-    'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'validated_interval',
-    'random_string', 'url_append_components', 'clear_white_space',
+    'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'random_string', 'url_append_components', 'clear_white_space',
     'compact_dict', 'compact_list', 'compact',
     'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
 
@@ -59,6 +58,27 @@ class LambRequest(HttpRequest):
         self.lamb_trace_id = None
 
 
+# compatibility
+VT = TypeVar('VT')
+
+
+def validated_interval(value: Optional[VT],
+                       bottom: VT,
+                       top: VT,
+                       key: str = None,
+                       allow_none: bool = False) -> Optional[VT]:
+    from lamb.utils.validators import validate_range
+    warnings.warn('validated_interval method is deprecated, use validate_range version',
+                  DeprecationWarning, stacklevel=2)
+    return validate_range(
+        value=value,
+        min_value=bottom,
+        max_value=top,
+        key=key,
+        allow_none=allow_none
+    )
+
+
 # parsing
 def parse_body_as_json(request: HttpRequest) -> dict:
     """  Parse request object to dictionary as JSON
@@ -81,40 +101,6 @@ def parse_body_as_json(request: HttpRequest) -> dict:
         return data
     except ValueError as e:
         raise InvalidBodyStructureError('Could not parse body as JSON object') from e
-
-
-VT = TypeVar('VT')
-
-
-def validated_interval(value: Optional[VT],
-                       bottom: VT,
-                       top: VT,
-                       key: str = None,
-                       allow_none: bool = False) -> Optional[VT]:
-    """ Value within interval validator
-
-    :param value: Value to be checked
-    :param bottom: Interval bottom limit
-    :param top: Interval top limit
-    :param key: Optional key to include in exception description as details
-    :param allow_none: Flag to make None value valid returnoing None
-
-    :raises InvalidParamValueError: In case of value out of interval
-    :raises InvalidParamTypeError: In case of any other exception
-    """
-    if value is None and allow_none:
-        return value
-
-    try:
-        if value < bottom or value > top:
-            raise InvalidParamValueError(
-                'Invalid param %s value or type, should be between %s and %s' % (key, bottom, top),
-                error_details=key)
-        return value
-    except InvalidParamValueError:
-        raise
-    except Exception as e:
-        raise InvalidParamTypeError('Invalid param type for %s' % key, error_details=key) from e
 
 
 # reponse utilities
