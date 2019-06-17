@@ -28,7 +28,6 @@ try:
     _CONNECTION_STRING = '%s://%s:%s@%s/%s?%s' % (_ENGINE, _USER, _PASS, _HOST, _NAME, _OPTS)
     _engine = create_engine(
         _CONNECTION_STRING,
-        echo=settings.LAMB_SQLALCHEMY_ECHO,
         pool_recycle=3600
     )
 except KeyError as e:
