@@ -2,3 +2,4 @@
 __author__ = 'KoNEW'
 
 from .locale import *
+from .device_info import *

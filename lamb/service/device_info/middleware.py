@@ -9,7 +9,8 @@ from django.utils.deprecation import MiddlewareMixin
 from lamb.utils import dpath_value, LambRequest
 from lamb.types import LambLocale
 
-from .model import DeviceInfo
+# from .model import DeviceInfo
+from lamb.types import DeviceInfo
 
 logger = logging.getLogger(__name__)
 

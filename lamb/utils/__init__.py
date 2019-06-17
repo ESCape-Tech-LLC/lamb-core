@@ -47,9 +47,9 @@ class LambRequest(HttpRequest):
     """ Class used only for proper type hinting in pycharm, not guarantee that properties will exist
     :type lamb_db_session: sqlalchemy.orm.Session | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
-    :type lamb_device_info: lamb.service.device_info.model.DeviceInfo
-    :type lamb_trace_id: str
-    :type lamb_locale: lamb.types.locale.LambLocale
+    :type lamb_device_info: lamb.types.DeviceInfo | None
+    :type lamb_trace_id: str | None
+    :type lamb_locale: lamb.types.LambLocale | None
     """
     def __init__(self):
         super(LambRequest, self).__init__()
