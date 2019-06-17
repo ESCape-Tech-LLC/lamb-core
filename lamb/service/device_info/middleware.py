@@ -22,8 +22,8 @@ __all__ = [
 class DeviceInfoMiddleware(MiddlewareMixin):
 
     def process_request(self, request: LambRequest):
-        """ Middleware parse and append device info version to request """
-        # device locale
+        """ Middleware parse and append device info and locale to request """
+        # device info parsing
         try:
             # extract info
             device_family = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_FAMILY, str, default=None)
@@ -54,3 +54,9 @@ class DeviceInfoMiddleware(MiddlewareMixin):
             logger.debug('Device info extract failed due: %s' % e)
             device_info = DeviceInfo()
         request.lamb_device_info = device_info
+
+        # attach device locale
+        if device_info.device_locale is not None:
+            request.lamb_locale = device_info.device_locale
+        else:
+            request.lamb_locale = LambLocale(settings.LAMB_DEVICE_DEFAULT_LOCALE)
