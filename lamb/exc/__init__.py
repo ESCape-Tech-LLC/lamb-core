@@ -164,7 +164,16 @@ class AuthCredentialsExpired(ClientError):
 
 class AuthForbidden(ClientError):
     """ Client side error for requesting authorized but forbidden resource """
-    def __init__(self, *args,**kwargs):
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.status_code = 403
+    #     self.app_error_code = LambExceptionCodes.AuthForbidden
+
+    def __init__(self, *args, message='You have not access to this resource', **kwargs):
+        if len(args) == 0:
+            kwargs.update({
+                'message': message
+            })
         super().__init__(*args, **kwargs)
         self.status_code = 403
         self.app_error_code = LambExceptionCodes.AuthForbidden
