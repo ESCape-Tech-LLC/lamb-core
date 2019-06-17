@@ -16,7 +16,7 @@ from lamb.json.mixins import ResponseEncodableMixin
 from lamb.json.encoder import JsonEncoder
 from lamb import exc
 
-from .uploaders.types import ImageUploadSlice, UploadedSlice
+from .uploaders.types import ImageUploadSlice, UploadedSlice, ImageUploadMode
 
 __all__ = ['AbstractImage', 'UploadedSlicesType']
 
@@ -99,12 +99,11 @@ class AbstractImage(ResponseEncodableMixin, AbstractConcreteBase, DeclarativeBas
 
     # columns
     image_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
-    # slices_info = Column(JSONB, nullable=False)
     slices_info = Column(UploadedSlicesType, nullable=False)
     image_type = Column(VARCHAR, nullable=False)
 
     # meta
-    __slicing__: List[ImageUploadSlice]
+    __slicing__: List[ImageUploadSlice] = [ImageUploadSlice('origin', -1, ImageUploadMode.NoAction, '')]
 
     __abstract__ = True
 

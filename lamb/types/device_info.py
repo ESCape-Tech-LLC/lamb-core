@@ -13,6 +13,7 @@ from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 from lamb import exc
 from lamb.json.encoder import JsonEncoder
 from lamb.types import LambLocale
+from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = [
@@ -22,8 +23,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True)
-class DeviceInfo(object):
+@dataclasses.dataclass()
+class DeviceInfo(ResponseEncodableMixin, object):
     """A device info class """
     device_family: Optional[str] = None
     device_platform: Optional[str] = None
@@ -32,8 +33,20 @@ class DeviceInfo(object):
     app_build: Optional[int] = None
     device_locale: Optional[LambLocale] = None
 
+    def __post_init__(self):
+        if isinstance(self.device_locale, str):
+            self.device_locale = LambLocale(self.device_locale)
 
-class DeviceInfoType(types.TypeDecorator, ScalarCoercible):
+    def response_encode(self, request=None) -> dict:
+        result = dataclasses.asdict(self)
+        if self.device_locale is not None:
+            result['device_locale'] = self.device_locale.response_encode(request)
+        else:
+            result['device_locale'] = None
+        return result
+
+
+class DeviceInfoType(types.TypeDecorator):
     """ Database storage """
     impl = types.Unicode(10)
     python_type = DeviceInfo
@@ -58,17 +71,18 @@ class DeviceInfoType(types.TypeDecorator, ScalarCoercible):
             raise exc.ServerError('Invalid data type to store as device info')
 
         # store data
-        if dialect.name == 'postgresql':
-            value = dataclasses.asdict(value)
-        else:
-            value = json.dumps(value, cls=self._encoder_class)
-        return value
+        result = value.response_encode()
+        if dialect.name != 'postgresql':
+            result = json.dumps(result, cls=self._encoder_class)
+        return result
 
     def process_result_value(self, value, dialect):
         if value is None:
             return None
 
         if dialect.name != 'postgresql':
-            value = json.loads(value)
-
-        return DeviceInfo(**value)
+            result = json.loads(value)
+        else:
+            result = value
+        result = DeviceInfo(**result)
+        return result
