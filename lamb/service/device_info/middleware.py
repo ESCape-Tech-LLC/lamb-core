@@ -60,4 +60,4 @@ class DeviceInfoMiddleware(MiddlewareMixin):
         if device_info.device_locale is not None:
             request.lamb_locale = device_info.device_locale
         else:
-            request.lamb_locale = LambLocale(settings.LAMB_DEVICE_DEFAULT_LOCALE)
+            request.lamb_locale = LambLocale.parse(settings.LAMB_DEVICE_DEFAULT_LOCALE)
