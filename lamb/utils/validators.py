@@ -97,8 +97,17 @@ def validate_length(
     return value
 
 
-def validate_phone_number(phone_number: str, region: Optional[str] = None) -> PhoneNumber:
+def validate_phone_number(phone_number: Optional[str], region: Optional[str] = None,
+                          allow_none: bool = False) -> PhoneNumber:
     """ Validate value as valid phone number """
+    # early return
+    if phone_number is None and allow_none:
+        return None
+
+    if isinstance(phone_number, PhoneNumber):
+        return phone_number
+
+    # parse
     try:
         if region is not None:
             region = region.upper()
@@ -113,7 +122,12 @@ def validate_phone_number(phone_number: str, region: Optional[str] = None) -> Ph
         raise InvalidParamValueError(f'Phone number validation failed') from e
 
 
-def validate_email(value: str) -> str:
+def validate_email(value: Optional[str], allow_none: bool = False) -> Optional[str]:
+    # early return
+    if value is None and allow_none:
+        return value
+
+    # parse value
     try:
         EmailValidator()(value)
         return value
