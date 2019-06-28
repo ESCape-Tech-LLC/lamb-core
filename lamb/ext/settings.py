@@ -148,7 +148,6 @@ class AbstractSettingsValue(DbEnum):
     def _setup_db_item(self, item):
         item = super()._setup_db_item(item=item)
         item.value = self._converter.process_result_value(self.default)
-        # item.value = self.default
         item.description = self._default_description
         item.disclaimer = self._default_disclaimer
         return item

@@ -13,6 +13,7 @@ from django.utils.deprecation import MiddlewareMixin
 from lamb.execution_time.meter import ExecutionTimeMeter
 from lamb.execution_time.model import LambExecutionTimeMetric, LambExecutionTimeMarker
 from lamb.utils import *
+from lamb.db.context import lamb_db_context
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +66,10 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         # store
         try:
             # database
-            request.lamb_db_session.add(metric)
-            request.lamb_db_session.commit()
+            with lamb_db_context() as db_session:
+                # make in context to omit invalid commits under exceptions
+                db_session.add(metric)
+                db_session.commit()
         except Exception as e:
             logger.error('ExecutionMetrics store error: %s' % e)
             pass
