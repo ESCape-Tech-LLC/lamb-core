@@ -36,7 +36,7 @@ __all__ = [
 
     'import_class_by_name', 'inject_app_defaults',
 
-    'datetime_end', 'datetime_begin',
+    'datetime_end', 'datetime_begin'
 ]
 
 
@@ -564,4 +564,3 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
     for _ in range(length):
         result += random.choice(char_set)
     return result
-

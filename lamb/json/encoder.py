@@ -6,6 +6,7 @@ import json
 import datetime
 import time
 import uuid
+import logging
 
 from django.conf import settings
 from decimal import Decimal
@@ -14,6 +15,8 @@ from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = ['JsonEncoder']
+
+logger = logging.getLogger(__name__)
 
 
 class JsonEncoder(json.JSONEncoder):

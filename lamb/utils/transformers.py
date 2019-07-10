@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import re
+
 __author__ = 'KoNEW'
 
 import logging
@@ -13,7 +15,7 @@ from furl import furl
 from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError, ApiError
 
 __all__ = [
-    'transform_boolean', 'transform_date', 'transform_string_enum', 'transform_uuid'
+    'transform_boolean', 'transform_date', 'transform_string_enum', 'transform_uuid', 'transform_prefixed_tsquery'
 ]
 
 logger = logging.getLogger(__name__)
@@ -99,3 +101,13 @@ def transform_uuid(value: str, key: Optional[str] = None) -> uuid.UUID:
         return uuid.UUID(value)
     except (TypeError, ValueError) as e:
         raise InvalidParamValueError('Invalid value for uuid field', error_details=key) from e
+
+
+def transform_prefixed_tsquery(value: str) -> str:
+    result = re.sub('[()|&*:]', ' ', value)
+    result = ' & '.join(result.split())
+    if len(result) > 0:
+        result += ':*'
+    else:
+        result = '*'
+    return result
