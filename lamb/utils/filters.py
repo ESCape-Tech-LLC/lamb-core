@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # abstract
 T = TypeVar('T')
 
+
 # TODO: migrate to dataclasses
 class Filter(object):
     """ Abstract filter for model query """
@@ -231,6 +232,7 @@ class ColumnBooleanFilter(ColumnValueFilter):
 
         super().__init__(*args, **kwargs)
         # kwargs['req_type']
+
 
 class EnumFilter(ColumnValueFilter):
 
