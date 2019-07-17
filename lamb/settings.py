@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
+import datetime
 
 # device info
 LAMB_DEVICE_INFO_HEADER_FAMILY = 'HTTP_X_LAMB_DEVICE_FAMILY'
@@ -30,6 +31,8 @@ LAMB_RESPONSE_JSON_INDENT = None
 LAMB_RESPONSE_DATE_FORMAT = '%Y-%m-%d'
 LAMB_RESPONSE_OVERRIDE_STATUS_200 = False
 LAMB_RESPONSE_APPLY_TO_APPS = []
+
+LAMB_RESPONSE_DATETIME_TRANSFORMER = 'lamb.utils.transformers.transform_datetime_seconds_int'
 
 
 # image uploading

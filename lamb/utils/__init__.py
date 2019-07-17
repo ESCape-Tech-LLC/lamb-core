@@ -34,7 +34,7 @@ __all__ = [
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
     'dpath_value',
 
-    'import_class_by_name', 'inject_app_defaults',
+    'import_class_by_name', 'import_by_name', 'inject_app_defaults',
 
     'datetime_end', 'datetime_begin'
 ]
@@ -483,12 +483,23 @@ def datetime_begin(value: Union[date, datetime]) -> datetime:
 
 
 # other
-def import_class_by_name(name):
+def import_by_name(name):
     components = name.split('.')
     mod = __import__(components[0])
     for comp in components[1:]:
         mod = getattr(mod, comp)
     return mod
+
+
+def import_class_by_name(name):
+    warnings.warn('import_class_by_name deprecated, use lamb.utils.transformers.import_by_name instead', DeprecationWarning,
+                  stacklevel=2)
+    return import_by_name(name=name)
+    # components = name.split('.')
+    # mod = __import__(components[0])
+    # for comp in components[1:]:
+    #     mod = getattr(mod, comp)
+    # return mod
 
 
 def inject_app_defaults(application: str):

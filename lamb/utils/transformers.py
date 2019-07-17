@@ -6,6 +6,7 @@ __author__ = 'KoNEW'
 import logging
 import enum
 import uuid
+import time
 
 from typing import Type, TypeVar, Optional, Union
 from datetime import datetime, date
@@ -15,7 +16,8 @@ from furl import furl
 from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError, ApiError
 
 __all__ = [
-    'transform_boolean', 'transform_date', 'transform_string_enum', 'transform_uuid', 'transform_prefixed_tsquery'
+    'transform_boolean', 'transform_date', 'transform_string_enum', 'transform_uuid', 'transform_prefixed_tsquery',
+    'transform_datetime_seconds_int', 'transform_datetime_milliseconds_int', 'transform_datetime_milliseconds_float'
 ]
 
 logger = logging.getLogger(__name__)
@@ -111,3 +113,15 @@ def transform_prefixed_tsquery(value: str) -> str:
     else:
         result = '*'
     return result
+
+
+def transform_datetime_seconds_int(value: datetime) -> int:
+    return int(value.timestamp())
+
+
+def transform_datetime_milliseconds_int(value: datetime) -> int:
+    return int(value.timestamp() * 1000)
+
+
+def transform_datetime_milliseconds_float(value: datetime) -> float:
+    return value.timestamp()
