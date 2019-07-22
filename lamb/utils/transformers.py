@@ -106,7 +106,7 @@ def transform_uuid(value: str, key: Optional[str] = None) -> uuid.UUID:
 
 
 def transform_prefixed_tsquery(value: str) -> str:
-    result = re.sub('[()|&*:]', ' ', value)
+    result = re.sub('[()|&*:!]', ' ', value)
     result = ' & '.join(result.split())
     if len(result) > 0:
         result += ':*'
