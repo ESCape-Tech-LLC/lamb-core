@@ -214,9 +214,11 @@ class DatetimeFilter(ColumnValueFilter):
         )
 
     def vary_param_value_min(self, value: Union[datetime, date]) -> datetime:
+        logger.warning(f'min vary: {value} -> {datetime_begin(value)}')
         return datetime_begin(value)
 
     def vary_param_value_max(self, value: Union[datetime, date]) -> datetime:
+        logger.warning(f'max vary: {value} -> {datetime_end(value)}')
         return datetime_end(value)
 
 
@@ -231,6 +233,7 @@ class ColumnBooleanFilter(ColumnValueFilter):
 
         super().__init__(*args, **kwargs)
         # kwargs['req_type']
+
 
 class EnumFilter(ColumnValueFilter):
 
