@@ -6,14 +6,21 @@ import json
 import datetime
 import time
 import uuid
+import logging
 
 from django.conf import settings
 from decimal import Decimal
 
+from lazy import lazy
+
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.utils import import_by_name
+from lamb.exc import ServerError
 
 
 __all__ = ['JsonEncoder']
+
+logger = logging.getLogger(__name__)
 
 
 class JsonEncoder(json.JSONEncoder):
@@ -22,11 +29,12 @@ class JsonEncoder(json.JSONEncoder):
         super().__init__(**kwargs)
         self.callback = callback
         self.request = request
+        self._datetime_transformer = import_by_name(settings.LAMB_RESPONSE_DATETIME_TRANSFORMER)
 
     def default(self, obj):
         # general encoding
         if isinstance(obj, datetime.datetime):
-            result = int(time.mktime(obj.timetuple()))
+            result = self._datetime_transformer(obj)
         elif isinstance(obj, datetime.date):
             result = obj.strftime(settings.LAMB_RESPONSE_DATE_FORMAT)
         elif isinstance(obj, Decimal):
