@@ -30,7 +30,6 @@ class JsonEncoder(json.JSONEncoder):
         self.callback = callback
         self.request = request
         self._datetime_transformer = import_by_name(settings.LAMB_RESPONSE_DATETIME_TRANSFORMER)
-        logger.info(f'transformer initialized')
 
     def default(self, obj):
         # general encoding

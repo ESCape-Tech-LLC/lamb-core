@@ -112,8 +112,8 @@ def validate_phone_number(phone_number: Optional[str], region: Optional[str] = N
         if region is not None:
             region = region.upper()
         phone_number = PhoneNumber(phone_number, region)
-        if not phone_number.is_valid_number():
-            raise InvalidParamValueError('Phone number is not valid')
+        # if not phone_number.is_valid_number():
+        #     raise InvalidParamValueError('Phone number is not valid')
         logger.debug(f'parsed phone number: {phone_number.e164}')
         return phone_number
     except ApiError:
