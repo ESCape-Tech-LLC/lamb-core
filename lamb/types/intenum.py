@@ -37,10 +37,8 @@ class IntEnumType(sa.types.TypeDecorator, ScalarCoercible):
 
     def load_dialect_impl(self, dialect):
         if self._impl_type is not None:
-            logger.warning(f'returns declared: {self._impl_type}')
             return dialect.type_descriptor(self._impl_type)
         elif dialect.name == 'postgresql':
-            logger.warning(f'returns postgresql: {SMALLINT}')
             return dialect.type_descriptor(SMALLINT)
         else:
             return dialect.type_descriptor(self.impl)

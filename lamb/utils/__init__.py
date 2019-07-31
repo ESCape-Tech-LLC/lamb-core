@@ -137,7 +137,7 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
 
     # parse omit total
     from lamb.utils.transformers import transform_boolean
-    total_omit  = dpath_value(params, settings.LAMB_PAGINATION_KEY_OMIT_TOTAL, str,
+    total_omit = dpath_value(params, settings.LAMB_PAGINATION_KEY_OMIT_TOTAL, str,
                               transform=transform_boolean, default=False)
 
     # parse and check offset
