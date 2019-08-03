@@ -54,7 +54,18 @@ def transform_date(value: Union[datetime, date, str], format=settings.LAMB_RESPO
         return value.date()
     if isinstance(value, date):
         return value
-    elif isinstance(value, str):
+    elif isinstance(value, (str, int)):
+        # try to convert as timestamp
+        try:
+            float_value = float(value)
+            if len(str(float_value)) >= 11:
+                float_value = float_value / 1000
+            result = datetime.fromtimestamp(float_value)
+            return result
+        except ValueError:
+            pass
+
+        # try to convert according to format
         try:
             if value.lower() == 'today':
                 result = datetime.now()

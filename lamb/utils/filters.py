@@ -5,7 +5,7 @@ import logging
 import warnings
 import sqlalchemy as sa
 
-from typing import List, Callable, Optional, Type, Dict, TypeVar, Union, Iterable, Any
+from typing import List, Callable, Optional, Type, Dict, TypeVar, Union, Iterable, Any, Tuple
 from functools import partial
 from datetime import date, datetime
 from django.conf import settings
@@ -95,6 +95,12 @@ class Filter(object):
 
         # return result
         return result
+
+    def vary_param_value_equal(self, value: T) -> T:
+        return value
+
+    def vary_param_value_not_equal(self, value: T) -> T:
+        return value
 
     def vary_param_value_max(self, value: T) -> T:
         return value
@@ -204,6 +210,21 @@ class ColumnValueFilter(FieldValueFilter):
 
 
 # special syntax sugars
+# def _timestamp_transform_date(value: Union[datetime, date, str, int, float], format=settings.LAMB_RESPONSE_DATE_FORMAT) -> Union[datetime, date]:
+#     # try to convert as timestamp
+#     if isinstance(value, (str, int, float)):
+#         try:
+#             float_value = float(value)
+#             if len(str(float_value)) >= 11:
+#                 float_value = float_value / 1000
+#             result = datetime.fromtimestamp(float_value)
+#             return result
+#         except ValueError:
+#             pass
+#
+#     return transform_date(value, format)
+
+
 class DatetimeFilter(ColumnValueFilter):
 
     def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):
@@ -216,11 +237,16 @@ class DatetimeFilter(ColumnValueFilter):
 
     def vary_param_value_min(self, value: Union[datetime, date]) -> datetime:
         logger.warning(f'min vary: {value} -> {datetime_begin(value)}')
-        return datetime_begin(value)
+        if isinstance(value, datetime):
+            return value
+        else:
+            return datetime_begin(value)
 
     def vary_param_value_max(self, value: Union[datetime, date]) -> datetime:
-        logger.warning(f'max vary: {value} -> {datetime_end(value)}')
-        return datetime_end(value)
+        if isinstance(value, datetime):
+            return value
+        else:
+            return datetime_end(value)
 
 
 class ColumnBooleanFilter(ColumnValueFilter):
