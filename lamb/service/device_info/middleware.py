@@ -3,9 +3,11 @@ __author__ = 'KoNEW'
 
 import logging
 
+from typing import Optional
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 
+from lamb import exc
 from lamb.utils import dpath_value, LambRequest
 from lamb.types import LambLocale
 
@@ -20,6 +22,15 @@ __all__ = [
 ]
 
 
+def _transform_empty_string_to_none(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise exc.InvalidParamTypeError('Invalid data type received for string converter')
+
+    return value if len(value) > 0 else None
+
+
 class DeviceInfoMiddleware(MiddlewareMixin):
 
     def process_request(self, request: LambRequest):
@@ -27,12 +38,16 @@ class DeviceInfoMiddleware(MiddlewareMixin):
         # device info parsing
         try:
             # extract info
-            device_family = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_FAMILY, str, default=None)
-            device_platform = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_PLATFORM, str, default=None)
+            device_family = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_FAMILY, str,
+                                        transform=_transform_empty_string_to_none, default=None)
+            device_platform = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_PLATFORM, str,
+                                          transform=_transform_empty_string_to_none, default=None)
             device_os_version = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_OS_VERSION, str,
-                                            default=None)
-            device_locale = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_LOCALE, str, default=None)
-            app_version = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_VERSION, str, default=None)
+                                            transform=_transform_empty_string_to_none, default=None)
+            device_locale = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_LOCALE, str,
+                                        transform=_transform_empty_string_to_none, default=None)
+            app_version = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_VERSION, str,
+                                      transform=_transform_empty_string_to_none, default=None)
             app_build = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_BUILD, int, default=None)
 
             # normalize values

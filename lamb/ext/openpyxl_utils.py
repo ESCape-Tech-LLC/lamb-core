@@ -26,6 +26,7 @@ Column names based wrapper around Excel worksheet
 - use zero-based indexes instead of default openpyxl mode
 """
 
+
 class Workbook(object):
     def __init__(self, filename, create_columns: bool = True):
         self._workbook = openpyxl.load_workbook(filename, data_only=True)
@@ -35,9 +36,17 @@ class Workbook(object):
     @property
     def worksheets(self) -> List['Worksheet']:
         return [
+
             Worksheet(wrapped_worskheet=w, create_columns=self._create_columns)
             for w in self._workbook.worksheets
         ]
+
+    @property
+    def worksheets_dict(self) -> Dict[str, 'Worksheet']:
+        return {
+            w.title: Worksheet(wrapped_worskheet=w, create_columns=self._create_columns)
+            for w in self._workbook.worksheets
+        }
 
     # excel general
     @property
@@ -130,8 +139,6 @@ class Worksheet(object):
             return None
 
 
-
-
 class Row(object):
 
     def __init__(self, worksheet: Worksheet, row_index: int):
@@ -144,9 +151,10 @@ class Row(object):
     def __setitem__(self, column_name, value):
         self._worksheet.cell(row=self._row_index, column=column_name).value = value
 
+    @property
     def cells(self) -> Generator['Cell', None, None]:
         max_column = self._worksheet.openpyxl_worksheet.max_column
-        for column_index in range(0, max_column - 1):
+        for column_index in range(0, max_column):
             yield self._worksheet.cell(row=self._row_index, column=column_index)
 
 
