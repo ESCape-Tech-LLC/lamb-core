@@ -236,7 +236,6 @@ class DatetimeFilter(ColumnValueFilter):
         )
 
     def vary_param_value_min(self, value: Union[datetime, date]) -> datetime:
-        logger.warning(f'min vary: {value} -> {datetime_begin(value)}')
         if isinstance(value, datetime):
             return value
         else:
