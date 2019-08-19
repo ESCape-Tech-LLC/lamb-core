@@ -98,7 +98,7 @@ def validate_length(
 
 
 def validate_phone_number(phone_number: Optional[str], region: Optional[str] = None,
-                          allow_none: bool = False) -> PhoneNumber:
+                          allow_none: bool = False, check_valid: bool = True) -> PhoneNumber:
     """ Validate value as valid phone number """
     # early return
     if phone_number is None and allow_none:
@@ -112,7 +112,7 @@ def validate_phone_number(phone_number: Optional[str], region: Optional[str] = N
         if region is not None:
             region = region.upper()
         phone_number = PhoneNumber(phone_number, region)
-        if not phone_number.is_valid_number():
+        if check_valid and not phone_number.is_valid_number():
             raise InvalidParamValueError('Phone number is not valid')
         logger.debug(f'parsed phone number: {phone_number.e164}')
         return phone_number
