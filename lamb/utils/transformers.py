@@ -58,7 +58,7 @@ def transform_date(value: Union[datetime, date, str], format=settings.LAMB_RESPO
         # try to convert as timestamp
         try:
             float_value = float(value)
-            if len(str(float_value)) >= 11:
+            if len(str(round(float_value))) >= 11:
                 float_value = float_value / 1000
             result = datetime.fromtimestamp(float_value)
             return result
