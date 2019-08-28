@@ -3,9 +3,13 @@
 import os
 import uuid
 import logging
+import base64
+
 from typing import List, Iterable, Union, Optional
 from dataclasses import asdict
 from PIL import Image as PILImage
+from io import BytesIO
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from lamb.utils import compact, LambRequest
 from lamb import exc
@@ -15,6 +19,32 @@ from .types import ImageUploadMode, ImageUploadSlice, UploadedSlice
 logger = logging.getLogger(__name__)
 
 __all__ = ['BaseUploader']
+
+
+def _is_base64(sb) -> bool:
+    try:
+        if type(sb) == str:
+            # If there's any unicode here, an exception will be thrown and the function will return false
+            sb_bytes = bytes(sb, 'ascii')
+        elif type(sb) == bytes:
+            sb_bytes = sb
+        else:
+            raise exc.InvalidParamTypeError('Argument must be string or bytes')
+        return base64.b64encode(base64.b64decode(sb_bytes)) == sb_bytes
+    except Exception:
+        return False
+
+
+def _get_bytes_image_mime_type(data: bytes) -> Optional[str]:
+    try:
+        stream = BytesIO(data)
+
+        image = PILImage.open(stream)
+        image.verify()
+        return PILImage.MIME[image.format]
+    except Exception as e:
+        logger.debug(f'image encoded check exception: {e}')
+        return None
 
 
 class BaseUploader(object):
@@ -103,19 +133,39 @@ class BaseUploader(object):
         :param required_count: Count of images that should be in request
         :return: List of uploaded slices info's collection for each image.
         """
+        # try to decode image stored as base64 fields
+        files = request.FILES.copy()
+        for key, value in request.POST.items():
+            try:
+                if not _is_base64(value):
+                    continue
+                data = base64.b64decode(value)
+                logger.info(f'{key} -> {value} -> {data}')
+
+                mime_type = _get_bytes_image_mime_type(data)
+                if mime_type is None:
+                    continue
+                logger.debug(f'encoded image mime-type: {mime_type}')
+
+                f = SimpleUploadedFile(key, data, content_type=mime_type)
+                files[key] = f
+                logger.debug(f'did patch FILES object to incldue image from POST base64 encoded data')
+            except:
+                continue
+
         # check request
-        if len(request.FILES) == 0:
+        if len(files) == 0:
             raise exc.InvalidBodyStructureError('Uploading image missed')
         if required_count is not None:
             if not isinstance(required_count, int):
                 logger.warning('Invalid data type received for required_count = %s' % required_count)
                 raise exc.ServerError('Improperly configured uploader')
-            if len(request.FILES) != required_count:
+            if len(files) != required_count:
                 raise exc.InvalidBodyStructureError('Invalid count of uploading images')
 
         # Decode original image
         result = list()
-        for _, uploaded_file in request.FILES.items():
+        for _, uploaded_file in files.items():
             processed_image_slices = self.process_image(
                 source_image=uploaded_file,
                 slices=slicing,
