@@ -9,6 +9,8 @@ import uuid
 import warnings
 import logging
 import re
+import types
+import importlib
 
 from datetime import datetime, date
 from typing import List, Union, TypeVar, Optional, Dict
@@ -483,23 +485,30 @@ def datetime_begin(value: Union[date, datetime]) -> datetime:
 
 
 # other
-def import_by_name(name):
-    components = name.split('.')
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
+def import_by_name(name: str):
+    # try to import as module
+    def _import_module(_name) -> Optional[types.ModuleType]:
+        try:
+            return importlib.import_module(_name)
+        except ImportError:
+            return None
+
+    res = _import_module(name)
+    if res is None:
+        module, _, func_or_class = name.rpartition('.')
+        mod = _import_module(module)
+        try:
+            res = getattr(mod, func_or_class)
+        except AttributeError as e:
+            raise ImportError(f'Could not load {name}') from e
+
+    return res
 
 
 def import_class_by_name(name):
     warnings.warn('import_class_by_name deprecated, use lamb.utils.transformers.import_by_name instead', DeprecationWarning,
                   stacklevel=2)
     return import_by_name(name=name)
-    # components = name.split('.')
-    # mod = __import__(components[0])
-    # for comp in components[1:]:
-    #     mod = getattr(mod, comp)
-    # return mod
 
 
 def inject_app_defaults(application: str):
