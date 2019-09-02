@@ -62,12 +62,14 @@ class BaseUploader(object):
 
     def process_image(self, source_image: Union[PILImage.Image, str],
                       request: LambRequest,
-                      slices: Iterable[ImageUploadSlice] = ()) -> List[UploadedSlice]:
+                      slices: Iterable[ImageUploadSlice] = (), 
+                      image_format: Optional[str] = None) -> List[UploadedSlice]:
         """
         Processes single images
         :param source_image: PIL Image or file
         :param request: Request
         :param slices: Slicing configuration
+        :param image_format: Optional image format to override
         :return: List of uploaded slices info's
         """
         try:
@@ -83,7 +85,8 @@ class BaseUploader(object):
 
         # store data
         filename_base = str(uuid.uuid4())
-        filename_extension = src.format.lower()
+        image_format = image_format or src.format
+        filename_extension = image_format.lower()
         result = list()
 
         for s in slices:
@@ -111,7 +114,12 @@ class BaseUploader(object):
             proposed_file_name = f'{filename}.{filename_extension}'
 
             # store info about new slice
-            image_url = self.store_image(image_copy, proposed_file_name, request)
+            image_url = self.store_image(
+                image=image_copy,
+                proposed_file_name=proposed_file_name,
+                request=request,
+                image_format=image_format
+            )
 
             result.append(UploadedSlice(
                 title=s.title,
@@ -125,7 +133,8 @@ class BaseUploader(object):
 
     def process_request(self, request: LambRequest,
                         slicing: Iterable[ImageUploadSlice] = (),
-                        required_count: Optional[int] = None) -> List[List[UploadedSlice]]:
+                        required_count: Optional[int] = None,
+                        image_format: Optional[str] = None) -> List[List[UploadedSlice]]:
         """
         Performs uploading of request's image files.
         :param request: Request
@@ -169,7 +178,8 @@ class BaseUploader(object):
             processed_image_slices = self.process_image(
                 source_image=uploaded_file,
                 slices=slicing,
-                request=request
+                request=request,
+                image_format=image_format
             )
             result.append(processed_image_slices)
 
@@ -177,7 +187,8 @@ class BaseUploader(object):
 
     def store_image(self, image: PILImage.Image,
                     proposed_file_name: str,
-                    request: LambRequest) -> str:
+                    request: LambRequest, 
+                    image_format: Optional[str] = None) -> str:
         """ Implements specific storage logic
         :return: URL of stored image
         """

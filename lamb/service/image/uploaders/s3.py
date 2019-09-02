@@ -7,6 +7,7 @@ from typing import Optional
 from django.conf import settings
 from boto3.session import Session as AWSSession
 
+from lamb.utils import LambRequest
 from lamb import exc
 from .base import BaseUploader, PILImage
 
@@ -39,7 +40,10 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             raise exc.ServerError('AWS bucket for store image not exist')
         self.bucket = s3.Bucket(settings.LAMB_AWS_BUCKET_NAME)
 
-    def store_image(self, image: PILImage.Image, proposed_file_name, request) ->str:
+    def store_image(self, image: PILImage.Image,
+                    proposed_file_name: str,
+                    request: LambRequest,
+                    image_format: Optional[str] = None) -> str:
         """ Implements specific storage logic
         :return: URL of stored image
         """
@@ -48,7 +52,11 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             relative_path = self.construct_relative_path(proposed_file_name)
             logger.debug('Processing image: <%s, %s>: %s to %s'
                          % (image.format, proposed_file_name, image, relative_path))
-            image.save(tf, image.format, quality=settings.LAMB_IMAGE_UPLOAD_QUALITY)
+            image.save(
+                tf,
+                image_format or image.format,
+                quality=settings.LAMB_IMAGE_UPLOAD_QUALITY
+            )
             tf.seek(0)
 
             # construct mime/type

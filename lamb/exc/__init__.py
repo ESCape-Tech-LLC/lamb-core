@@ -140,7 +140,11 @@ class AlreadyExistError(ClientError):
 
 class AuthCredentialsIsNotProvided(ClientError):
     """ Client side error for invalid credentials structure """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, message='User auth token is not provided. You must be logged for this request.', **kwargs):
+        if len(args) == 0:
+            kwargs.update({
+                'message': message
+            })
         super().__init__(*args, **kwargs)
         self.status_code = 401
         self.app_error_code = LambExceptionCodes.AuthNotProvided
@@ -156,7 +160,11 @@ class AuthCredentialsInvalid(ClientError):
 
 class AuthCredentialsExpired(ClientError):
     """ Client side error for expired credentials value """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, message='Provided user auth token has expired. Please renew it.', **kwargs):
+        if len(args) == 0:
+            kwargs.update({
+                'message': message
+            })
         super().__init__(*args, **kwargs)
         self.status_code = 401
         self.app_error_code = LambExceptionCodes.AuthExpired
@@ -164,11 +172,6 @@ class AuthCredentialsExpired(ClientError):
 
 class AuthForbidden(ClientError):
     """ Client side error for requesting authorized but forbidden resource """
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.status_code = 403
-    #     self.app_error_code = LambExceptionCodes.AuthForbidden
-
     def __init__(self, *args, message='You have not access to this resource', **kwargs):
         if len(args) == 0:
             kwargs.update({

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import os
+
+from typing import Optional
 from urllib.parse import urljoin
 from django.conf import settings
 
@@ -18,10 +20,14 @@ class ImageUploadServiceDisk(BaseUploader):
 
     """
 
-    def store_image(self,
-                    image: PILImage.Image,
+    def store_image(self, image: PILImage.Image,
                     proposed_file_name: str,
-                    request: LambRequest) -> str:
+                    request: LambRequest,
+                    image_format: Optional[str] = None) -> str:
+    # # def store_image(self,
+    #                 image: PILImage.Image,
+    #                 proposed_file_name: str,
+    #                 request: LambRequest) -> str:
         """ Implements specific storage logic
         :return: URL of stored image
         """
@@ -37,7 +43,7 @@ class ImageUploadServiceDisk(BaseUploader):
             # store file on disk
             image.save(
                 output_file_path,
-                image.format,
+                image_format or image.format,
                 quality=settings.LAMB_IMAGE_UPLOAD_QUALITY
             )
 

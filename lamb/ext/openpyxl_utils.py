@@ -9,6 +9,7 @@ from typing import Optional, List, Generator, Tuple, Dict, Union, Callable
 from openpyxl.cell.cell import Cell as OpenpyxlCell
 from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet
 from openpyxl.workbook import Workbook as OpenpyxlWorkbook
+from lazy import lazy
 
 from lamb.exc import InvalidParamTypeError, InvalidParamValueError, ApiError, InvalidBodyStructureError
 
@@ -81,7 +82,7 @@ class Worksheet(object):
     def openpyxl_worksheet(self) -> OpenpyxlWorksheet:
         return self._wrapped_worksheet
 
-    @property
+    @lazy
     def headers(self) -> List[Optional[str]]:
         return [cell.typed_value(req_type=str, default=None) for cell in self.cells(0)]
 
@@ -107,6 +108,7 @@ class Worksheet(object):
                     max_column = self._wrapped_worksheet.max_column
                     self._wrapped_worksheet.cell(row=1, column=max_column + 1).value = column
                     column_index = max_column
+                    lazy.invalidate(self, 'headers')
                 else:
                     raise InvalidParamValueError(f'Column with name={column} not exist')
         elif isinstance(column, int):
