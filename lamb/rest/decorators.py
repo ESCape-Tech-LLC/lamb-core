@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
+from functools import wraps
 
 from django.http import HttpResponse
 
@@ -12,6 +13,7 @@ __all__ = [ 'rest_allowed_http_methods' ]
 
 def rest_allowed_http_methods(method_list):
     def wrapper(wrapped_object):
+        @wraps(wrapped_object)
         def inner(request, *args, **kwargs):
             # get method list in proper format
             m_list = [m.upper() for m in method_list]
