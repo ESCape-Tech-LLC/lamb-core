@@ -28,3 +28,25 @@ class FieldValueFilterTestCase(LambTestCase):
                 value_filter = FieldValueFilter('actor_id', str, Actor.actor_id, allowed_compares=[compare])
                 result = value_filter.apply_to_query(Query(Actor), {param: 0})
                 assert f"WHERE actor.actor_id {operator} %(actor_id_1)s" in str(result)
+
+    def test_null_argument(self):
+        for compare, param, operator in [
+                ('__eq__', 'actor_id', 'IS NULL'),
+                ('__ne__', 'actor_id.exclude', 'IS NOT NULL'),
+        ]:
+            with self.subTest(compare):
+                value_filter = FieldValueFilter('actor_id', str, Actor.actor_id, allowed_compares=[compare])
+                result = value_filter.apply_to_query(Query(Actor), {param: 'null'})
+                assert f"WHERE actor.actor_id {operator}" in str(result)
+
+    def test_null_argument_in_list(self):
+        for compare, param, operator in [
+                ('__eq__', 'actor_id',
+                 'IN (%(actor_id_1)s, %(actor_id_2)s) OR actor.actor_id IS NULL'),
+                ('__ne__', 'actor_id.exclude',
+                 'NOT IN (%(actor_id_1)s, %(actor_id_2)s) AND actor.actor_id IS NOT NULL'),
+        ]:
+            with self.subTest(compare):
+                value_filter = FieldValueFilter('actor_id', str, Actor.actor_id, allowed_compares=[compare])
+                result = value_filter.apply_to_query(Query(Actor), {param: '1,null,3'})
+                assert f"WHERE actor.actor_id {operator}" in str(result), str(result)

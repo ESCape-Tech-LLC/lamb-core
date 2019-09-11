@@ -152,7 +152,14 @@ class FieldValueFilter(Filter):
             param_value = self.get_param_value(params, key_path=self.arg_name)
             if param_value is not None:
                 if len(param_value) > 1:
-                    query = query.filter(self.comparing_field.in_(param_value))
+                    try:  # check for null value in values
+                        param_value.remove(None)
+                    except ValueError:
+                        query = query.filter(self.comparing_field.in_(param_value))
+                    else:
+                        # IN (...) OR IS NULL
+                        query = query.filter(sa.or_(self.comparing_field.in_(param_value),
+                                                    self.comparing_field.__eq__(None)))
                 else:
                     query = query.filter(self.comparing_field.__eq__(param_value[0]))
 
@@ -161,7 +168,14 @@ class FieldValueFilter(Filter):
             param_value = self.get_param_value(params, key_path=self.arg_name + '.exclude')
             if param_value is not None:
                 if len(param_value) > 1:
-                    query = query.filter(~self.comparing_field.in_(param_value))
+                    try:  # check for null value in values
+                        param_value.remove(None)
+                    except ValueError:
+                        query = query.filter(~self.comparing_field.in_(param_value))
+                    else:
+                        # IN (...) AND IS NOT NULL
+                        query = query.filter(sa.and_(~self.comparing_field.in_(param_value),
+                                                     self.comparing_field.__ne__(None)))
                 else:
                     query = query.filter(self.comparing_field.__ne__(param_value[0]))
 
