@@ -37,10 +37,10 @@ except KeyError as e:
 DeclarativeBase = declarative_base()
 metadata = DeclarativeBase.metadata
 metadata.bind = _engine
+_session_maker = sessionmaker(bind=_engine)
 
 
 def lamb_db_session_maker() -> sa.orm.session.Session:
     """ Constructor for database sqlalchemy sessions """
-    maker = sessionmaker(bind=_engine)
-    session = maker()
+    session = _session_maker()
     return session
