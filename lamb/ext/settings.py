@@ -5,7 +5,9 @@ import abc
 import json
 import logging
 import enum
+from typing import Type
 
+from django.core.cache import cache
 from sqlalchemy import Column, VARCHAR, TEXT
 from lamb import exc
 from lamb.db.patterns import DbEnum
@@ -85,8 +87,65 @@ class IntBooleanConverter(BaseConverter):
             return '0'
 
 
+class AbstractSettingsValueCache:
+    """Descriptor that cache `AbstractSettingsValue` values.
+    """
+
+    @staticmethod
+    def key_func(settings_cls: Type['AbstractSettingsValue'], key: str):
+        return f"{settings_cls.__cache_prefix__}_{key}"
+
+    @classmethod
+    def clear(cls, settings_cls: Type['AbstractSettingsValue']):
+        """Delete values of all settings members from a cache."""
+        cache.delete_many([cls.key_func(settings_cls, key) for key in settings_cls.__members__])
+
+    def __get__(self, obj: 'AbstractSettingsValue', objtype: Type['AbstractSettingsValue']) -> 'AbstractSettingsStorage':
+        value = None
+        if obj._cached and obj.__cache_timeout__ != 0:
+            value = cache.get(self.key_func(obj, obj.value))
+        return value
+
+    def __set__(self, obj: 'AbstractSettingsValue', value: 'AbstractSettingsStorage'):
+        timeout = obj.__cache_timeout__
+        values_dict = {k: getattr(value, k) for k in obj.__class__.__attrib_mapping__.values()}
+        if obj._cached and timeout != 0:
+            cache.set(
+                key=self.key_func(obj, obj.value),
+                value=value.__class__(**values_dict),
+                timeout=timeout
+            )
+
+    def __delete__(self, obj: 'AbstractSettingsValue'):
+        if obj._cached and obj.__cache_timeout__ != 0:
+            cache.delete(self.key_func(obj, obj.value))
+
+
 @enum.unique
 class AbstractSettingsValue(DbEnum):
+    """Settings storage processor.
+
+       Example:
+
+        from lamb.ext.settings import AbstractSettingsValue
+
+        class TestCode(AbstractSettingsValue):
+            __table_class__ = 'SettingsStorage'
+
+            # Cache timeout, in seconds, to use for the cache. None - cache forever, 0 - do not use cache.
+            __cache_timeout__ = 600
+
+            # Prefix for settings keys in the cache
+            __cache_prefix__ = 'lamb_settings'
+
+            # Settings variable
+            settings1 = ('settings1', 900, 'Description', int, None)
+
+            # Variable with caching disabled
+            settings2 = ('settings2', 900, 'Description', int, None, False)
+
+    )
+    """
 
     __table_class__ = None
     __attrib_mapping__ = {
@@ -95,13 +154,27 @@ class AbstractSettingsValue(DbEnum):
         'disclaimer': 'disclaimer'
     }
 
-    def __new__(cls, code, default, default_description, converter, default_disclaimer, *args, **kwargs):
+    __cache_timeout__ = None
+    __cache_prefix__ = 'lamb_settings'
+    _cached_item = AbstractSettingsValueCache()
+
+
+    def __new__(cls, code, default, default_description, converter, default_disclaimer, cached=True, *args, **kwargs):
+        """
+        :param code:
+        :param default:
+        :param default_description:
+        :param converter:
+        :param default_disclaimer:
+        :param cached: cache variable values if True. Cache is enabled by default.
+        """
         obj = object.__new__(cls)
         obj._value_ = code
         obj.default = default
         obj._default_description = default_description
         obj._default_disclaimer = default_disclaimer
         obj._converter = None  # type: BaseConverter
+        obj._cached = cached
 
         if any(converter is simple_type for simple_type in (int, str, float)):
             obj._converter = SimpleTypeConverter(converter)
@@ -111,21 +184,31 @@ class AbstractSettingsValue(DbEnum):
             obj._converter = converter
         return obj
 
+    @classmethod
+    def cache_clear(cls):
+        """Clear the cache of settings values."""
+        AbstractSettingsValueCache.clear(cls)
+
     def __getattribute__(self, key):
         if key[:2] != '__':
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
-                with lamb_db_context() as session:
-                    db_item = self._db_item(session)
+                db_item = self._cached_item
+                if db_item:
+                    # use cached value
                     result = getattr(db_item, mapped_key)
-                    try:
-                        if result is not None and key=='val':
-                            result = self._converter.process_bind_param(result)
-                    except Exception as e:
-                        logger.error('Settings convert failed: %s' % e)
-                        raise exc.ServerError('Improperly configured settings values') from e
-                    return result
+                else:
+                    with lamb_db_context() as session:
+                        self._cached_item = db_item = self._db_item(session)
+                        result = getattr(db_item, mapped_key)
+                try:
+                    if result is not None and key=='val':
+                        result = self._converter.process_bind_param(result)
+                except Exception as e:
+                    logger.error('Settings convert failed: %s' % e)
+                    raise exc.ServerError('Improperly configured settings values') from e
+                return result
         return super().__getattribute__(key)
 
     def __setattr__(self, key, value):
@@ -143,6 +226,7 @@ class AbstractSettingsValue(DbEnum):
                         logger.error('Settings convert failed: %s' % e)
                         raise exc.ServerError('Improperly configured settings values') from e
                     session.commit()
+                    self._cached_item = db_item
         super().__setattr__(key, value)
 
     def _setup_db_item(self, item):
