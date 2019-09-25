@@ -131,7 +131,7 @@ class FieldValueFilter(Filter):
             raise ServerError('Improperly configured filter')
 
         for c in allowed_compares:
-            if c not in ['__eq__', '__ne__', '__le__', '__ge__']:
+            if c not in ['__eq__', '__ne__', '__lt__', '__le__', '__ge__', '__gt__']:
                 logger.warning('Filter allowed_compares invalid data type: %s' % allowed_compares)
                 raise ServerError('Improperly configured filter')
 
@@ -165,6 +165,16 @@ class FieldValueFilter(Filter):
                 else:
                     query = query.filter(self.comparing_field.__ne__(param_value[0]))
 
+        # check for greater
+        if '__gt__' in self.allowed_compares:
+            param_value = self.get_param_value(params, key_path=self.arg_name + '.greater')
+            if param_value is not None:
+                if len(param_value) > 1:
+                    raise InvalidParamValueError('Invalid param \'%s\' type for greater compare' % self.arg_name)
+                param_value = param_value[0]
+                param_value = self.vary_param_value_min(value=param_value)
+                query = query.filter(self.comparing_field.__gt__(param_value))
+
         # check for greater or equal
         if '__ge__' in self.allowed_compares:
             param_value = self.get_param_value(params, key_path=self.arg_name + '.min')
@@ -174,6 +184,16 @@ class FieldValueFilter(Filter):
                 param_value = param_value[0]
                 param_value = self.vary_param_value_min(value=param_value)
                 query = query.filter(self.comparing_field.__ge__(param_value))
+
+        # check for lower
+        if '__lt__' in self.allowed_compares:
+            param_value = self.get_param_value(params, key_path=self.arg_name + '.less')
+            if param_value is not None:
+                if len(param_value) > 1:
+                    raise InvalidParamValueError('Invalid param \'%s\' type for lower compare' % self.arg_name)
+                param_value = param_value[0]
+                param_value = self.vary_param_value_max(value=param_value)
+                query = query.filter(self.comparing_field.__lt__(param_value))
 
         # check for lower or equal
         if '__le__' in self.allowed_compares:
