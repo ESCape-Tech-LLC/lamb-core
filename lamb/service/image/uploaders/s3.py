@@ -5,6 +5,7 @@ import tempfile
 
 from typing import Optional
 from django.conf import settings
+from furl import furl
 from boto3.session import Session as AWSSession
 
 from lamb.utils import LambRequest
@@ -70,8 +71,12 @@ class ImageUploadServiceAmazonS3(BaseUploader):
                     Key=relative_path,
                     ContentType=image_mime_type
                 )
-                uploaded_url = 'https://{}.amazonaws.com/{}/{}'.format(
-                    settings.LAMB_AWS_BUCKET_ZONE, self.bucket.name, relative_path)
+                uploaded_url = furl(settings.LAMB_AWS_BUCKET_URL)
+                uploaded_url.path.add(relative_path)
+                uploaded_url = uploaded_url.url
+                logger.debug(f'uploading S3 URL: {uploaded_url}')
+                # uploaded_url = 'https://{}.amazonaws.com/{}/{}'.format(
+                #     settings.LAMB_AWS_BUCKET_ZONE, self.bucket.name, relative_path)
                 return uploaded_url
             except Exception as e:
                 raise exc.ServerError('Failed to save image') from e
