@@ -74,9 +74,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
                 uploaded_url = furl(settings.LAMB_AWS_BUCKET_URL)
                 uploaded_url.path.add(relative_path)
                 uploaded_url = uploaded_url.url
-                logger.debug(f'uploading S3 URL: {uploaded_url}')
-                # uploaded_url = 'https://{}.amazonaws.com/{}/{}'.format(
-                #     settings.LAMB_AWS_BUCKET_ZONE, self.bucket.name, relative_path)
+                logger.debug(f'uploaded S3 URL: {uploaded_url}')
                 return uploaded_url
             except Exception as e:
                 raise exc.ServerError('Failed to save image') from e

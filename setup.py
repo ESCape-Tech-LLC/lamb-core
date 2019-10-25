@@ -104,6 +104,7 @@ setup(
         'django-crequest',
         'pymemcache',
         'dataclasses',
-        'openpyxl'
+        'openpyxl',
+        'django-ipware'
     ]
 )

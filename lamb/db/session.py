@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from furl import furl
 
 from lamb.exc import ServerError
 
@@ -25,7 +26,25 @@ try:
     _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.')+1:]
-    _CONNECTION_STRING = '%s://%s:%s@%s/%s?%s' % (_ENGINE, _USER, _PASS, _HOST, _NAME, _OPTS)
+
+    if _ENGINE == 'sqlite3':
+        # monkey patch on django/sqlalchemy difference
+        _ENGINE = 'sqlite'
+    
+    _CONNECTION_STRING = furl()
+    _CONNECTION_STRING.scheme = _ENGINE
+    _CONNECTION_STRING.username = _USER
+    _CONNECTION_STRING.password = _PASS
+    if _HOST is not None:
+        _CONNECTION_STRING.host = _HOST
+    else:
+        _CONNECTION_STRING.host = ''
+    if _NAME is not None:
+        _CONNECTION_STRING.path.add(_NAME)
+    if _OPTS is not None:
+        _CONNECTION_STRING.args.update(_OPTS)
+    _CONNECTION_STRING = _CONNECTION_STRING.url
+
     _engine = create_engine(
         _CONNECTION_STRING,
         pool_recycle=3600
