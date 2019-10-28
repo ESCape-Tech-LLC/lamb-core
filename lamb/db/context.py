@@ -18,7 +18,7 @@ class lamb_db_context:
 
     _pooled: bool
 
-    def __init__(self, pooled: bool = True):
+    def __init__(self, pooled: bool = False):
         super().__init__()
         self._pooled = pooled
 

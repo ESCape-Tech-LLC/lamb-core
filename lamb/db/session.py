@@ -14,7 +14,7 @@ from furl import furl
 from lamb.exc import ServerError
 
 __all__ = [
-    'DeclarativeBase', 'metadata', 'lamb_db_session_maker', '_engine', 'declarative_base'
+    'DeclarativeBase', 'metadata', 'lamb_db_session_maker', 'declarative_base', '_engine'
 ]
 
 
@@ -26,28 +26,29 @@ try:
     _ENGINE = settings.DATABASES['default'].get('ENGINE', None)
     _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
     if _ENGINE is not None:
-        _ENGINE = _ENGINE[_ENGINE.rindex('.')+1:]
+        _ENGINE = _ENGINE[_ENGINE.rindex('.') + 1:]
 
     if _ENGINE == 'sqlite3':
         # monkey patch on django/sqlalchemy difference
         _ENGINE = 'sqlite'
-    
-    _CONNECTION_STRING = furl()
-    _CONNECTION_STRING.scheme = _ENGINE
-    _CONNECTION_STRING.username = _USER
-    _CONNECTION_STRING.password = _PASS
-    if _HOST is not None:
-        _CONNECTION_STRING.host = _HOST
-    else:
-        _CONNECTION_STRING.host = ''
-    if _NAME is not None:
-        _CONNECTION_STRING.path.add(_NAME)
-    if _OPTS is not None:
-        _CONNECTION_STRING.args.update(_OPTS)
-    _CONNECTION_STRING = _CONNECTION_STRING.url
 
-    _engine = create_engine(_CONNECTION_STRING, pool_recycle=3600)
-    _no_pool_engine = create_engine(_CONNECTION_STRING, poolclass=NullPool)
+    CONNECTION_STRING = furl()
+    CONNECTION_STRING.scheme = _ENGINE
+    CONNECTION_STRING.username = _USER
+    CONNECTION_STRING.password = _PASS
+    if _HOST is not None:
+        CONNECTION_STRING.host = _HOST
+    else:
+        CONNECTION_STRING.host = ''
+    if _NAME is not None:
+        CONNECTION_STRING.path.add(_NAME)
+    if _OPTS is not None:
+        CONNECTION_STRING.args.update(_OPTS)
+    CONNECTION_STRING = CONNECTION_STRING.url
+
+    _engine = create_engine(CONNECTION_STRING, pool_recycle=3600)
+    _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool)
+    print(f'connection string: {CONNECTION_STRING}')
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 
