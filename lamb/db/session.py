@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.pool import NullPool
 from furl import furl
 
 from lamb.exc import ServerError
@@ -45,10 +46,8 @@ try:
         _CONNECTION_STRING.args.update(_OPTS)
     _CONNECTION_STRING = _CONNECTION_STRING.url
 
-    _engine = create_engine(
-        _CONNECTION_STRING,
-        pool_recycle=3600
-    )
+    _engine = create_engine(_CONNECTION_STRING, pool_recycle=3600)
+    _no_pool_engine = create_engine(_CONNECTION_STRING, poolclass=NullPool)
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 
@@ -57,9 +56,13 @@ DeclarativeBase = declarative_base()
 metadata = DeclarativeBase.metadata
 metadata.bind = _engine
 _session_maker = sessionmaker(bind=_engine)
+_no_poll_session_maker = sessionmaker(bind=_no_pool_engine)
 
 
-def lamb_db_session_maker() -> sa.orm.session.Session:
+def lamb_db_session_maker(pooled: bool = True) -> sa.orm.session.Session:
     """ Constructor for database sqlalchemy sessions """
-    session = _session_maker()
+    if pooled:
+        session = _session_maker()
+    else:
+        session = _no_poll_session_maker()
     return session
