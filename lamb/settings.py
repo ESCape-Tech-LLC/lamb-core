@@ -44,6 +44,8 @@ LAMB_IMAGE_UPLOAD_ENGINE = 'lamb.service.image.ImageUploadServiceDisk'
 LAMB_AWS_ACCESS_KEY = None
 LAMB_AWS_SECRET_KEY = None
 LAMB_AWS_BUCKET_NAME = None
+LAMB_AWS_BUCKET_URL = None
+LAMB_AWS_ENDPOINT_URL = None
 
 
 # utils

@@ -8,7 +8,7 @@ from django.conf import settings
 from furl import furl
 from boto3.session import Session as AWSSession
 
-from lamb.utils import LambRequest
+from lamb.utils import LambRequest, compact
 from lamb import exc
 from .base import BaseUploader, PILImage
 
@@ -20,8 +20,6 @@ __all__ = ['ImageUploadServiceAmazonS3']
 class ImageUploadServiceAmazonS3(BaseUploader):
     """
     Amazon S3 image uploader
-
-
     """
     aws_session: AWSSession
 
@@ -30,9 +28,14 @@ class ImageUploadServiceAmazonS3(BaseUploader):
         # constrict session
         self.aws_session = AWSSession(
             aws_access_key_id=settings.LAMB_AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.LAMB_AWS_SECRET_KEY
+            aws_secret_access_key=settings.LAMB_AWS_SECRET_KEY,
         )
-        s3 = self.aws_session.resource('s3')
+        s3_kwargs = {
+            'service_name': 's3',
+            'endpoint_url': settings.LAMB_AWS_ENDPOINT_URL
+        }
+        s3_kwargs = compact(s3_kwargs)
+        s3 = self.aws_session.resource(**s3_kwargs)
 
         # find bucket
         exist_buckets = [b.name for b in s3.buckets.all()]
