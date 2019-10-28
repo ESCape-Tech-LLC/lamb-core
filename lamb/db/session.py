@@ -48,7 +48,6 @@ try:
 
     _engine = create_engine(CONNECTION_STRING, pool_recycle=3600)
     _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool)
-    print(f'connection string: {CONNECTION_STRING}')
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 
