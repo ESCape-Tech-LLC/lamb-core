@@ -11,6 +11,7 @@ from sqlalchemy.ext.compiler import compiles
 
 from lamb.db.session import metadata
 from lamb.management.base import LambLoglevelMixin
+from lamb.utils import compact
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +38,35 @@ class Command(LambLoglevelMixin, LabelCommand):
             default=False,
             help='Force drop all before create'
         )
+        parser.add_argument(
+            '--exclude-tables',
+            action='store',
+            dest='exclude_tables',
+            default=None,
+            help='Tables to exclude from creation process'
+        )
 
     def handle_label(self, label, **options):
         try:
             import_module(label)
+            if options['exclude_tables'] is not None:
+                exclude_tables = options['exclude_tables'].split(',')
+                tables = [v for k, v in metadata.tables.items() if k not in exclude_tables]
+            else:
+                tables = None
+            kwargs = {'tables': tables}
+            kwargs = compact(kwargs)
+
             if options['force']:
-                metadata.drop_all()
-            metadata.create_all()
+                metadata.drop_all(**kwargs)
+
+            metadata.create_all(**kwargs)
+            # if options['exclude_tables'] is not None:
+            #     exclude_tables=options['exclude_tables'].split(',')
+            #     tables = {k: v for k, v in metadata.tables.items() if k not in exclude_tables}
+            #     metadata.create_all(tables=tables.values())
+            # else:
+            #     metadata.create_all()
         except ImportError as e:
             logging.warning('Module import failed: %s' % e)
             raise CommandError('Failed to import module. \"%s\"' % e)
