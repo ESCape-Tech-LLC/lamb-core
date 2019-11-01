@@ -49,6 +49,17 @@ class Workbook(object):
             for w in self._workbook.worksheets
         }
 
+    def remove_sheet(self, sheet: Union[str, 'Worksheet']):
+        if isinstance(sheet, str):
+            sheet = self.worksheets_dict[sheet]
+        self._workbook.remove(sheet.openpyxl_worksheet)
+
+    def create_sheet(self, title: str = None, index: int = None) -> 'Worksheet':
+        return Worksheet(
+            self._workbook.create_sheet(title=title, index=index),
+            create_columns=self._create_columns
+        )
+
     # excel general
     @property
     def filename(self) -> str:
