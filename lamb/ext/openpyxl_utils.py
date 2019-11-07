@@ -14,7 +14,7 @@ from lazy import lazy
 from lamb.exc import InvalidParamTypeError, InvalidParamValueError, ApiError, InvalidBodyStructureError
 
 
-__all__ = ['Worksheet', 'Workbook', 'Cell', 'Row']
+__all__ = ['Worksheet', 'Workbook', 'Cell', 'Row', 'Column']
 
 
 from collections import OrderedDict
@@ -29,15 +29,14 @@ Column names based wrapper around Excel worksheet
 
 
 class Workbook(object):
-    def __init__(self, filename, create_columns: bool = True):
-        self._workbook = openpyxl.load_workbook(filename, data_only=True)
+    def __init__(self, filename, create_columns: bool = True, read_only: bool = False):
+        self._workbook = openpyxl.load_workbook(filename, data_only=True, read_only=read_only)
         self._create_columns = create_columns
         self._filename = filename
 
     @property
     def worksheets(self) -> List['Worksheet']:
         return [
-
             Worksheet(wrapped_worskheet=w, create_columns=self._create_columns)
             for w in self._workbook.worksheets
         ]
@@ -102,6 +101,12 @@ class Worksheet(object):
         max_row = self._wrapped_worksheet.max_row
         for row_index in range(0, max_row):
             yield Row(worksheet=self, row_index=row_index)
+
+    @property
+    def columns(self) -> Generator['Column', None, None]:
+        max_column = self._wrapped_worksheet.max_column
+        for column_index in range(0, max_column):
+            yield Column(worksheet=self, column_index=column_index)
 
     # cell access
     def cells(self, row: int) -> Generator['Cell', None, None]:
@@ -169,6 +174,18 @@ class Row(object):
         max_column = self._worksheet.openpyxl_worksheet.max_column
         for column_index in range(0, max_column):
             yield self._worksheet.cell(row=self._row_index, column=column_index)
+
+
+class Column(object):
+    def __init__(self, worksheet: Worksheet, column_index: int):
+        self._worksheet = worksheet
+        self._column_index = column_index
+
+    @property
+    def cells(self) -> Generator['Cell', None, None]:
+        max_row = self._worksheet.openpyxl_worksheet.max_row
+        for row_index in range(0, max_row):
+            yield self._worksheet.cell(row=row_index, column=self._column_index)
 
 
 class Cell(object):
