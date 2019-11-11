@@ -9,6 +9,7 @@ from typing import List, Callable, Optional, Type, Dict, TypeVar, Union, Iterabl
 from functools import partial
 from datetime import date, datetime
 from django.conf import settings
+from django.http import QueryDict
 from dataclasses import dataclass
 from sqlalchemy import func
 from sqlalchemy.sql.functions import Function
@@ -64,7 +65,15 @@ class Filter(object):
             key_path = self.arg_name
 
         # extract value
-        result = dpath_value(params, key_path, str, default=None)
+        if isinstance(params, QueryDict):
+            result = params.getlist(key_path, default=None)
+            if len(result) > 0:
+                result = [str(r) for r in result]
+                result = ','.join(result)
+            else:
+                result = None
+        else:
+            result = dpath_value(params, key_path, str, default=None)
         if result is None:
             return None
 
