@@ -41,6 +41,8 @@ class JsonEncoder(json.JSONEncoder):
             result = float(obj)
         elif isinstance(obj, uuid.UUID):
             result = str(obj)
+        elif isinstance(obj, set):
+            result = list(obj)
         elif isinstance(obj, ResponseEncodableMixin):
             result = obj.response_encode(self.request)
         else:
