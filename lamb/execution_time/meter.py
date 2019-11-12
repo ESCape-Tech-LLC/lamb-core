@@ -65,15 +65,16 @@ class ExecutionTimeMeter(object):
 
             message_elements = list()
             if isinstance(header, str):
-                final_header =  header + ' measures: '
+                final_header = header + ' measures: '
             else:
                 final_header = 'Time measures: '
             message_elements.append(final_header)
-            message_elements.append('Total time: %.6f sec.' % total_elapsed)
+            message_elements.append(f'Total time: {total_elapsed:.6f} sec.')
 
             # print values
             for m in measurements:
-                message_elements.append('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
+                message_elements.append(f'\t{m[0]}: {m[2]:.6f} sec. [{m[3]:.2f} %%] ({m[1]:.6f} sec.)')
+                # message_elements.append('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
             message = '\n'.join(message_elements)
             logger.info(message)
         except:
