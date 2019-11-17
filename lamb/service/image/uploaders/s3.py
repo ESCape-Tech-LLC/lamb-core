@@ -74,7 +74,11 @@ class ImageUploadServiceAmazonS3(BaseUploader):
                     Key=relative_path,
                     ContentType=image_mime_type
                 )
-                uploaded_url = furl(settings.LAMB_AWS_BUCKET_URL)
+                if settings.LAMB_AWS_BUCKET_URL is None:
+                    bucket_url = f'http://{settings.LAMB_AWS_BUCKET_NAME}.s3.amazonaws.com/'
+                else:
+                    bucket_url = settings.LAMB_AWS_BUCKET_URL
+                uploaded_url = furl(bucket_url)
                 uploaded_url.path.add(relative_path)
                 uploaded_url = uploaded_url.url
                 logger.debug(f'uploaded S3 URL: {uploaded_url}')
