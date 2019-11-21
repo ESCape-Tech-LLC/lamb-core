@@ -171,9 +171,14 @@ class Row(object):
 
     @property
     def cells(self) -> Generator['Cell', None, None]:
-        max_column = self._worksheet.openpyxl_worksheet.max_column
-        for column_index in range(0, max_column):
-            yield self._worksheet.cell(row=self._row_index, column=column_index)
+        _row = next(self._worksheet.openpyxl_worksheet.iter_rows(
+            min_row=self._row_index + 1,
+            max_row=self._row_index + 1,
+            min_col=1,
+            max_col=self._worksheet.openpyxl_worksheet.max_column
+        ))
+        for _cell in _row:
+            yield Cell(_cell)
 
 
 class Column(object):
