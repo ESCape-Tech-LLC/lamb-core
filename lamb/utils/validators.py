@@ -56,7 +56,8 @@ def validate_length(
         max_length: Optional[int] = None,
         key: Optional[str] = None,
         allow_none: bool = False,
-        trimming: bool = True) -> Optional[VT]:
+        trimming: bool = True,
+        empty_as_none: bool = True) -> Optional[VT]:
     """ Validate value of Sized datatype for min/max length
 
     :param value: value to be checked
@@ -65,6 +66,7 @@ def validate_length(
     :param key: optional key to include in exception description as details
     :param allow_none: flag to make None value valid returning None
     :param trimming: flag to trim string values (removes whitespace symbols)
+    :param empty_as_none: flag to return empty string as None
     :return: validated value
 
     :raises InvalidParamValueError: In case of value out of min/max interval
@@ -77,6 +79,10 @@ def validate_length(
     # pre-patch
     if isinstance(value, str) and trimming:
         value = ' '.join(value.split())
+        if len(value) == 0 and empty_as_none:
+            value = None
+        if value is None and allow_none:
+            return None
 
     # check data type
     try:
