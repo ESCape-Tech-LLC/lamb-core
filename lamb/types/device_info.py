@@ -35,7 +35,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
 
     def __post_init__(self):
         if isinstance(self.device_locale, str):
-            self.device_locale = LambLocale(self.device_locale)
+            self.device_locale = LambLocale.parse(self.device_locale)
 
     def response_encode(self, request=None) -> dict:
         result = dataclasses.asdict(self)
