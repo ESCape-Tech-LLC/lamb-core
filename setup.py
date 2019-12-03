@@ -81,7 +81,7 @@ setup(
     package_data=get_package_data('lamb'),
     zip_safe=False,
     install_requires=[
-        'django>=2.0.0,<3.0',
+        'django >=2.0.0, <3.0',
         'boto3',
         'celery',
         'dpath',
