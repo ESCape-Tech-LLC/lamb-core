@@ -56,6 +56,8 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             relative_path = self.construct_relative_path(proposed_file_name)
             logger.debug('Processing image: <%s, %s>: %s to %s'
                          % (image.format, proposed_file_name, image, relative_path))
+
+            image_format = image_format or image.format
             image.save(
                 tf,
                 image_format or image.format,
@@ -64,7 +66,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             tf.seek(0)
 
             # construct mime/type
-            image_mime_type = 'image/%s' % image.format.lower()
+            image_mime_type = f'image/{image_format.lower()}'
 
             # upload image
             try:
