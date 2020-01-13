@@ -7,7 +7,7 @@ import uuid
 
 from collections import OrderedDict
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 
 from lamb.json import JsonResponse
@@ -65,7 +65,7 @@ class LambRestApiJsonMiddleware:
             return response
 
         # try to encode response
-        if not isinstance(response, HttpResponse):
+        if not isinstance(response, (HttpResponse, StreamingHttpResponse)):
             try:
                 response = JsonResponse(response, request=request)
             except Exception as e:
