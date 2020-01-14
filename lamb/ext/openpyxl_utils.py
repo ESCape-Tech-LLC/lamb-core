@@ -12,6 +12,7 @@ from openpyxl.workbook import Workbook as OpenpyxlWorkbook
 from lazy import lazy
 
 from lamb.exc import InvalidParamTypeError, InvalidParamValueError, ApiError, InvalidBodyStructureError
+from lamb.utils import compact
 
 
 __all__ = ['Worksheet', 'Workbook', 'Cell', 'Row', 'Column']
@@ -78,6 +79,60 @@ class Workbook(object):
         if outputfile_path is None:
             outputfile_path = self._filename
         self._workbook.save(outputfile_path)
+
+    def clean_sheet_empty_columns(self, sheet_name: str):
+        # check and extract info
+        if sheet_name not in self.worksheets_dict:
+            raise InvalidParamValueError(f'Did not found sheet {sheet_name} in excel file')
+        index = list(self.worksheets_dict.keys()).index(sheet_name)
+
+        # clean
+        ws = self.worksheets_dict[sheet_name]
+        columns: List[List[Optional[str]]] = []
+
+        removed_count = 0
+        for column in ws.columns:
+            values: List[Optional[str]] = [cell.value for cell in column.cells]
+            if len(compact(values)) > 0:
+                columns.append(values)
+            else:
+                removed_count += 1
+
+        # save new sheet
+        self.remove_sheet(sheet_name)
+        ws = self.create_sheet(title=sheet_name, index=index)
+        for column_index, column in enumerate(columns):
+            for row_index, value in enumerate(column):
+                ws.cell(row_index, column_index).value = value
+
+        logger.info(f'columns cleaning: {sheet_name} -> removed columns count {removed_count}')
+
+    def clean_sheet_empty_rows(self, sheet_name: str):
+        # check and extract info
+        if sheet_name not in self.worksheets_dict:
+            raise InvalidParamValueError(f'Did not found sheet {sheet_name} in excel file')
+        index = list(self.worksheets_dict.keys()).index(sheet_name)
+
+        # clean
+        ws = self.worksheets_dict[sheet_name]
+        rows: List[List[Optional[str]]] = []
+
+        removed_count = 0
+        for row in ws.rows:
+            values: List[Optional[str]] = [cell.value for cell in row.cells]
+            if len(compact(values)) > 0:
+                rows.append(values)
+            else:
+                removed_count += 1
+
+        # save new sheet
+        self.remove_sheet(sheet_name)
+        ws = self.create_sheet(sheet_name, index=index)
+        for row_index, row in enumerate(rows):
+            for column_index, value in enumerate(row):
+                ws.cell(row_index, column_index).value = value
+
+        logger.info(f'rows cleaning: {sheet_name} -> removed rows count {removed_count}')
 
 
 class Worksheet(object):

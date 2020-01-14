@@ -46,8 +46,10 @@ try:
         CONNECTION_STRING.args.update(_OPTS)
     CONNECTION_STRING = CONNECTION_STRING.url
 
-    _engine = create_engine(CONNECTION_STRING, pool_recycle=3600)
-    _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool)
+    _engine = create_engine(CONNECTION_STRING, pool_recycle=3600, executemany_mode='values',
+                            executemany_values_page_size=10000, executemany_batch_page_size=500)
+    _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, executemany_mode='values',
+                            executemany_values_page_size=10000, executemany_batch_page_size=500)
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 

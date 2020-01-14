@@ -61,12 +61,6 @@ class Command(LambLoglevelMixin, LabelCommand):
                 metadata.drop_all(**kwargs)
 
             metadata.create_all(**kwargs)
-            # if options['exclude_tables'] is not None:
-            #     exclude_tables=options['exclude_tables'].split(',')
-            #     tables = {k: v for k, v in metadata.tables.items() if k not in exclude_tables}
-            #     metadata.create_all(tables=tables.values())
-            # else:
-            #     metadata.create_all()
         except ImportError as e:
             logging.warning('Module import failed: %s' % e)
             raise CommandError('Failed to import module. \"%s\"' % e)
