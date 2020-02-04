@@ -100,6 +100,9 @@ def transform_string_enum(value: str, enum_class: Type[ET]) -> ET:
         for enum_candidate in enum_class:
             if value.lower() == enum_candidate.value.lower():
                 return enum_class(enum_candidate)
+
+        # not found - raise
+        raise InvalidParamValueError(f'Could not cast {value} as valid {enum_class.__name__}')
     except ApiError:
         raise
     except Exception as e:
