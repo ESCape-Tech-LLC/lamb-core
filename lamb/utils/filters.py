@@ -239,6 +239,7 @@ class ColumnValueFilter(FieldValueFilter):
         ins = sa.inspect(column)
 
         if arg_name is None:
+            # TODO: fix to properly work on hybrid properties -
             arg_name = ins.name
 
         if req_type is None:
