@@ -16,14 +16,14 @@ from sqlalchemy.sql.functions import Function
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.attributes import QueryableAttribute
 
-from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError, ApiError
-from lamb.utils import dpath_value, LambRequest, datetime_begin, datetime_end
+from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError, ApiError, InvalidBodyStructureError
+from lamb.utils import dpath_value, LambRequest, datetime_begin, datetime_end, compact
 from lamb.utils.transformers import transform_date, transform_string_enum, transform_boolean
 
 
 __all__ = [
     'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter', 'EnumFilter',
-    'PostgresqlFastTextSearchFilter', 'ColumnBooleanFilter'
+    'PostgresqlFastTextSearchFilter', 'ColumnBooleanFilter', 'JsonDataFilter'
 ]
 
 logger = logging.getLogger(__name__)
@@ -393,4 +393,107 @@ class PostgresqlFastTextSearchFilter(Filter):
         query = query.filter(
             self._tsvector_expr.op('@@')(self._tsquery_func(param_value))
         )
+        return query
+
+
+class JsonFilterDescriptor(object):
+    """ Json filter descriptor
+
+    :type key_path: list
+    :type value: str
+    :type comparing_function: str
+    """
+
+    def __init__(self, key_path, value, comparing_function):
+        super().__init__()
+        self.key_path = key_path
+        self.value = value
+        self.comparing_function = comparing_function
+
+    def __str__(self):
+        return 'JsonFilterDescriptor(%s, %s, %s)' % (self.key_path, self.value, self.comparing_function)
+
+
+class JsonDataFilter(ColumnValueFilter):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.req_type = str
+        self.req_type_transformer = None
+
+    @staticmethod
+    def _parse_descriptor(raw_descriptor):
+        """ Parse descriptor to extract parts: key_path, value, functor
+        :type raw_descriptor: str
+        :rtype: JsonFilterDescriptor
+        """
+        # parse parts
+        functor_mapping = {
+            '==': '__eq__',
+            '!=': '__ne__'
+        }
+
+        result = None
+
+        for delimiter, comparing_function in functor_mapping.items():
+            parts = raw_descriptor.split(delimiter)
+            parts = compact(parts)
+            if len(parts) != 2:
+                continue
+
+            result = JsonFilterDescriptor(
+                key_path=parts[0],
+                value=parts[1],
+                comparing_function=comparing_function
+            )
+            break
+
+        if result is None:
+            raise InvalidBodyStructureError(
+                'Could not parse json field request descriptor: key_path and value required')
+
+        # convert key path to form of list
+        unparsed_key_path = result.key_path
+        unparsed_key_path = unparsed_key_path.split('.')
+
+        # convert key path components to include int indices
+        buffer = list()
+        for path_component in unparsed_key_path:
+            try:
+                path_component = int(path_component)
+            except ValueError:
+                pass
+            buffer.append(path_component)
+        result.key_path = buffer
+
+        # check for special value
+        if result.value.lower() == 'null':
+            result.value = None
+
+        # return results
+        return result
+
+    # def apply_to_query(self, query, request):
+    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
+        # early return
+        param_value = self.get_param_value(params, key_path=self.arg_name)
+        if param_value is None:
+            return query
+
+        # apply filters
+        for raw_descriptor in param_value:
+            descriptor = JsonDataFilter._parse_descriptor(raw_descriptor)
+
+            # construct comparator
+            field = self.comparing_field
+            for key_path_component in descriptor.key_path:
+                field = field[key_path_component]
+
+            if descriptor.comparing_function == '__eq__':
+                query = query.filter(field.astext.__eq__(descriptor.value))
+            elif descriptor.comparing_function == '__ne__':
+                query = query.filter(field.astext.__ne__(descriptor.value))
+            else:
+                raise InvalidParamValueError('Unsupported comparing function %s' % descriptor.comparing_function)
+
         return query
