@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import dpath.util
+# import dpath.util
+import dpath
 
 from typing import Callable, Optional, Union, List, Any
 from functools import singledispatch
@@ -55,6 +56,7 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
     # query
     try:
         # get internal result
+        logger.debug(f'start extract')
         result = _dpath_find_impl(dict_object, key_path=key_path, **kwargs)
 
         # check for none
@@ -74,6 +76,7 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
 
         return result
     except Exception as e:
+        logger.exception(f'extraction failed: {e}')
         if 'default' in kwargs.keys():
             return kwargs['default']
         elif isinstance(e, exc.ApiError):

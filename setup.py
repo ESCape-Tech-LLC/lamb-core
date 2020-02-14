@@ -84,7 +84,7 @@ setup(
         'django>=2.0.0,<3.0',
         'boto3',
         'celery',
-        'dpath',
+        'dpath<2.0.0',
         'sqlalchemy',
         'sqlalchemy-utils',
         'Pillow<7.0.0',
