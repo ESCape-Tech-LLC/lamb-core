@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-# import dpath.util
-import dpath
+import dpath.util
 
 from typing import Callable, Optional, Union, List, Any
 from functools import singledispatch
