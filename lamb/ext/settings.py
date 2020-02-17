@@ -253,13 +253,13 @@ class AbstractSettingsStorage(ResponseEncodableMixin, DeclarativeBase):
 class AbstractLocalizedSettingsValue(AbstractSettingsValue):
     """
         Settings storage processor with description localization support.
-        Use with AbstractLocalizedSettingsValue as a table class for getter and setter support
+        Use with AbstractLocalizedSettingsStorage as a table class for getter and setter support
 
                Example:
 
-                from lamb.ext.settings import AbstractLocalizedSettingsStorage
+                from lamb.ext.settings import AbstractLocalizedSettingsValue
 
-                class TestCode(AbstractSettingsValue):
+                class TestCode(AbstractLocalizedSettingsValue):
                     __table_class__ = 'SettingsStorage'
 
                     # Cache timeout, in seconds, to use for the cache. None - cache forever, 0 - do not use cache.
