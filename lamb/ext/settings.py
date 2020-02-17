@@ -5,19 +5,22 @@ import abc
 import json
 import logging
 import enum
-from typing import Type
+from typing import Type, Union
 
 from django.core.cache import cache
 from sqlalchemy import Column, VARCHAR, TEXT
+from sqlalchemy.dialects.postgresql import JSONB
 from lamb import exc
 from lamb.db.patterns import DbEnum
 from lamb.db.context import lamb_db_context
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.types import LambLocale
 
 
 __all__ = [
-    'AbstractSettingsStorage', 'AbstractSettingsValue'
+    'AbstractSettingsStorage', 'AbstractSettingsValue', 'AbstractLocalizedSettingsStorage',
+    'AbstractLocalizedSettingsValue'
 ]
 
 
@@ -244,3 +247,77 @@ class AbstractSettingsStorage(ResponseEncodableMixin, DeclarativeBase):
     description = Column(TEXT, nullable=False)
     value = Column(TEXT, nullable=False)
     disclaimer = Column(TEXT, nullable=True)
+
+
+@enum.unique
+class AbstractLocalizedSettingsValue(AbstractSettingsValue):
+    """
+        Settings storage processor with description localization support.
+        Use with AbstractLocalizedSettingsValue as a table class for getter and setter support
+
+               Example:
+
+                from lamb.ext.settings import AbstractLocalizedSettingsStorage
+
+                class TestCode(AbstractSettingsValue):
+                    __table_class__ = 'SettingsStorage'
+
+                    # Cache timeout, in seconds, to use for the cache. None - cache forever, 0 - do not use cache.
+                    __cache_timeout__ = 600
+
+                    # Prefix for settings keys in the cache
+                    __cache_prefix__ = 'lamb_settings'
+
+                    # Settings variable
+                    settings1 = ('settings1', 900, {'en': 'Description', 'ru': 'Описание'}, int, None)
+
+                    # Variable with caching disabled
+                    settings2 = ('settings2', 900, {'en': 'Description', 'ru': 'Описание'}, int, None, False)
+
+            )
+    """
+
+    def get_description_localized(self, locale: Union[LambLocale, str]):
+        """ Getter of localized setting value """
+
+        if not isinstance(self.description, dict):
+            raise AttributeError('Description field of a requested setting has invalid format')
+
+        # Convert LambLocale to str if needed
+        try:
+            locale = locale.language
+        except AttributeError:
+            pass
+
+        # Return value
+        try:
+            return self.description[locale]
+        except (KeyError, AttributeError):
+            return None
+
+    def set_description_localized(self, description: str, locale: Union[LambLocale, str]):
+        """ Setter of localized setting value """
+
+        if not isinstance(self.description, dict):
+            raise AttributeError('Description field of a requested setting has invalid format')
+
+        # Convert LambLocale to str if needed
+        try:
+            locale = locale.language
+        except AttributeError:
+            pass
+
+        # Set value
+        with lamb_db_context() as session:
+            db_item = self._db_item(session)
+
+            if description is not None:
+                old_description = db_item.description.copy()
+                old_description[locale] = description
+                db_item.description = old_description
+                session.commit()
+
+
+class AbstractLocalizedSettingsStorage(AbstractSettingsStorage):
+    __abstract__ = True
+    description = Column(JSONB, nullable=False, default={})
