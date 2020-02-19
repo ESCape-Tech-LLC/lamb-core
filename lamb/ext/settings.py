@@ -278,12 +278,23 @@ class AbstractLocalizedSettingsValue(AbstractSettingsValue):
             )
     """
 
+    def _set_property_default(self, session, property_name):
+        if not hasattr(self, '_default_' + property_name):
+            return None
+
+        target_property = getattr(self, '_default_' + property_name)
+        setattr(self, property_name, target_property)
+
+        return target_property
+
     def get_localized(self, property_name: str, locale: Union[LambLocale, str]):
         """ Getter for localized setting value """
 
         target_property = getattr(self, property_name)
         if target_property is None:
-            return None
+            with lamb_db_context() as session:
+                target_property = self._set_property_default(session, property_name)
+                session.commit()
         if not isinstance(target_property, dict):
             return target_property
 
@@ -304,7 +315,9 @@ class AbstractLocalizedSettingsValue(AbstractSettingsValue):
 
         target_property = getattr(self, property_name)
         if target_property is None:
-            target_property = dict()
+            with lamb_db_context() as session:
+                target_property = self._set_property_default(session, property_name)
+                session.commit()
         if not isinstance(target_property, dict):
             raise AttributeError(f'"{property_name}" field of a requested setting has invalid format')
 
