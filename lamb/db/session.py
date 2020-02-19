@@ -5,6 +5,7 @@ __author__ = 'KoNEW'
 from django.conf import settings
 
 import sqlalchemy as sa
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -17,6 +18,8 @@ __all__ = [
     'DeclarativeBase', 'metadata', 'lamb_db_session_maker', 'declarative_base', '_engine'
 ]
 
+logger = logging.getLogger(__name__)
+
 
 try:
     _USER = settings.DATABASES['default'].get('USER', None)
@@ -25,6 +28,7 @@ try:
     _HOST = settings.DATABASES['default'].get('HOST', None)
     _ENGINE = settings.DATABASES['default'].get('ENGINE', None)
     _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
+    _ENGINE_OPTS = settings.DATABASES['default'].get('ENGINE_OPTS', None)
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.') + 1:]
 
@@ -46,10 +50,20 @@ try:
         CONNECTION_STRING.args.update(_OPTS)
     CONNECTION_STRING = CONNECTION_STRING.url
 
-    _engine = create_engine(CONNECTION_STRING, pool_recycle=3600, executemany_mode='values',
-                            executemany_values_page_size=10000, executemany_batch_page_size=500)
-    _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, executemany_mode='values',
-                            executemany_values_page_size=10000, executemany_batch_page_size=500)
+    # pre-fill default engine opts and modify with server settings
+    if _ENGINE == 'postgresql' and _ENGINE_OPTS is None:
+        _ENGINE_OPTS = {
+            'executemany_mode': 'values',
+            'executemany_values_page_size': 100000,
+            'executemany_batch_page_size': 500
+        }
+    if _ENGINE_OPTS is None:
+        _ENGINE_OPTS = {}
+
+    logger.warning(f'database engine options would be used: {_ENGINE_OPTS}')
+
+    _engine = create_engine(CONNECTION_STRING, pool_recycle=3600, **_ENGINE_OPTS)
+    _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, **_ENGINE_OPTS)
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 
