@@ -269,7 +269,8 @@ class AbstractLocalizedSettingsValue(AbstractSettingsValue):
                     __cache_prefix__ = 'lamb_settings'
 
                     # Settings variable
-                    settings1 = ('settings1', 900, {'en': 'Description', 'ru': 'Описание'}, int, None)
+                    settings1 = ('settings1', 900, {'en': 'Description', 'ru': 'Описание'}, int,
+                                 {'en': 'Disclaimer', 'ru': 'Условия'}})
 
                     # Variable with caching disabled
                     settings2 = ('settings2', 900, {'en': 'Description', 'ru': 'Описание'}, int, None, False)
@@ -277,11 +278,14 @@ class AbstractLocalizedSettingsValue(AbstractSettingsValue):
             )
     """
 
-    def get_description_localized(self, locale: Union[LambLocale, str]):
-        """ Getter of localized setting value """
+    def get_localized(self, property_name: str, locale: Union[LambLocale, str]):
+        """ Getter for localized setting value """
 
-        if not isinstance(self.description, dict):
-            raise AttributeError('Description field of a requested setting has invalid format')
+        target_property = getattr(self, property_name)
+        if target_property is None:
+            return None
+        if not isinstance(target_property, dict):
+            raise AttributeError(f'"{property_name}" field of a requested setting has invalid format')
 
         # Convert LambLocale to str if needed
         try:
@@ -291,15 +295,18 @@ class AbstractLocalizedSettingsValue(AbstractSettingsValue):
 
         # Return value
         try:
-            return self.description[locale]
+            return target_property[locale]
         except (KeyError, AttributeError):
             return None
 
-    def set_description_localized(self, description: str, locale: Union[LambLocale, str]):
-        """ Setter of localized setting value """
+    def set_localized(self, property_name: str, value: str, locale: Union[LambLocale, str]):
+        """ Setter for localized setting value """
 
-        if not isinstance(self.description, dict):
-            raise AttributeError('Description field of a requested setting has invalid format')
+        target_property = getattr(self, property_name)
+        if target_property is None:
+            target_property = dict()
+        if not isinstance(target_property, dict):
+            raise AttributeError(f'"{property_name}" field of a requested setting has invalid format')
 
         # Convert LambLocale to str if needed
         try:
@@ -309,15 +316,34 @@ class AbstractLocalizedSettingsValue(AbstractSettingsValue):
 
         # Set value
         with lamb_db_context() as session:
-            db_item = self._db_item(session)
-
-            if description is not None:
-                old_description = db_item.description.copy()
-                old_description[locale] = description
-                db_item.description = old_description
+            if value is not None:
+                new_value = target_property.copy()
+                new_value[locale] = value
+                setattr(self, property_name, new_value)
                 session.commit()
+
+    def get_description_localized(self, locale: Union[LambLocale, str]):
+        """ Getter for localized description of setting value """
+
+        return self.get_localized('description', locale)
+
+    def set_description_localized(self, description: str, locale: Union[LambLocale, str]):
+        """ Setter for localized description of setting value """
+
+        self.set_localized('description', description, locale)
+
+    def get_disclaimer_localized(self, locale: Union[LambLocale, str]):
+        """ Getter for localized disclaimer of setting value """
+
+        return self.get_localized('disclaimer', locale)
+
+    def set_description_localized(self, disclaimer: str, locale: Union[LambLocale, str]):
+        """ Setter for localized disclaimer of setting value """
+
+        self.set_localized('disclaimer', disclaimer, locale)
 
 
 class AbstractLocalizedSettingsStorage(AbstractSettingsStorage):
     __abstract__ = True
     description = Column(JSONB, nullable=False, default={})
+    disclaimer = Column(JSONB, nullable=False, default={})
