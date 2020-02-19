@@ -60,7 +60,7 @@ try:
     if _ENGINE_OPTS is None:
         _ENGINE_OPTS = {}
 
-    logger.warning(f'database engine options would be used: {_ENGINE_OPTS}')
+    logger.debug(f'database engine options would be used: {_ENGINE_OPTS}')
 
     _engine = create_engine(CONNECTION_STRING, pool_recycle=3600, **_ENGINE_OPTS)
     _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, **_ENGINE_OPTS)
