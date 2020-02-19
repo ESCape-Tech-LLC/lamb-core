@@ -285,7 +285,7 @@ class AbstractLocalizedSettingsValue(AbstractSettingsValue):
         if target_property is None:
             return None
         if not isinstance(target_property, dict):
-            raise AttributeError(f'"{property_name}" field of a requested setting has invalid format')
+            return target_property
 
         # Convert LambLocale to str if needed
         try:
