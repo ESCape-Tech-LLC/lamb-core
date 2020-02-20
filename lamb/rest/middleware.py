@@ -86,27 +86,29 @@ class LambRestApiJsonMiddleware:
 
         # process exception to response
         logger.exception('Handled exception:')
-        if isinstance(exception, (SQLAlchemyError, DBAPIError)):
-            status_code = 500
-            error_code = LambExceptionCodes.Database
-            error_message = 'Database error occurred'
-            error_details = None
-        elif isinstance(exception, ApiError):
-            status_code = exception.status_code
-            error_code = exception.app_error_code
-            error_message = exception.message
-            error_details = exception.error_details
-        else:
-            status_code = 500
-            error_code = LambExceptionCodes.Unknown
-            error_message = 'Unknown server side error occurred'
-            error_details = None
+        if not isinstance(exception, ApiError):
+            if isinstance(exception, (SQLAlchemyError, DBAPIError)):
+                exception = DatabaseError()
+            else:
+                exception = ServerError()
+            logger.error(f'exception wrapped into: {exception!r}')
+
+        # optional patch error
+        if settings.LAMB_ERROR_OVERRIDE_PROCESSOR is not None:
+            try:
+                _processor = import_by_name(settings.LAMB_ERROR_OVERRIDE_PROCESSOR)
+                exception = _processor(exception)
+            except Exception as e:
+                exception = ImproperlyConfiguredError()
+                logger.exception(f'Exception processor failed')
+                logger.error(f'Converting {e!r} -> {exception!r}')
 
         # envelope error
         result = OrderedDict()
-        result['error_code'] = error_code
-        result['error_message'] = error_message
-        result['error_details'] = error_details
+        status_code = exception.status_code
+        result['error_code'] = exception.app_error_code
+        result['error_message'] = exception.message
+        result['error_details'] = exception.error_details
 
         # override status if required and return
         if _should_override_status:

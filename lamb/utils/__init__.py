@@ -13,7 +13,7 @@ import types
 import importlib
 
 from datetime import datetime, date
-from typing import List, Union, TypeVar, Optional, Dict
+from typing import List, Union, TypeVar, Optional, Dict, Tuple
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from sqlalchemy import asc, desc
@@ -23,7 +23,7 @@ from sqlalchemy.inspection import inspect
 from django.http import HttpRequest
 from django.conf import settings
 
-from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError
+from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError, UpdateRequiredError
 from .dpath import dpath_value
 
 
@@ -38,7 +38,11 @@ __all__ = [
 
     'import_class_by_name', 'import_by_name', 'inject_app_defaults',
 
-    'datetime_end', 'datetime_begin'
+    'datetime_end', 'datetime_begin',
+
+    'check_device_info_min_versions',
+
+    'DeprecationClassHelper'
 ]
 
 
@@ -584,3 +588,47 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
     for _ in range(length):
         result += random.choice(char_set)
     return result
+
+
+class DeprecationClassHelper(object):
+    def __init__(self, new_target):
+        self.new_target = new_target
+
+    def _warn(self):
+        warnings.warn(f'Class is deprecated, use {self.new_target} instead', DeprecationWarning, stacklevel=3)
+
+    def __call__(self, *args, **kwargs):
+        self._warn()
+        return self.new_target(*args, **kwargs)
+
+    def __getattr__(self, attr):
+        self._warn()
+        return getattr(self.new_target, attr)
+
+
+def check_device_info_min_versions(request: LambRequest, min_versions: List[Tuple[str, int]]):
+    # TODO: migrate to support independent device_info object and not only request
+    """ Minimum app version checker
+
+    If request object have info about platform and app build will check compatibility of versions:
+    - by default for requests without device info and not specified platforms - skip without exception
+    - raise `UpdateRequiredError` if version detected and below minimal requirements
+    """
+    if request is None:
+        return
+    if request.lamb_device_info.app_build is None:
+        return
+    if request.lamb_device_info.device_platform is None:
+        return
+
+    for min_v in min_versions:
+        try:
+            _platform = min_v[0]
+            _min_app_build = min_v[1]
+            if request.lamb_device_info.device_platform == _platform and _min_app_build > request.lamb_device_info.app_build:
+                raise UpdateRequiredError
+        except UpdateRequiredError:
+            raise
+        except Exception as e:
+            logger.warning('Skip min version checking for %s cause of invalid structure, error: %s' % (min_v, e))
+            continue

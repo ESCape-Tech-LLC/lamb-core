@@ -34,6 +34,8 @@ LAMB_RESPONSE_APPLY_TO_APPS = []
 
 LAMB_RESPONSE_DATETIME_TRANSFORMER = 'lamb.utils.transformers.transform_datetime_seconds_int'
 
+LAMB_ERROR_OVERRIDE_PROCESSOR = None
+
 
 # image uploading
 LAMB_IMAGE_UPLOAD_QUALITY = 87
@@ -52,3 +54,11 @@ LAMB_AWS_ENDPOINT_URL = None
 LAMB_EXECUTION_TIME_COLLECT_MARKERS = False
 
 LAMB_VERBOSE_SQL_LOG = False
+
+
+# services
+LAMB_REDIS_URL = 'redis://localhost:6379/0'
+
+LAMB_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+LAMB_BROKER_RESULT_URL = 'redis://localhost:6379/1'
+
