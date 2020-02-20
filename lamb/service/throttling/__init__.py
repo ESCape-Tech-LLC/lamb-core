@@ -34,8 +34,9 @@ def _check_limits(limits: List[Tuple[int, int]]) -> Dict[int, int]:
 def _hash_marked_bucket_name(value: str) -> str:
     """ Add hash_tag mark to bucket name of not exist already"""
     if not re.match(r'^(.*?)\{(.+?)\}(.*?)$', value):
-        result = f'{{{value}}}'
-    return result
+        return f'{{{value}}}'
+    else:
+        return value
 
 
 def redis_rate_check_pipelined(conn: redis.Redis, bucket_name_base: str, limits: List[Tuple[int, int]] = list()):
@@ -50,7 +51,6 @@ def redis_rate_check_pipelined(conn: redis.Redis, bucket_name_base: str, limits:
         limit = limits_dict[duration]
         time_slot = now // duration
         bucket_name_slot = f'{bucket_name_base}:{duration}:{time_slot}'
-        # logger.debug(f'checking: bucket={bucket_name_slot}, limit={limit}, duration={duration}')
 
         pipe.incr(bucket_name_slot)
         pipe.expire(bucket_name_slot, duration)
@@ -129,4 +129,4 @@ def redis_rate_check_lua(conn: redis.Redis, bucket_name_base: str, limits: List[
     except ApiError:
         raise
     except Exception as e:
-        raise ImproperlyConfiguredError from e
+        raise ExternalServiceError from e
