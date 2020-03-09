@@ -3,6 +3,7 @@ __author__ = 'KoNEW'
 
 import logging
 import requests
+import copy
 
 from typing import Optional, Any, Callable, List, Tuple
 from dataclasses import dataclass
@@ -12,7 +13,7 @@ from furl import furl
 from lazy import lazy
 from sqlalchemy.orm.session import Session as SASession
 from lamb.exc import ServerError, ImproperlyConfiguredError, ExternalServiceError, ApiError
-from lamb.utils import dpath_value, compact
+from lamb.utils import dpath_value, compact, masked_dict
 from lamb.acquiring.base import AbstractPaymentEngine
 
 
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 #     error_message: Optional[str] = None
 #
 #
+
 
 @dataclass(frozen=True)
 class RBSResponse(object):
@@ -59,9 +61,6 @@ class RBSCallError(ExternalServiceError):
 
 
 def _default_currency_multiplier_callback(currency_iso4217: int) -> int:
-    currency_codes = [
-
-    ]
     mapper = {
         643: 100  # RUR
     }
@@ -112,7 +111,8 @@ class RBSPaymentEngine(object):
                 params['userName'] = self.merchant_login
                 params['password'] = self.merchant_password
             params = compact(params)
-            logger.info(f'final params: {params}')
+            _masked_params = masked_dict(params, 'password', 'token')
+            logger.info(f'RBS call params: {_masked_params}')
 
             # execute request
             method_url = furl(self.endpoint)
@@ -125,7 +125,7 @@ class RBSPaymentEngine(object):
                              f'content={response.content}')
                 raise ExternalServiceError('RBS service call failed')
             response = response.json()
-            logger.debug(f'RBS {method} JSON response: {response}')
+            logger.debug(f'RBS JSON response raw: [{method}] -> {response}')
 
             # check for proper data type
             if not isinstance(response, dict):
@@ -133,25 +133,15 @@ class RBSPaymentEngine(object):
                 raise ExternalServiceError('RBS service call failed')
 
             # small hack cause RBS is so wonderful about error processing guys!!!!
-            logger.warning('raw rbs: %s' % response)
             if 'ErrorCode' in response:
                 response['errorCode'] = response.pop('ErrorCode')
             if 'ErrorMessage' in response:
                 response['errorMessage'] = response.pop('ErrorMessage')
-            logger.debug('RBS JSON response after hack: %s' % response)
-
-            # extract and append error info
-            # error_code = dpath_value(response, 'errorCode', req_type=int, default=0)
-            # error_message = dpath_value(response, 'errorMessage', req_type=str, default=None)
-            # if error_code == 0:
-            #     error_message = None
+            logger.debug(f'RBS JSON response normalized: {response}')
 
             response = RBSResponse(content=response)
+            logger.info(f'RBS JSON response: [{method}] -> {response}')
 
-            # if error_code not in valid_error_codes:
-            #     logger.error(f'RBS request failed: error_code = {error_code}, error_message={error_message}')
-            #     raise RBSCallError(rbs_error_info=RBSErrorInfo(error_code=error_code, error_message=error_message))
-            
             return response
         except ApiError as e:
             raise e from e
@@ -161,7 +151,6 @@ class RBSPaymentEngine(object):
         except Exception as e:
             logger.error('RBS %s service failed due unknown reason: <%s> %s' % (method, e.__class__.__name__, e))
             raise ExternalServiceError('RBS service %s failed with unknown error' % method)
-
 
     # methods
     def register(self,
@@ -214,7 +203,8 @@ class RBSPaymentEngine(object):
             form_url = dpath_value(result.content, 'formUrl', str)
             return result, order_id, form_url
         except ApiError as e:
-            raise RBSCallError('RBs failed due invalid response format', rbs_response=result)
+            logger.error(f'RBS content: {result.content}')
+            raise RBSCallError('RBS failed due invalid response format', rbs_response=result) from e
 
     def get_status(self, rbs_order_id: str, order_number: Optional[Any] = None, language: Optional[str] = None) -> RBSResponse:
         """ Obtain extended payment status from RBS """
@@ -227,12 +217,10 @@ class RBSPaymentEngine(object):
                 'language': language,
             }
         )
-        logger.info(f'getOrderStatusExtended.do response: {result}')
 
         # validate status
         if result.error_code != 0:
             raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
 
         # import json
-        # logger.info(f'JSON: {json.dumps(result.content)}')
         return result

@@ -13,7 +13,7 @@ import types
 import importlib
 
 from datetime import datetime, date
-from typing import List, Union, TypeVar, Optional, Dict, Tuple
+from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from sqlalchemy import asc, desc
@@ -42,7 +42,7 @@ __all__ = [
 
     'check_device_info_min_versions',
 
-    'DeprecationClassHelper'
+    'DeprecationClassHelper', 'masked_dict'
 ]
 
 
@@ -632,3 +632,7 @@ def check_device_info_min_versions(request: LambRequest, min_versions: List[Tupl
         except Exception as e:
             logger.warning('Skip min version checking for %s cause of invalid structure, error: %s' % (min_v, e))
             continue
+
+
+def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
+    return {k: v if k not in masking_keys else '*****' for k, v in dct.items()}
