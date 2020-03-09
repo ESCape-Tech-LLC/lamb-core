@@ -4,8 +4,11 @@ __author__ = 'KoNEW'
 import logging
 import requests
 import copy
+import hmac
+import hashlib
+import re
 
-from typing import Optional, Any, Callable, List, Tuple
+from typing import Optional, Any, Callable, List, Tuple, Dict
 from dataclasses import dataclass
 
 from datetime import datetime
@@ -18,7 +21,7 @@ from lamb.acquiring.base import AbstractPaymentEngine
 
 
 __all__ = [
-    'RBSCallError', 'RBSResponse'
+    'RBSCallError', 'RBSResponse', 'determine_card_type'
 ]
 
 logger = logging.getLogger(__name__)
@@ -68,6 +71,25 @@ def _default_currency_multiplier_callback(currency_iso4217: int) -> int:
         logger.error(f'Unknown default currency multiplier callback code={currency_iso4217}')
         raise ImproperlyConfiguredError
     return mapper[currency_iso4217]
+
+
+_DEFAULT_MAPPING = {
+    'VISA': re.compile(r'^4[0-9]{12}(?:[0-9]{3})?$'),
+    'MASTER CARD': re.compile(r'^(?:5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}$'),
+    'AMERICAN EXPRESS': re.compile(r'^3[47][0-9]{13}$'),
+    'JCB': re.compile(r'^(?:2131|1800|35\d{3})\d{11}$'),
+    'DINERS CLUB': re.compile(r'^3(?:0[0-5]|[68][0-9])[0-9]{11}$'),
+    'DISCOVER': re.compile(r'^6(?:011|5[0-9]{2})[0-9]{12}$ '),
+    'MIR': re.compile(r'^220[0-4][0-9]{12}$')
+    }
+
+
+def determine_card_type(pan: str, mapping: Dict[str, Any] = _DEFAULT_MAPPING) -> Optional[str]:
+    for result, regex in mapping.items():
+        m = regex.match(pan)
+        if regex.match(pan) is not None:
+            return result
+    return None
 
 
 @dataclass(frozen=True)
@@ -224,3 +246,55 @@ class RBSPaymentEngine(object):
 
         # import json
         return result
+
+    def validate_callback(self, params: Dict[str, Any]) -> Tuple[str, str]:
+        # construct check sum control string
+        checksum_control_params = {k: v for k, v in params.items() if k != 'checksum'}
+        checksum_control_params_sorted_keys = sorted(list(checksum_control_params.keys()), key=str.lower)
+        checksum_control_items = ['%s;%s' % (k, checksum_control_params[k]) for k in
+                                  checksum_control_params_sorted_keys]
+        checksum_control_string = ';'.join(checksum_control_items) + ';'
+
+        calculated_checksum = hmac.new(
+            self.callback_hmac_key.encode('utf-8'),
+            msg=checksum_control_string.encode('utf-8'),
+            digestmod=hashlib.sha256
+        ).hexdigest().upper()
+
+        # compare against received checksum
+        received_checksum = dpath_value(params, 'checksum', str).upper()
+        if received_checksum != calculated_checksum:
+            get_params = '&'.join(['%s=%s' % (k, v) for k, v in params.items()])
+            raise InvalidParamValueError(
+                'RBS callback failed due check sums not equal <params=%s, received=%s, calculated=%s>' % (
+                    get_params, received_checksum, calculated_checksum))
+
+        # check operation type and status
+        operation = dpath_value(params, 'operation', req_type=str)
+        # if operation not in ['approved', 'deposited', 'reversed', 'refunded']:
+        #     raise InvalidParamValueError('RBS callback failed due unknown operation type %s' % operation)
+        status = dpath_value(params, 'status', req_type=int)
+        if status not in [0, 1]:
+            raise InvalidParamValueError('RBS callback failed due unknown status %s' % status)
+
+        # extract params
+        logger.debug(f'did validate checksum for payment callback: {params} -> {calculated_checksum, operation, status}')
+        return dpath_value(params, 'mdOrder', str), dpath_value(params, 'orderNumber', str)
+
+    def get_bindings(self, client_id: str) -> List[Dict[str, Any]]:
+        result = self._make_request(
+            method='getBindings.do',
+            params={
+                'clientId': client_id
+            }
+        )
+
+        # validate status
+        if result.error_code not in [0, 2]:
+            raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
+        try:
+            bindings = dpath_value(result.content, 'bindings', list)
+            return bindings
+        except ApiError as e:
+            logger.error(f'RBS content: {result.content}')
+            raise RBSCallError('RBS failed due invalid response format', rbs_response=result) from e
