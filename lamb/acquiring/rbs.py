@@ -7,9 +7,9 @@ import copy
 import hmac
 import hashlib
 import re
+import dataclasses
 
 from typing import Optional, Any, Callable, List, Tuple, Dict
-from dataclasses import dataclass
 
 from datetime import datetime
 from furl import furl
@@ -18,10 +18,11 @@ from sqlalchemy.orm.session import Session as SASession
 from lamb.exc import ServerError, ImproperlyConfiguredError, ExternalServiceError, ApiError
 from lamb.utils import dpath_value, compact, masked_dict
 from lamb.acquiring.base import AbstractPaymentEngine
+from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = [
-    'RBSCallError', 'RBSResponse', 'determine_card_type'
+    'RBSCallError', 'RBSResponse', 'determine_card_type', 'Binding'
 ]
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 #
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class RBSResponse(object):
     content: dict
 
@@ -54,6 +55,24 @@ class RBSResponse(object):
     def error_message(self) -> Optional[str]:
         return dpath_value(self.content, 'errorMessage', req_type=str, default=None)
 
+
+@dataclasses.dataclass()
+class Binding(ResponseEncodableMixin, object):
+    binding_id: str
+    masked_pan: str
+    expiry_date: str
+    card_type: Optional[str] = None
+
+    def __post_init__(self):
+        # rbs send masked pans as  ** or XXXXXX replacemanets for 6 symbols
+        _pan = self.masked_pan
+        _pan = _pan.replace('**', '000000')
+        _pan = _pan.replace('XXXXXX', '000000')
+
+        self.card_type = determine_card_type(pan=_pan)
+
+    def response_encode(self, request=None) -> dict:
+        return dataclasses.asdict(self)
 
 class RBSCallError(ExternalServiceError):
     rbs_response: RBSResponse
@@ -92,7 +111,7 @@ def determine_card_type(pan: str, mapping: Dict[str, Any] = _DEFAULT_MAPPING) ->
     return None
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class RBSPaymentEngine(object):
 
     endpoint: str
@@ -119,7 +138,8 @@ class RBSPaymentEngine(object):
                 logger.error(f'invalid marchant params: merchant_login={self.merchant_login}, password={self.merchant_password}')
                 raise ImproperlyConfiguredError
 
-    def _make_request(self, method: str, params: dict = None):
+    def _make_request(self, method: str, params: dict = None,  http_method: str = 'GET', add_credentials: bool = True,
+                      as_json: bool = False):
         logger.debug(f'Execute RBS request, method={method} params={params}')
 
         try:
@@ -127,20 +147,41 @@ class RBSPaymentEngine(object):
             if params is None:
                 params = {}
 
-            if self.merchant_token is not None:
-                params['token'] = self.merchant_token
-            else:
-                params['userName'] = self.merchant_login
-                params['password'] = self.merchant_password
+            if  add_credentials:
+                if self.merchant_token is not None:
+                    params['token'] = self.merchant_token
+                else:
+                    params['userName'] = self.merchant_login
+                    params['password'] = self.merchant_password
             params = compact(params)
             _masked_params = masked_dict(params, 'password', 'token')
-            logger.info(f'RBS call params: {_masked_params}')
+
 
             # execute request
             method_url = furl(self.endpoint)
             method_url.path.add(method)
             method_url = method_url.url
-            response = requests.get(url=method_url, params=params)
+
+            logger.info(f'RBS call params: [{http_method}] -> {method_url}: {_masked_params}')
+
+            if http_method.upper() == 'GET':
+                response = requests.get(
+                    url=method_url,
+                    params=params
+                )
+            elif http_method.upper()  == 'POST':
+                req_kwargs = {
+                    'url': method_url
+                }
+                if as_json:
+                    req_kwargs['json'] = params
+                else:
+                    req_kwargs['data'] = params
+                response = requests.post(**req_kwargs)
+                # response = requests.post(
+                #     url=method_url,
+                #     json=params
+                # )
 
             if response.status_code != 200:
                 logger.error(f'RBS call to method {method} failed due invalid http status code={response.status_code}, '
@@ -159,6 +200,10 @@ class RBSPaymentEngine(object):
                 response['errorCode'] = response.pop('ErrorCode')
             if 'ErrorMessage' in response:
                 response['errorMessage'] = response.pop('ErrorMessage')
+            if method in ['applepay/payment.do', 'google/payment.do']:
+                if not dpath_value(response, 'success', bool):
+                    response['errorCode'] = dpath_value(response, ['error', 'code'], int)
+                    response['errorMessage'] = dpath_value(response, ['error', 'message'], str)
             logger.debug(f'RBS JSON response normalized: {response}')
 
             response = RBSResponse(content=response)
@@ -195,7 +240,7 @@ class RBSPaymentEngine(object):
         """ Register payment and returns (rbs_response, orderId, formUrl) """
         # make request
         result = self._make_request(
-            method='register.do',
+            method='rest/register.do',
             params={
                 'orderNumber': str(order_number) if order_number is not None else None,
                 'amount': int(amount * self.currency_multiplier_callback(currency)),
@@ -232,7 +277,7 @@ class RBSPaymentEngine(object):
         """ Obtain extended payment status from RBS """
         # make request
         result = self._make_request(
-            method='getOrderStatusExtended.do',
+            method='rest/getOrderStatusExtended.do',
             params={
                 'orderId': rbs_order_id,
                 'orderNumber': str(order_number) if order_number is not None else None,
@@ -281,9 +326,9 @@ class RBSPaymentEngine(object):
         logger.debug(f'did validate checksum for payment callback: {params} -> {calculated_checksum, operation, status}')
         return dpath_value(params, 'mdOrder', str), dpath_value(params, 'orderNumber', str)
 
-    def get_bindings(self, client_id: str) -> List[Dict[str, Any]]:
+    def get_bindings(self, client_id: str) -> List[Binding]:
         result = self._make_request(
-            method='getBindings.do',
+            method='rest/getBindings.do',
             params={
                 'clientId': client_id
             }
@@ -294,7 +339,139 @@ class RBSPaymentEngine(object):
             raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
         try:
             bindings = dpath_value(result.content, 'bindings', list)
+            bindings = [
+                Binding(
+                    binding_id = dpath_value(b, 'bindingId', str),
+                    masked_pan = dpath_value(b, 'maskedPan', str),
+                    expiry_date = dpath_value(b, 'expiryDate', str)
+                )
+                for b in  bindings
+            ]
             return bindings
         except ApiError as e:
             logger.error(f'RBS content: {result.content}')
             raise RBSCallError('RBS failed due invalid response format', rbs_response=result) from e
+
+    def add_binding(self,
+                    success_uri: str,
+                    order_number: Any,
+                    client_id: str,
+                    currency: int = 643,
+                    fail_uri: Optional[str] = None,
+                    description: Optional[str] = 'CARD VERIFY',
+                    language: Optional[str] = None,
+                    session_timeout_secs: Optional[int] = None,
+                 ) -> Tuple[RBSResponse, str, str]:
+        # make request
+        result = self._make_request(
+            method='rest/register.do',
+            params={
+                'orderNumber': str(order_number) if order_number is not None else None,
+                'amount': 0,
+                'currency': currency,
+                'returnUrl': success_uri,
+                'failUrl': fail_uri,
+                'description': description,
+                'language': language,
+                'clientId': str(client_id),
+                'sessionTimeoutSecs': session_timeout_secs,
+                'features': 'VERIFY'
+            }
+        )
+
+        # validate status
+        if result.error_code != 0:
+            raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
+
+        # validate response format
+        try:
+            order_id = dpath_value(result.content, 'orderId', str)
+            form_url = dpath_value(result.content, 'formUrl', str)
+            return result, order_id, form_url
+        except ApiError as e:
+            logger.error(f'RBS content: {result.content}')
+            raise RBSCallError('RBS failed due invalid response format', rbs_response=result) from e
+
+    def delete_binding(self, client_id: str, binding_id: str):
+        result = self._make_request(
+            method='rest/unBindCard.do',
+            params={
+                'bindingId': binding_id
+            }
+        )
+        # validate status
+        if result.error_code not in [0, 2]:
+            raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
+        return result
+
+    def pay_with_binding(self, order_id: str, binding_id: str, language: Optional[str] = None):
+        result = self._make_request(
+            method='rest/paymentOrderBinding.do',
+            params={
+                'mdOrder': order_id,
+                'bindingId': binding_id,
+                'language': language
+            },
+            http_method='POST',
+            as_json=False
+        )
+        # validate status
+        if result.error_code != 0:
+            raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
+        return result
+
+    def pay_with_applepay(self,
+                          order_number: Any,
+                          merchant_id: str,
+                          payment_token: str,
+                          description: Optional[str] = None,
+                          language: Optional[str] = None,
+                          ):
+        result = self._make_request(
+            method='applepay/payment.do',
+            params={
+                'merchant': merchant_id,
+                'orderNumber': str(order_number) if order_number is not None else None,
+                'description': description,
+                'language': language,
+                'paymentToken': payment_token
+            },
+            http_method='POST',
+            as_json=True,
+            add_credentials=False
+        )
+        # validate status
+        if result.error_code != 0:
+            raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
+        return result
+
+    def pay_with_googlepay(self,
+                           order_number: Any,
+                           merchant_id: str,
+                           payment_token: str,
+                           amount: float,
+                           currency: int = 643,
+                           # success_uri: str,
+                           # fail_uri: Optional[str] = None,
+                           description: Optional[str] = None,
+                           language: Optional[str] = None,
+                          ):
+        result = self._make_request(
+            method='google/payment.do',
+            params={
+                'merchant': merchant_id,
+                'orderNumber': str(order_number) if order_number is not None else None,
+                'description': description,
+                'language': language,
+                'paymentToken': payment_token,
+                'amount': int(amount * self.currency_multiplier_callback(currency)),
+                'currencyCode': str(currency),
+            },
+            http_method='POST',
+            as_json=True,
+            add_credentials=False
+        )
+        # validate status
+        if result.error_code != 0:
+            raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
+        return result
