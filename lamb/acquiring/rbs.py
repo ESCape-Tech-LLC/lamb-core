@@ -15,24 +15,18 @@ from datetime import datetime
 from furl import furl
 from lazy import lazy
 from sqlalchemy.orm.session import Session as SASession
+from django.conf import settings
 from lamb.exc import ServerError, ImproperlyConfiguredError, ExternalServiceError, ApiError
-from lamb.utils import dpath_value, compact, masked_dict
+from lamb.utils import dpath_value, compact, masked_dict, import_by_name
 from lamb.acquiring.base import AbstractPaymentEngine
 from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = [
-    'RBSCallError', 'RBSResponse', 'determine_card_type', 'Binding'
+    'RBSCallError', 'RBSResponse', 'Binding'
 ]
 
 logger = logging.getLogger(__name__)
-
-# @dataclass(frozen=True)
-# class RBSErrorInfo(object):
-#     error_code: int
-#     error_message: Optional[str] = None
-#
-#
 
 
 @dataclasses.dataclass(frozen=True)
@@ -56,23 +50,58 @@ class RBSResponse(object):
         return dpath_value(self.content, 'errorMessage', req_type=str, default=None)
 
 
+_card_type_parser = None
+
+
+def get_card_type_parser() -> Callable[['Binding'], None]:
+    global _card_type_parser
+    if _card_type_parser is None:
+        logger.info(f'lazy loading credit card type parser: {settings.LAMB_CARD_TYPE_PARSER}')
+        _card_type_parser = import_by_name(settings.LAMB_CARD_TYPE_PARSER)
+    return _card_type_parser
+
+
 @dataclasses.dataclass()
 class Binding(ResponseEncodableMixin, object):
     binding_id: str
     masked_pan: str
     expiry_date: str
     card_type: Optional[str] = None
+    card_type_icon: Optional[str] = None
+
+    @classmethod
+    def _card_type_parser(cls, binding: 'Binding') -> 'Binding':
+        return import_by_name(settings.LAMB_CARD_TYPE_PARSER)
 
     def __post_init__(self):
-        # rbs send masked pans as  ** or XXXXXX replacemanets for 6 symbols
-        _pan = self.masked_pan
-        _pan = _pan.replace('**', '000000')
-        _pan = _pan.replace('XXXXXX', '000000')
-
-        self.card_type = determine_card_type(pan=_pan)
+        get_card_type_parser()(self)
+        # self = get_card_type_parser()(self)
 
     def response_encode(self, request=None) -> dict:
         return dataclasses.asdict(self)
+
+
+_DEFAULT_MAPPING = {
+    'VISA': re.compile(r'^4[0-9]{12}(?:[0-9]{3})?$'),
+    'MASTER CARD': re.compile(r'^(?:5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}$'),
+    'AMERICAN EXPRESS': re.compile(r'^3[47][0-9]{13}$'),
+    'JCB': re.compile(r'^(?:2131|1800|35\d{3})\d{11}$'),
+    'DINERS CLUB': re.compile(r'^3(?:0[0-5]|[68][0-9])[0-9]{11}$'),
+    'DISCOVER': re.compile(r'^6(?:011|5[0-9]{2})[0-9]{12}$'),
+    'MIR': re.compile(r'^220[0-4][0-9]{12}$')
+    }
+
+
+def _default_card_type_parser(binding: Binding):
+    _pan = binding.masked_pan
+    _pan = _pan.replace('**', '000000')
+    _pan = _pan.replace('XXXXXX', '000000')
+    binding.card_type = None
+    for result, regex in _DEFAULT_MAPPING.items():
+        if regex.match(_pan) is not None:
+            binding.card_type = result
+            break
+
 
 class RBSCallError(ExternalServiceError):
     rbs_response: RBSResponse
@@ -90,25 +119,6 @@ def _default_currency_multiplier_callback(currency_iso4217: int) -> int:
         logger.error(f'Unknown default currency multiplier callback code={currency_iso4217}')
         raise ImproperlyConfiguredError
     return mapper[currency_iso4217]
-
-
-_DEFAULT_MAPPING = {
-    'VISA': re.compile(r'^4[0-9]{12}(?:[0-9]{3})?$'),
-    'MASTER CARD': re.compile(r'^(?:5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}$'),
-    'AMERICAN EXPRESS': re.compile(r'^3[47][0-9]{13}$'),
-    'JCB': re.compile(r'^(?:2131|1800|35\d{3})\d{11}$'),
-    'DINERS CLUB': re.compile(r'^3(?:0[0-5]|[68][0-9])[0-9]{11}$'),
-    'DISCOVER': re.compile(r'^6(?:011|5[0-9]{2})[0-9]{12}$ '),
-    'MIR': re.compile(r'^220[0-4][0-9]{12}$')
-    }
-
-
-def determine_card_type(pan: str, mapping: Dict[str, Any] = _DEFAULT_MAPPING) -> Optional[str]:
-    for result, regex in mapping.items():
-        m = regex.match(pan)
-        if regex.match(pan) is not None:
-            return result
-    return None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -341,9 +351,9 @@ class RBSPaymentEngine(object):
             bindings = dpath_value(result.content, 'bindings', list)
             bindings = [
                 Binding(
-                    binding_id = dpath_value(b, 'bindingId', str),
-                    masked_pan = dpath_value(b, 'maskedPan', str),
-                    expiry_date = dpath_value(b, 'expiryDate', str)
+                    binding_id=dpath_value(b, 'bindingId', str),
+                    masked_pan=dpath_value(b, 'maskedPan', str),
+                    expiry_date=dpath_value(b, 'expiryDate', str)
                 )
                 for b in  bindings
             ]

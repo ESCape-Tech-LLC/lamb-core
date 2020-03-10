@@ -62,3 +62,4 @@ LAMB_REDIS_URL = 'redis://localhost:6379/0'
 LAMB_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 LAMB_BROKER_RESULT_URL = 'redis://localhost:6379/1'
 
+LAMB_CARD_TYPE_PARSER = 'lamb.acquiring.rbs._default_card_type_parser'
