@@ -355,7 +355,7 @@ class RBSPaymentEngine(object):
                     masked_pan=dpath_value(b, 'maskedPan', str),
                     expiry_date=dpath_value(b, 'expiryDate', str)
                 )
-                for b in  bindings
+                for b in bindings
             ]
             return bindings
         except ApiError as e:
