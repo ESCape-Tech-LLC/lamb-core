@@ -432,7 +432,7 @@ class RBSPaymentEngine(object):
 
     def pay_with_applepay(self,
                           order_number: Any,
-                          merchant_id: str,
+                          merchant: str,
                           payment_token: str,
                           description: Optional[str] = None,
                           language: Optional[str] = None,
@@ -440,7 +440,7 @@ class RBSPaymentEngine(object):
         result = self._make_request(
             method='applepay/payment.do',
             params={
-                'merchant': merchant_id,
+                'merchant': merchant,
                 'orderNumber': str(order_number) if order_number is not None else None,
                 'description': description,
                 'language': language,

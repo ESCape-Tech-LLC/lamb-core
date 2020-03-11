@@ -11,8 +11,9 @@ import logging
 import re
 import types
 import importlib
+import functools
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
@@ -42,7 +43,7 @@ __all__ = [
 
     'check_device_info_min_versions',
 
-    'DeprecationClassHelper', 'masked_dict'
+    'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache'
 ]
 
 
@@ -636,3 +637,25 @@ def check_device_info_min_versions(request: LambRequest, min_versions: List[Tupl
 
 def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
     return {k: v if k not in masking_keys else '*****' for k, v in dct.items()}
+
+
+def timed_lru_cache(**timedelta_kwargs):
+    def _wrapper(f):
+        update_delta = timedelta(**timedelta_kwargs)
+        next_update = datetime.utcnow() + update_delta
+        logger.warning(f'next update: {next_update}')
+        # Apply @lru_cache to f with no cache size limit
+        f = functools.lru_cache(None)(f)
+
+        @functools.wraps(f)
+        def _wrapped(*args, **kwargs):
+            nonlocal next_update
+            now = datetime.utcnow()
+            if now >= next_update:
+                f.cache_clear()
+                next_update = now + update_delta
+            return f(*args, **kwargs)
+
+        return _wrapped
+
+    return _wrapper
