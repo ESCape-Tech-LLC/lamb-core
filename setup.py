@@ -105,6 +105,7 @@ setup(
         'pymemcache',
         'dataclasses',
         'openpyxl',
-        'django-ipware'
+        'django-ipware',
+        'asgiref'
     ]
 )

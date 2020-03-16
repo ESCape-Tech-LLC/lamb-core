@@ -9,14 +9,19 @@ import uuid
 import warnings
 import logging
 import re
+import io
 import types
 import importlib
 import functools
+import asyncio
+import requests
 
 from datetime import datetime, date, timedelta
 from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
+from asgiref.sync import sync_to_async
+from PIL import Image as PILImage
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -43,7 +48,8 @@ __all__ = [
 
     'check_device_info_min_versions',
 
-    'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache'
+    'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache',
+    'async_download_resources', 'async_download_images'
 ]
 
 
@@ -659,3 +665,41 @@ def timed_lru_cache(**timedelta_kwargs):
         return _wrapped
 
     return _wrapper
+
+
+# async downloads
+@sync_to_async
+def _async_download_url(url: Optional[str], timeout) -> Optional[bytes]:
+    logger.debug(f'downloading resource from url: {url}, timeout={timeout}')
+    if url is None:
+        return None
+    else:
+        try:
+            res = requests.get(url, timeout=timeout)
+            if res.status_code != 200:
+                raise ExternalServiceError(f'Could not download resource, invalid status: {url}')
+            return res.content
+        except requests.RequestException as e:
+            raise ExternalServiceError(f'Could not download resource, network error: {url}') from e
+
+
+async def _async_download_resources(urls: List[Optional[str]], timeout: int) -> List[Optional[bytes]]:
+    tasks = []
+    for url in urls:
+        tasks.append(_async_download_url(url=url, timeout=timeout))
+    result = await asyncio.gather(*tasks)
+
+    return result
+
+
+def async_download_resources(urls: List[Optional[str]], timeout=30) -> List[Optional[bytes]]:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    result = loop.run_until_complete(_async_download_resources(urls=urls, timeout=timeout))
+    return result
+
+
+def async_download_images(urls: List[Optional[str]], timeout=30) -> List[Optional[PILImage.Image]]:
+    result = async_download_resources(urls, timeout)
+    result = [PILImage.open(io.BytesIO(r)) if r is not None else None for r in result]
+    return result
