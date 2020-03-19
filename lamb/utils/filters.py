@@ -158,7 +158,6 @@ class FieldValueFilter(Filter):
 
         # check for equality
         if '__eq__' in self.allowed_compares:
-            logger.warning(f'equal in {self.arg_name}')
             param_value = self.get_param_value(params, key_path=self.arg_name)
             if param_value is not None:
                 if len(param_value) > 1:
@@ -229,7 +228,6 @@ class FieldValueFilter(Filter):
                 param_value = self.vary_param_value_max(value=param_value)
                 query = query.filter(self.comparing_field.__le__(param_value))
 
-        logger.warning(f'processed: {self.arg_name, self.req_type}')
         return query
 
 
