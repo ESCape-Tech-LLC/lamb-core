@@ -344,14 +344,15 @@ def response_sorted(
     if 'final_sorting' in kwargs.keys():
         # final_sorting exist - should parse and apply descriptors
         f_sorting_descriptors = kwargs['final_sorting']
-        if not isinstance(f_sorting_descriptors, str):
-            raise ServerError('Improperly configured final sorting descriptor')
-        f_sorting_descriptors = f_sorting_descriptors.split(',')
-        f_sorting_descriptors = [f for f in f_sorting_descriptors if len(f_sorting_descriptors) > 0]
-        for f_descriptor in f_sorting_descriptors:
-            _sorting_field, _sorting_function = extract_sorting_params(f_descriptor, model_inspection)
-            applied_fields.append(_sorting_field)
-            query = query.order_by(_sorting_function(getattr(model_class, _sorting_field)))
+        if f_sorting_descriptors is not None:
+            if not isinstance(f_sorting_descriptors, str):
+                raise ServerError('Improperly configured final sorting descriptor')
+            f_sorting_descriptors = f_sorting_descriptors.split(',')
+            f_sorting_descriptors = [f for f in f_sorting_descriptors if len(f_sorting_descriptors) > 0]
+            for f_descriptor in f_sorting_descriptors:
+                _sorting_field, _sorting_function = extract_sorting_params(f_descriptor, model_inspection)
+                applied_fields.append(_sorting_field)
+                query = query.order_by(_sorting_function(getattr(model_class, _sorting_field)))
     else:
         # if final sorting omitted - use primary key
         primary_key_columns = [c.name for c in model_inspection.primary_key]
