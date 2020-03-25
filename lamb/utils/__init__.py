@@ -670,13 +670,14 @@ def timed_lru_cache(**timedelta_kwargs):
 
 # async downloads
 @sync_to_async
-def _async_download_url(url: Optional[str], timeout) -> Optional[bytes]:
-    logger.debug(f'downloading resource from url: {url}, timeout={timeout}')
+def _async_download_url(url: Optional[str], timeout, headers: Optional[Dict[str, Any]] = None) -> Optional[bytes]:
+    logger.debug(f'downloading resource from url: {url}, timeout={timeout}, headers={headers}')
     if url is None:
         return None
     else:
         try:
-            res = requests.get(url, timeout=timeout)
+            headers = headers or {}
+            res = requests.get(url, timeout=timeout, headers=headers)
             if res.status_code != 200:
                 raise ExternalServiceError(f'Could not download resource, invalid status: {url}')
             return res.content
@@ -684,23 +685,23 @@ def _async_download_url(url: Optional[str], timeout) -> Optional[bytes]:
             raise ExternalServiceError(f'Could not download resource, network error: {url}') from e
 
 
-async def _async_download_resources(urls: List[Optional[str]], timeout: int) -> List[Optional[bytes]]:
+async def _async_download_resources(urls: List[Optional[str]], timeout: int, headers: Optional[Dict[str, Any]] = None) -> List[Optional[bytes]]:
     tasks = []
     for url in urls:
-        tasks.append(_async_download_url(url=url, timeout=timeout))
+        tasks.append(_async_download_url(url=url, timeout=timeout, headers=headers))
     result = await asyncio.gather(*tasks)
 
     return result
 
 
-def async_download_resources(urls: List[Optional[str]], timeout=30) -> List[Optional[bytes]]:
+def async_download_resources(urls: List[Optional[str]], timeout=30, headers: Optional[Dict[str, Any]] = None) -> List[Optional[bytes]]:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    result = loop.run_until_complete(_async_download_resources(urls=urls, timeout=timeout))
+    result = loop.run_until_complete(_async_download_resources(urls=urls, timeout=timeout, headers=headers))
     return result
 
 
-def async_download_images(urls: List[Optional[str]], timeout=30) -> List[Optional[PILImage.Image]]:
-    result = async_download_resources(urls, timeout)
+def async_download_images(urls: List[Optional[str]], timeout=30, headers: Optional[Dict[str, Any]] = None) -> List[Optional[PILImage.Image]]:
+    result = async_download_resources(urls, timeout, headers)
     result = [PILImage.open(io.BytesIO(r)) if r is not None else None for r in result]
     return result
