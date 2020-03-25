@@ -106,6 +106,7 @@ setup(
         'dataclasses',
         'openpyxl',
         'django-ipware',
-        'asgiref'
+        'asgiref',
+        'python-redis-lock'
     ]
 )

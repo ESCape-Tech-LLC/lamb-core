@@ -29,7 +29,8 @@ from sqlalchemy.inspection import inspect
 from django.http import HttpRequest
 from django.conf import settings
 
-from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError, UpdateRequiredError
+from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError,\
+    UpdateRequiredError, ExternalServiceError
 from .dpath import dpath_value
 
 
@@ -696,8 +697,11 @@ async def _async_download_resources(urls: List[Optional[str]], timeout: int, hea
 
 def async_download_resources(urls: List[Optional[str]], timeout=30, headers: Optional[Dict[str, Any]] = None) -> List[Optional[bytes]]:
     loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    result = loop.run_until_complete(_async_download_resources(urls=urls, timeout=timeout, headers=headers))
+    try:
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(_async_download_resources(urls=urls, timeout=timeout, headers=headers))
+    finally:
+        loop.close()
     return result
 
 
