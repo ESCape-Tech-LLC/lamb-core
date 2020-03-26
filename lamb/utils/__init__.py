@@ -28,6 +28,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
 from django.http import HttpRequest
 from django.conf import settings
+from PIL import Image as PILImage
 
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError,\
     UpdateRequiredError, ExternalServiceError
@@ -49,8 +50,10 @@ __all__ = [
 
     'check_device_info_min_versions',
 
+    'list_chunks',
+
     'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache',
-    'async_download_resources', 'async_download_images'
+    'async_download_resources', 'async_download_images', 'image_convert_to_rgb'
 ]
 
 
@@ -669,6 +672,12 @@ def timed_lru_cache(**timedelta_kwargs):
     return _wrapper
 
 
+def list_chunks(lst: list, n: int):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+
 # async downloads
 @sync_to_async
 def _async_download_url(url: Optional[str], timeout) -> Optional[bytes]:
@@ -706,5 +715,24 @@ def async_download_resources(urls: List[Optional[str]], timeout=30) -> List[Opti
 
 def async_download_images(urls: List[Optional[str]], timeout=30) -> List[Optional[PILImage.Image]]:
     result = async_download_resources(urls, timeout)
-    result = [PILImage.open(io.BytesIO(r)) if r is not None else None for r in result]
-    return result
+    buffer = []
+    for index, res in enumerate(result):
+        if res is None:
+            buffer.append(None)
+            continue
+        try:
+            PILImage.open(io.BytesIO(res))
+        except Exception as e:
+            logger.warning(f'failed url: {urls[index]}')
+            raise
+    return buffer
+
+
+def image_convert_to_rgb(image: PILImage.Image) -> PILImage.Image:
+    if image.mode == 'RGBA':
+        image.load()
+        background = PILImage.new('RGB', image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[3])
+        return background
+    else:
+        return image.convert('RGB')
