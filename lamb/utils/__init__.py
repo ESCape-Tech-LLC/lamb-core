@@ -15,6 +15,7 @@ import importlib
 import functools
 import asyncio
 import requests
+import enum
 
 from datetime import datetime, date, timedelta
 from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any
@@ -679,52 +680,99 @@ def list_chunks(lst: list, n: int):
 
 
 # async downloads
+@enum.unique
+class AsyncFallStrategy(str, enum.Enum):
+    RAISING = 'RAISING'
+    NONE = 'NONE'
+    EXCEPTION = 'EXCEPTION'
+
+
+def _handle_async_fall(e: Exception, fall_strategy: AsyncFallStrategy):
+    if fall_strategy == AsyncFallStrategy.RAISING:
+        raise e
+        # raise ExternalServiceError(f'Could not download resource, network error: {url}') from e
+    elif fall_strategy == AsyncFallStrategy.NONE:
+        return None
+    elif fall_strategy == AsyncFallStrategy.EXCEPTION:
+        return e
+    else:
+        logger.warning(f'Invalid strategy received: {fall_strategy}')
+        raise ServerError('Invalid async fall strategy mode')
+
+
 @sync_to_async
-def _async_download_url(url: Optional[str], timeout) -> Optional[bytes]:
-    logger.debug(f'downloading resource from url: {url}, timeout={timeout}')
+def _async_download_url(url: Optional[str],
+                        timeout,
+                        fall_strategy: AsyncFallStrategy,
+                        headers: Optional[Dict[str, Any]] = None
+                        ) -> Optional[bytes]:
+    logger.debug(f'downloading resource from url: {url}, timeout={timeout}, headers={headers}')
     if url is None:
         return None
     else:
         try:
-            res = requests.get(url, timeout=timeout)
+            headers = headers or {}
+            res = requests.get(url, timeout=timeout, headers=headers)
             if res.status_code != 200:
                 raise ExternalServiceError(f'Could not download resource, invalid status: {url}')
             return res.content
-        except requests.RequestException as e:
-            raise ExternalServiceError(f'Could not download resource, network error: {url}') from e
+        except Exception as e:
+            return _handle_async_fall(e, fall_strategy)
+            # if fall_strategy == AsyncFallStrategy.RAISING:
+            #     raise
+            # elif fall_strategy == AsyncFallStrategy.NONE:
+            #     return None
+            # elif fall_strategy == AsyncFallStrategy.EXCEPTION:
+            #     return e
+            # else:
+            #     logger.warning(f'Invalid strategy received: {fall_strategy}')
+            #     raise ServerError('Invalid async fall strategy mode')
 
 
-async def _async_download_resources(urls: List[Optional[str]], timeout: int) -> List[Optional[bytes]]:
+async def _async_download_resources(urls: List[Optional[str]],
+                                    timeout: int,
+                                    fall_strategy: AsyncFallStrategy,
+                                    headers: Optional[Dict[str, Any]] = None
+                                    ) -> List[Optional[bytes]]:
     tasks = []
     for url in urls:
-        tasks.append(_async_download_url(url=url, timeout=timeout))
+        tasks.append(_async_download_url(url=url, timeout=timeout, headers=headers, fall_strategy=fall_strategy))
     result = await asyncio.gather(*tasks)
 
     return result
 
 
-def async_download_resources(urls: List[Optional[str]], timeout=30) -> List[Optional[bytes]]:
+def async_download_resources(urls: List[Optional[str]],
+                             timeout=30,
+                             headers: Optional[Dict[str, Any]] = None,
+                             fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING
+                             ) -> List[Optional[bytes]]:
     loop = asyncio.new_event_loop()
     try:
         asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(_async_download_resources(urls=urls, timeout=timeout))
+        result = loop.run_until_complete(
+            _async_download_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
+        )
     finally:
         loop.close()
     return result
 
 
-def async_download_images(urls: List[Optional[str]], timeout=30) -> List[Optional[PILImage.Image]]:
-    result = async_download_resources(urls, timeout)
+def async_download_images(urls: List[Optional[str]],
+                          timeout=30,
+                          headers: Optional[Dict[str, Any]] = None,
+                          fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING
+                          ) -> List[Optional[PILImage.Image]]:
+    result = async_download_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
     buffer = []
     for index, res in enumerate(result):
-        if res is None:
-            buffer.append(None)
-            continue
         try:
-            PILImage.open(io.BytesIO(res))
+            if res is None:
+                buffer.append(None)
+                continue
+            buffer.append(PILImage.open(io.BytesIO(res)))
         except Exception as e:
-            logger.warning(f'failed url: {urls[index]}')
-            raise
+            buffer.append(_handle_async_fall(e, fall_strategy))
     return buffer
 
 
