@@ -16,9 +16,10 @@ import functools
 import asyncio
 import requests
 import enum
+import sys
 
 from datetime import datetime, date, timedelta
-from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any
+from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any, Callable
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from asgiref.sync import sync_to_async
@@ -53,7 +54,7 @@ __all__ = [
 
     'list_chunks',
 
-    'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache',
+    'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache', 'timed_lru_cache_clear',
     'async_download_resources', 'async_download_images', 'image_convert_to_rgb'
 ]
 
@@ -651,26 +652,40 @@ def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
     return {k: v if k not in masking_keys else '*****' for k, v in dct.items()}
 
 
+_timed_lru_cache_functions: Dict[Callable, Callable] = {}
+
+
 def timed_lru_cache(**timedelta_kwargs):
-    def _wrapper(f):
+    def _wrapper(func):
         update_delta = timedelta(**timedelta_kwargs)
         next_update = datetime.utcnow() + update_delta
-        logger.warning(f'next update: {next_update}')
-        # Apply @lru_cache to f with no cache size limit
-        f = functools.lru_cache(None)(f)
+        func_full_name = f'{sys.modules[func.__module__].__name__}.{func.__name__}'
+        logger.warning(f'timed_lru_cache initial update calculated: {func_full_name} -> {next_update}')
+        # Apply @lru_cache to func with no cache size limit
+        func_lru_cached = functools.lru_cache(None)(func)
 
-        @functools.wraps(f)
+        _timed_lru_cache_functions[func] = func_lru_cached
+        logger.warning(f'time cached functions: {_timed_lru_cache_functions}')
+
+        @functools.wraps(func_lru_cached)
         def _wrapped(*args, **kwargs):
             nonlocal next_update
             now = datetime.utcnow()
             if now >= next_update:
-                f.cache_clear()
+                func_lru_cached.cache_clear()
                 next_update = now + update_delta
-            return f(*args, **kwargs)
+                logger.warning(f'timed_lru_cache next update calculated: {func_full_name} -> {next_update}')
+            return func_lru_cached(*args, **kwargs)
 
         return _wrapped
 
     return _wrapper
+
+
+def timed_lru_cache_clear():
+    for func, wrapped_func in _timed_lru_cache_functions.items():
+        wrapped_func.cache_clear()
+        logger.warning(f'time_lru_cache cleared for: {func} -> {wrapped_func}')
 
 
 def list_chunks(lst: list, n: int):

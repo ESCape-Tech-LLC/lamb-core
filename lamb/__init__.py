@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'KoNEW'
 
-__version__ = '2.1.2'
+__version__ = '2.2.0'
 
 
 import logging

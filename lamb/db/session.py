@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 try:
+    # basic
     _USER = settings.DATABASES['default'].get('USER', None)
     _NAME = settings.DATABASES['default'].get('NAME', None)
     _PASS = settings.DATABASES['default'].get('PASSWORD', None)
     _HOST = settings.DATABASES['default'].get('HOST', None)
     _ENGINE = settings.DATABASES['default'].get('ENGINE', None)
     _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
-    _ENGINE_OPTS = settings.DATABASES['default'].get('ENGINE_OPTS', None)
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.') + 1:]
 
@@ -51,19 +51,30 @@ try:
     CONNECTION_STRING = CONNECTION_STRING.url
 
     # pre-fill default engine opts and modify with server settings
-    if _ENGINE == 'postgresql' and _ENGINE_OPTS is None:
-        _ENGINE_OPTS = {
+    ENGINE_OPTS_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_POOLED', None)
+    if _ENGINE == 'postgresql' and ENGINE_OPTS_POOLED is None:
+        ENGINE_OPTS_POOLED = {
+            'pool_recycle': 3600,
             'executemany_mode': 'values',
-            'executemany_values_page_size': 100000,
+            'executemany_values_page_size': 10000,
             'executemany_batch_page_size': 500
         }
-    if _ENGINE_OPTS is None:
-        _ENGINE_OPTS = {}
+    if ENGINE_OPTS_POOLED is None:
+        ENGINE_OPTS_POOLED = {}
+    logger.info(f'database engine options would be used for pooled connections: {ENGINE_OPTS_POOLED}')
+    _engine = create_engine(CONNECTION_STRING, **ENGINE_OPTS_POOLED)
 
-    logger.debug(f'database engine options would be used: {_ENGINE_OPTS}')
-
-    _engine = create_engine(CONNECTION_STRING, pool_recycle=3600, **_ENGINE_OPTS)
-    _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, **_ENGINE_OPTS)
+    ENGINE_OPTS_NON_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_NON_POOLED', None)
+    if _ENGINE == 'postgresql' and ENGINE_OPTS_NON_POOLED is None:
+        ENGINE_OPTS_NON_POOLED = {
+            'executemany_mode': 'values',
+            'executemany_values_page_size': 10000,
+            'executemany_batch_page_size': 500
+        }
+    if ENGINE_OPTS_NON_POOLED is None:
+        ENGINE_OPTS_NON_POOLED = {}
+    logger.info(f'database engine options would be used for non-pooled connections: {ENGINE_OPTS_NON_POOLED}')
+    _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, **ENGINE_OPTS_NON_POOLED)
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
 

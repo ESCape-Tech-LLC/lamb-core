@@ -7,7 +7,7 @@ import logging
 
 from django.urls import resolve
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpRequest
 from django.utils.deprecation import MiddlewareMixin
 
 from lamb.execution_time.meter import ExecutionTimeMeter
@@ -34,7 +34,7 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         """ Appends metric object to request """
         request.lamb_execution_meter = ExecutionTimeMeter()
 
-    def _finish(self, request: LambRequest):
+    def _finish(self, request: LambRequest, response: HttpResponse, exception: Exception):
         """ Stores collected data in database """
         metric = LambExecutionTimeMetric()
         metric.http_method = request.method
@@ -74,12 +74,26 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
             logger.error('ExecutionMetrics store error: %s' % e)
             pass
 
+        # log total
+        level = settings.LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL
+        if level:
+            if isinstance(level, str):
+                logging.getLogger
+                level = logging.mlevel(level)
+            msg = f'"{request.method} {request.get_full_path()}" {request.lamb_execution_meter.get_total_time():.6f} sec.'
+            if response is not None:
+                length = len(response.content) if not response.streaming else '<stream>'
+                msg = f'{msg} {response.status_code} {length}'
+            elif exception is not None:
+                msg = f'{msg} {exception.__class__.__name__}'
+            logger.log(level, msg)
+
     def process_request(self, request: LambRequest):
         self._start(request)
 
     def process_response(self, request: LambRequest, response: HttpResponse) -> HttpResponse:
-        self._finish(request)
+        self._finish(request, response, None)
         return response
 
-    def process_exception(self, request: LambRequest, _):
-        self._finish(request)
+    def process_exception(self, request: LambRequest, exception: Exception):
+        self._finish(request, None, exception)

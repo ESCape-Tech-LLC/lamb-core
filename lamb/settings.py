@@ -2,6 +2,7 @@
 __author__ = 'KoNEW'
 
 import datetime
+import logging
 
 # device info
 LAMB_DEVICE_INFO_HEADER_FAMILY = 'HTTP_X_LAMB_DEVICE_FAMILY'
@@ -52,6 +53,7 @@ LAMB_AWS_ENDPOINT_URL = None
 
 # utils
 LAMB_EXECUTION_TIME_COLLECT_MARKERS = False
+LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL = logging.INFO
 
 LAMB_VERBOSE_SQL_LOG = False
 

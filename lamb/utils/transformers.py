@@ -10,7 +10,6 @@ import time
 
 from typing import Type, TypeVar, Optional, Union
 from datetime import datetime, date
-from django.conf import settings
 from furl import furl
 
 from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError, ApiError
@@ -49,7 +48,11 @@ def transform_boolean(value) -> bool:
         raise InvalidParamTypeError('Invalid data type for boolean convert')
 
 
-def transform_date(value: Union[datetime, date, str], format=settings.LAMB_RESPONSE_DATE_FORMAT) -> datetime.date:
+def transform_date(value: Union[datetime, date, str], format=None) -> datetime.date:
+    from django.conf import settings
+    if format is None:
+        format = settings.LAMB_RESPONSE_DATE_FORMAT
+
     if isinstance(value, datetime):
         return value.date()
     if isinstance(value, date):
