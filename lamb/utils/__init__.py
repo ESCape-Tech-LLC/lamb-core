@@ -253,6 +253,75 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
     return result
 
 
+Sorter = Tuple[str, Callable]
+
+
+def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sorter:
+    """ Parse single sorting descriptor """
+    # check against regex and extract field and function
+    full_regex = re.compile(r'^\w+{\w+}$')
+    short_regex = re.compile(r'^\w+$')
+    if full_regex.match(raw_sorting_descriptor) is not None:
+        index = raw_sorting_descriptor.index('{')
+        field = raw_sorting_descriptor[:index]
+        sort_functor = raw_sorting_descriptor[index + 1:-1]
+    elif short_regex.match(raw_sorting_descriptor) is not None:
+        field = raw_sorting_descriptor
+        sort_functor = 'desc'
+    else:
+        raise InvalidParamValueError('Invalid sorting descriptor format %s' % raw_sorting_descriptor,
+                                     error_details={'key_path': 'sorting', 'descriptor': raw_sorting_descriptor})
+
+    # check against meta data
+    field = field.lower()
+    if field not in [c.name for c in model_inspection.columns]:
+        raise InvalidParamValueError(
+            'Invalid sorting_field value for descriptor %s. Not found in model' % raw_sorting_descriptor,
+            error_details={'key_path': 'sorting', 'descriptor': raw_sorting_descriptor, 'field': field})
+
+    sort_functor = sort_functor.lower()
+    if sort_functor not in ['asc', 'desc']:
+        raise InvalidParamValueError(
+            'Invalid sorting_direction value for descriptor %s. Should be one [asc or desc]' % raw_sorting_descriptor,
+            error_details={'key_path': 'sorting', 'descriptor': raw_sorting_descriptor})
+
+    sort_functor = asc if sort_functor == 'asc' else desc
+
+    return field, sort_functor
+
+
+def _sorting_parse_descriptors(raw_sorting_descriptors: Optional[str], model_inspection) -> List[Sorter]:
+    """ Parse list of sorting descriptors """
+    # early return and check params
+    if raw_sorting_descriptors is None:
+        return []
+    if not isinstance(raw_sorting_descriptors, str):
+        logger.warning(f'Invalid sorting descriptors type received: {raw_sorting_descriptors}')
+        raise InvalidParamTypeError('Invalid sorting descriptors type')
+    raw_sorting_descriptors = unquote(raw_sorting_descriptors)  # dirty hack for invalid arg transfer
+    raw_sorting_descriptors = raw_sorting_descriptors.lower()
+
+    # parse data
+    sorting_descriptors_list = raw_sorting_descriptors.split(',')
+    sorting_descriptors_list = [sd for sd in sorting_descriptors_list if len(sd) > 0]
+    result = []
+    for sd in sorting_descriptors_list:
+        result.append(_sorting_parse_sorter(sd, model_inspection))
+    return result
+
+
+def _sorting_apply_sorters(sorters: List[Sorter], query: Query, check_duplicate: bool = True) -> Query:
+    applied_sort_fields: List[str] = list()
+    for (_sorting_field, _sorting_functor) in sorters:
+        if _sorting_field in applied_sort_fields and check_duplicate:
+            logger.debug(f'skip duplicate sorting field: {_sorting_field}')
+            continue
+        logger.debug(f'apply sorter: {_sorting_field, _sorting_functor}')
+        query = query.order_by(_sorting_functor(getattr(model_class, _sorting_field)))
+        applied_sort_fields.append(_sorting_field)
+    return query
+
+
 def response_sorted(
         query: Query,
         model_class: DeclarativeMeta,
@@ -263,51 +332,13 @@ def response_sorted(
 
     :param query: SQLAlchemy query instance to be sorted
     :param model_class: Model class for columns introspection
-    :param params_dict: Dictionary that contains params of sorting
+    :param params: Dictionary that contains params of sorting
     :param default_sorting: Default sorting descriptors
-    :param final_sorting: Final step sorting - if provided in kwargs it would be parsed as descriptor andd applied
+    :param final_sorting: Final step sorting - if provided in kwargs it would be parsed as descriptor and applied
         to query. By default final step of sorting - is to sort via primary key of model class.
+    :param start_sorting: Initial sorting step - if provided in kwargs it would be parsed as descriptor and applied
+        to query before all other descriptors.
     """
-    def extract_sorting_params(_sorting_description, _model_inspection):
-        """
-        :param _sorting_description: Raw sorting description
-        :type _sorting_description: str
-        :param _model_inspection: Inspection of model class
-        :type _model_inspection: sqlalchemy.orm.mapper.Mapper
-        :return: Tuple of atttibute name and sorting function (by default sorting function is desc)
-        :rtype: (str, callable)
-        """
-        # check against regex and extract field and function
-        full_regex = re.compile(r'^\w+{\w+}$')
-        short_regex = re.compile(r'^\w+$')
-        if full_regex.match(_sorting_description) is not None:
-            index = _sorting_description.index('{')
-            _field = _sorting_description[:index]
-            _function = _sorting_description[index+1:-1]
-        elif short_regex.match(_sorting_description) is not None:
-            _field = _sorting_description
-            _function = 'desc'
-        else:
-            raise InvalidParamValueError('Invalid sorting descriptor format %s' % _sorting_description,
-                                         error_details={'key_path': 'sorting', 'descriptor': _sorting_description})
-
-        # check against meta data
-        _field = _field.lower()
-        if _field not in [c.name for c in _model_inspection.columns]:
-            raise InvalidParamValueError(
-                'Invalid sorting_field value for descriptor %s. Not found in model' % _sorting_description,
-                error_details={'key_path': 'sorting', 'descriptor': _sorting_description, 'field': _field})
-
-        _function = _function.lower()
-        if _function not in ['asc', 'desc']:
-            raise InvalidParamValueError(
-                'Invalid sorting_direction value for descriptor %s. Should be one [asc or desc]' % _sorting_description,
-                error_details={'key_path': 'sorting', 'descriptor': _sorting_description})
-
-        _function = asc if _function == 'asc' else desc
-
-        return _field, _function
-
     # check deprecation
     if 'params_dict' in kwargs and params is None:
         warnings.warn('response_sorted `params_dict` param is deprecated, use `params` instead', DeprecationWarning,
@@ -315,8 +346,6 @@ def response_sorted(
         params = kwargs.pop('params_dict')
 
     # check params
-    if default_sorting is not None and not isinstance(default_sorting, str):
-        raise ServerError('Improperly configured default_sorting descriptors')
     if not isinstance(params, dict):
         raise ServerError('Improperly configured sorting params dictionary')
     if not isinstance(model_class, DeclarativeMeta):
@@ -324,48 +353,55 @@ def response_sorted(
     if not isinstance(query, Query):
         raise ServerError('Improperly configured query item for sorting')
 
-    # prepare model meta-data inspection
+    # prepare inspection and container
     model_inspection = inspect(model_class)
 
-    # extract sorting descriptions
-    sorting_descriptions = dpath_value(params, settings.LAMB_SORTING_KEY, str, default=default_sorting)
-    if sorting_descriptions is not None:
-        sorting_descriptions = unquote(sorting_descriptions)  # dirty hack for invalid arg transfer
+    # discover and apply start sorters
+    all_sorters: List[Sorter] = []
+    start_sorters = _sorting_parse_descriptors(
+        raw_sorting_descriptors=kwargs.get('start_sorting', None),
+        model_inspection=model_inspection
+    )
+    logger.debug(f'sorters parsed start_sorting: {start_sorters}')
+    all_sorters.extend(start_sorters)
 
-    if sorting_descriptions is None:
-        sorting_descriptions = ''
-    else:
-        sorting_descriptions = sorting_descriptions.lower()
+    # discover and apply client sorters
+    client_sorters = _sorting_parse_descriptors(
+        raw_sorting_descriptors=dpath_value(params, settings.LAMB_SORTING_KEY, str, default=default_sorting),
+        model_inspection=model_inspection
+    )
+    logger.debug(f'sorters parsed client_sorters: {client_sorters}')
+    all_sorters.extend(client_sorters)
 
-    # parse sorting descriptions
-    applied_fields = list()
-    sorting_descriptions = sorting_descriptions.split(',')
-    sorting_descriptions = [s for s in sorting_descriptions if len(s) > 0]
-    for sorting_description in sorting_descriptions:
-        sorting_field, sorting_function = extract_sorting_params(sorting_description, model_inspection)
-        applied_fields.append(sorting_field)
-        query = query.order_by(sorting_function(getattr(model_class, sorting_field)))
-
-    # discover final sorting attribute
+    # discover and apply final sorters
+    final_sorters = []
     if 'final_sorting' in kwargs.keys():
         # final_sorting exist - should parse and apply descriptors
-        f_sorting_descriptors = kwargs['final_sorting']
-        if f_sorting_descriptors is not None:
-            if not isinstance(f_sorting_descriptors, str):
-                raise ServerError('Improperly configured final sorting descriptor')
-            f_sorting_descriptors = f_sorting_descriptors.split(',')
-            f_sorting_descriptors = [f for f in f_sorting_descriptors if len(f_sorting_descriptors) > 0]
-            for f_descriptor in f_sorting_descriptors:
-                _sorting_field, _sorting_function = extract_sorting_params(f_descriptor, model_inspection)
-                applied_fields.append(_sorting_field)
-                query = query.order_by(_sorting_function(getattr(model_class, _sorting_field)))
+        final_sorting_descriptors = kwargs['final_sorting']
+        if final_sorting_descriptors is not None:
+            final_sorters = _sorting_parse_descriptors(
+                raw_sorting_descriptors=final_sorting_descriptors,
+                model_inspection=model_inspection
+            )
+            logger.info(f'sorters parsed final_sorters [explicit]: {final_sorters}')
     else:
         # if final sorting omitted - use primary key
         primary_key_columns = [c.name for c in model_inspection.primary_key]
-        for pk_column in primary_key_columns:
-            if pk_column in applied_fields:
-                continue
-            query = query.order_by(desc(getattr(model_class, pk_column)))
+        primary_key_descriptors = ','.join([f'{pk_column}{{desc}}' for pk_column in primary_key_columns])
+        primary_key_sorters = _sorting_parse_descriptors(
+            raw_sorting_descriptors=primary_key_descriptors,
+            model_inspection=model_inspection
+        )
+        logger.info(f'sorters parsed final_sorters [implicit pkey]: {final_sorters}')
+        final_sorters = primary_key_sorters
+
+    # apply sorters
+    all_sorters.extend(final_sorters)
+    query = apply_sorters(
+        sorters=all_sorters,
+        query=query,
+        check_duplicate=True
+    )
 
     return query
 
