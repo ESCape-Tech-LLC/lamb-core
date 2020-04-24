@@ -310,7 +310,10 @@ def _sorting_parse_descriptors(raw_sorting_descriptors: Optional[str], model_ins
     return result
 
 
-def _sorting_apply_sorters(sorters: List[Sorter], query: Query, check_duplicate: bool = True) -> Query:
+def _sorting_apply_sorters(sorters: List[Sorter],
+                           query: Query,
+                           model_class: DeclarativeMeta,
+                           check_duplicate: bool = True) -> Query:
     applied_sort_fields: List[str] = list()
     for (_sorting_field, _sorting_functor) in sorters:
         if _sorting_field in applied_sort_fields and check_duplicate:
@@ -400,6 +403,7 @@ def response_sorted(
     query = _sorting_apply_sorters(
         sorters=all_sorters,
         query=query,
+        model_class=model_class,
         check_duplicate=True
     )
 
