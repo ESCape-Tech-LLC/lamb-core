@@ -397,7 +397,7 @@ def response_sorted(
 
     # apply sorters
     all_sorters.extend(final_sorters)
-    query = apply_sorters(
+    query = _sorting_apply_sorters(
         sorters=all_sorters,
         query=query,
         check_duplicate=True
