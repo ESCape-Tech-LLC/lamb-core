@@ -17,7 +17,9 @@ from lamb.json.mixins import ResponseEncodableMixin
 
 
 __all__ = [
-    'AbstractSettingsStorage', 'AbstractSettingsValue'
+    'AbstractSettingsStorage', 'AbstractSettingsValue',
+    'BaseConverter', 'SimpleTypeConverter', 'JsonConverter', 'IntBooleanConverter'
+
 ]
 
 
