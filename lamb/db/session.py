@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 try:
+    # TODO: add support for project connection definition with callbacks
     # basic
     _USER = settings.DATABASES['default'].get('USER', None)
     _NAME = settings.DATABASES['default'].get('NAME', None)

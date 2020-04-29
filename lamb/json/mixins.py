@@ -52,19 +52,10 @@ class ResponseEncodableMixin(object):
                     response_attributes.extend([
                         ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property
                     ])
-                    # logger.debug(f'ResponseEncodableMixin attributes default used: {self.__class__.__name__} -> {response_attributes}')
-                else:
-                    # logger.debug(f'ResponseEncodableMixin attributes NON-default used: {self.__class__.__name__} -> {response_attributes}')
-                    pass
 
                 # parse names
                 response_attribute_names = []
                 for orm_descriptor in response_attributes:
-                    # if isinstance(orm_descriptor, InstrumentedAttribute):
-                    #     orm_descriptor = orm_descriptor.key
-                    # if isinstance(orm_descriptor, QueryableAttribute):
-                    #     orm_descriptor = orm_descriptor.property
-
                     if isinstance(orm_descriptor, str):
                         orm_attr_name = orm_descriptor
                     elif isinstance(orm_descriptor, Column):
@@ -77,7 +68,7 @@ class ResponseEncodableMixin(object):
                         logger.warning(f'Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}')
                         raise exc.ServerError('Could not serialize data')
                     response_attribute_names.append(orm_attr_name)
-                logger.info(f'caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}')
+                logger.debug(f'caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}')
                 _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__] = response_attribute_names
 
             response_attribute_names = _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__]
