@@ -8,10 +8,12 @@ from django.http import HttpResponse
 from django.conf import settings
 
 from lamb.json.encoder import JsonEncoder
+from lamb.utils import import_by_name
 
 
 __all__ = ['JsonResponse']
 
+_encoder_class = None
 
 class JsonResponse(HttpResponse):
 
@@ -28,7 +30,10 @@ class JsonResponse(HttpResponse):
 
         if data is not None:
             # encode response in form of json
-            encoder = JsonEncoder(callback, request)
+            global _encoder_class
+            if _encoder_class is None:
+                _encoder_class = import_by_name(settings.LAMB_RESPONSE_ENCODER)
+            encoder = _encoder_class(callback, request)
 
             _response_indent = settings.LAMB_RESPONSE_JSON_INDENT
 
