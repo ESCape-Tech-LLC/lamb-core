@@ -33,47 +33,104 @@ class ResponseEncodableMixin(object):
         """ Mixin to mark object support JSON serialization with JsonEncoder class
 
         :type request: lamb.utils.LambRequest
-        :return: Encoded represenation of object
+        :return: Encoded representation of object
         :rtype: dict
         """
-        if isinstance(self.__class__, DeclarativeMeta):
-            # cache
-            if self.__class__ not in _DEFAULT_ATTRIBUTE_NAMES_REGISTRY:
-                # extract attribute names
-                response_attributes = self.response_attributes()
-                if response_attributes is None:
-                    response_attributes = []
-                    ins = inspect(self.__class__)
+        # cache
+        if self.__class__ not in _DEFAULT_ATTRIBUTE_NAMES_REGISTRY:
+            # check possibility to process
+            _declarative = isinstance(self.__class__, DeclarativeMeta)
+            _attributes_provided = self.response_attributes() is not None
+            if not _declarative and not _attributes_provided:
+                raise NotImplementedError('ResponseEncodableMixin subclass should implement non empty: '
+                                          'classmethod:response_attributes() or to be subclass of DeclarativeMeta to '
+                                          'use default encoder. In other case implement custom method '
+                                          'response_encode()')
 
-                    # append plain columns
-                    response_attributes.extend(ins.mapper.column_attrs.values())
+            # extract attribute names
+            response_attributes = self.response_attributes()
+            if response_attributes is None:
+                # for DeclarativeMeta support auto descritors discovery
+                response_attributes = []
+                ins = inspect(self.__class__)
 
-                    # append hybrid properties
-                    response_attributes.extend([
-                        ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property
-                    ])
+                # append plain columns
+                response_attributes.extend(ins.mapper.column_attrs.values())
 
-                # parse names
-                response_attribute_names = []
-                for orm_descriptor in response_attributes:
-                    if isinstance(orm_descriptor, str):
-                        orm_attr_name = orm_descriptor
-                    elif isinstance(orm_descriptor, Column):
-                        orm_attr_name = orm_descriptor.name
-                    elif isinstance(orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute)):
-                        orm_attr_name = orm_descriptor.key
-                    elif isinstance(orm_descriptor, hybrid_property):
-                        orm_attr_name = orm_descriptor.__name__
-                    else:
-                        logger.warning(f'Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}')
-                        raise exc.ServerError('Could not serialize data')
-                    response_attribute_names.append(orm_attr_name)
-                logger.debug(f'caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}')
-                _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__] = response_attribute_names
+                # append hybrid properties
+                response_attributes.extend([
+                    ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property
+                ])
 
-            response_attribute_names = _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__]
-            result = {orm_attr: getattr(self, orm_attr) for orm_attr in response_attribute_names}
-            return result
-        else:
-            raise NotImplementedError('ResponseEncodableMixin response_encode method on non DeclarativeMeta '
-                                      'should be implemented in subclass')
+            # parse names
+            response_attribute_names = []
+            for orm_descriptor in response_attributes:
+                if isinstance(orm_descriptor, str):
+                    orm_attr_name = orm_descriptor
+                elif isinstance(orm_descriptor, Column):
+                    orm_attr_name = orm_descriptor.name
+                elif isinstance(orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute)):
+                    orm_attr_name = orm_descriptor.key
+                elif isinstance(orm_descriptor, hybrid_property):
+                    orm_attr_name = orm_descriptor.__name__
+                else:
+                    logger.warning(f'Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}')
+                    raise exc.ServerError('Could not serialize data')
+                response_attribute_names.append(orm_attr_name)
+            logger.debug(f'caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}')
+            _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__] = response_attribute_names
+
+        # encode data
+        response_attribute_names = _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__]
+        result = {orm_attr: getattr(self, orm_attr) for orm_attr in response_attribute_names}
+        return result
+        # parse flags
+
+
+        # # check compatibility
+        # if not isinstance(self.__class__, DeclarativeMeta) and self.response_attributes() is None:
+        #     raise NotImplementedError('ResponseEncodableMixin subclass should implement non empty: '
+        #                               'classmethod:response_attributes() or direct method:response_encode()')
+        #
+        # # encode data
+        # if isinstance(self.__class__, DeclarativeMeta) or self.response_attributes() is not None:
+        #     # cache
+        #     if self.__class__ not in _DEFAULT_ATTRIBUTE_NAMES_REGISTRY:
+        #         # extract attribute names
+        #         response_attributes = self.response_attributes()
+        #         if response_attributes is None:
+        #             response_attributes = []
+        #             ins = inspect(self.__class__)
+        #
+        #             # append plain columns
+        #             response_attributes.extend(ins.mapper.column_attrs.values())
+        #
+        #             # append hybrid properties
+        #             response_attributes.extend([
+        #                 ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property
+        #             ])
+        #
+        #         # parse names
+        #         response_attribute_names = []
+        #         for orm_descriptor in response_attributes:
+        #             if isinstance(orm_descriptor, str):
+        #                 orm_attr_name = orm_descriptor
+        #             elif isinstance(orm_descriptor, Column):
+        #                 orm_attr_name = orm_descriptor.name
+        #             elif isinstance(orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute)):
+        #                 orm_attr_name = orm_descriptor.key
+        #             elif isinstance(orm_descriptor, hybrid_property):
+        #                 orm_attr_name = orm_descriptor.__name__
+        #             else:
+        #                 logger.warning(f'Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}')
+        #                 raise exc.ServerError('Could not serialize data')
+        #             response_attribute_names.append(orm_attr_name)
+        #         logger.debug(f'caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}')
+        #         _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__] = response_attribute_names
+        #
+        #     response_attribute_names = _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__]
+        #     result = {orm_attr: getattr(self, orm_attr) for orm_attr in response_attribute_names}
+        #     return result
+        # else:
+        #     raise NotImplementedError('ResponseEncodableMixin response_encode method on non DeclarativeMeta '
+        #                               'should be implemented in subclass')
