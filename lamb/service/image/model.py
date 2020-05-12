@@ -18,7 +18,7 @@ from lamb import exc
 
 from .uploaders.types import ImageUploadSlice, UploadedSlice, ImageUploadMode
 
-__all__ = ['AbstractImage', 'UploadedSlicesType']
+__all__ = ['AbstractImage', 'UploadedSlicesType', 'ImageMixin']
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,14 @@ class UploadedSlicesType(types.TypeDecorator):
         return value
 
 
+class ImageMixin(object):
+    """
+    Abstract mixin for image subclasses.
+    """
+    __slicing__: List[ImageUploadSlice] = [ImageUploadSlice('origin', -1, ImageUploadMode.NoAction, '')]
+    slices_info = Column(UploadedSlicesType, nullable=False)
+
+
 class AbstractImage(ResponseEncodableMixin, AbstractConcreteBase, DeclarativeBase):
     """
     Abstract class for Images storage.
@@ -99,11 +107,11 @@ class AbstractImage(ResponseEncodableMixin, AbstractConcreteBase, DeclarativeBas
 
     # columns
     image_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
-    slices_info = Column(UploadedSlicesType, nullable=False)
+    # slices_info = Column(UploadedSlicesType, nullable=False)
     image_type = Column(VARCHAR, nullable=False)
 
     # meta
-    __slicing__: List[ImageUploadSlice] = [ImageUploadSlice('origin', -1, ImageUploadMode.NoAction, '')]
+    # __slicing__: List[ImageUploadSlice] = [ImageUploadSlice('origin', -1, ImageUploadMode.NoAction, '')]
 
     __abstract__ = True
 
