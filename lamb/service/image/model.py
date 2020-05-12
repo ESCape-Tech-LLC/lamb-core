@@ -88,7 +88,7 @@ class ImageMixin(object):
     slices_info = Column(UploadedSlicesType, nullable=False)
 
 
-class AbstractImage(ResponseEncodableMixin, AbstractConcreteBase, DeclarativeBase):
+class AbstractImage(ImageMixin, ResponseEncodableMixin, AbstractConcreteBase, DeclarativeBase):
     """
     Abstract class for Images storage.
 
