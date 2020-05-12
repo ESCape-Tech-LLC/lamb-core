@@ -700,12 +700,12 @@ def timed_lru_cache(**timedelta_kwargs):
         update_delta = timedelta(**timedelta_kwargs)
         next_update = datetime.utcnow() + update_delta
         func_full_name = f'{sys.modules[func.__module__].__name__}.{func.__name__}'
-        logger.warning(f'timed_lru_cache initial update calculated: {func_full_name} -> {next_update}')
+        logger.debug(f'timed_lru_cache initial update calculated: {func_full_name} -> {next_update}')
         # Apply @lru_cache to func with no cache size limit
         func_lru_cached = functools.lru_cache(None)(func)
 
         _timed_lru_cache_functions[func] = func_lru_cached
-        logger.warning(f'time cached functions: {_timed_lru_cache_functions}')
+        logger.debug(f'time cached functions: {_timed_lru_cache_functions}')
 
         @functools.wraps(func_lru_cached)
         def _wrapped(*args, **kwargs):
@@ -714,7 +714,7 @@ def timed_lru_cache(**timedelta_kwargs):
             if now >= next_update:
                 func_lru_cached.cache_clear()
                 next_update = now + update_delta
-                logger.warning(f'timed_lru_cache next update calculated: {func_full_name} -> {next_update}')
+                logger.debug(f'timed_lru_cache next update calculated: {func_full_name} -> {next_update}')
             return func_lru_cached(*args, **kwargs)
 
         return _wrapped
