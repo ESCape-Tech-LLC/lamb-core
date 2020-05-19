@@ -28,6 +28,11 @@ from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
+from sqlalchemy import Column
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import ColumnProperty, RelationshipProperty, synonym
+from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from django.http import HttpRequest
 from django.conf import settings
 from PIL import Image as PILImage
@@ -256,6 +261,36 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
 Sorter = Tuple[str, Callable]
 
 
+def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
+    # TODO: add support for instance and model class params
+    # TODO: cache results
+    # discover sortable attributes
+    sortable_attributes = set()
+
+    # append columns
+    sortable_attributes.update(set(ins.mapper.column_attrs.values()))
+
+    # append hybrid attributes
+    sortable_attributes.update(set([
+        ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property
+    ]))
+
+    result = []
+    for ormd in sortable_attributes:
+        if isinstance(ormd, Column):
+            orm_attr_name = ormd.name
+        elif isinstance(ormd, (ColumnProperty, QueryableAttribute)):
+            orm_attr_name = ormd.key
+        elif isinstance(ormd, hybrid_property):
+            orm_attr_name = ormd.__name__
+        else:
+            logger.warning(f'Unsupported orm_descriptor type: {ormd, ormd.__class__}')
+            raise exc.ServerError('Could not serialize data')
+        result.append(orm_attr_name)
+
+    return result
+
+
 def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sorter:
     """ Parse single sorting descriptor """
     # check against regex and extract field and function
@@ -273,8 +308,9 @@ def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sort
                                      error_details={'key_path': 'sorting', 'descriptor': raw_sorting_descriptor})
 
     # check against meta data
+    sortable_attributes = _get_instance_sorting_attribute_names(model_inspection)
     field = field.lower()
-    if field not in [c.name for c in model_inspection.columns]:
+    if field not in sortable_attributes:
         raise InvalidParamValueError(
             'Invalid sorting_field value for descriptor %s. Not found in model' % raw_sorting_descriptor,
             error_details={'key_path': 'sorting', 'descriptor': raw_sorting_descriptor, 'field': field})
@@ -386,7 +422,7 @@ def response_sorted(
                 raw_sorting_descriptors=final_sorting_descriptors,
                 model_inspection=model_inspection
             )
-            logger.info(f'sorters parsed final_sorters [explicit]: {final_sorters}')
+            logger.debug(f'sorters parsed final_sorters [explicit]: {final_sorters}')
     else:
         # if final sorting omitted - use primary key
         primary_key_columns = [c.name for c in model_inspection.primary_key]
@@ -395,7 +431,7 @@ def response_sorted(
             raw_sorting_descriptors=primary_key_descriptors,
             model_inspection=model_inspection
         )
-        logger.info(f'sorters parsed final_sorters [implicit pkey]: {final_sorters}')
+        logger.debug(f'sorters parsed final_sorters [implicit pkey]: {final_sorters}')
         final_sorters = primary_key_sorters
 
     # apply sorters
