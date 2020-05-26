@@ -30,24 +30,20 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             aws_access_key_id=settings.LAMB_AWS_ACCESS_KEY,
             aws_secret_access_key=settings.LAMB_AWS_SECRET_KEY,
         )
-        s3_kwargs = {
-            'service_name': 's3',
-            'endpoint_url': settings.LAMB_AWS_ENDPOINT_URL
-        }
-        s3_kwargs = compact(s3_kwargs)
-        s3 = self.aws_session.resource(**s3_kwargs)
+        self.s3_client = self.aws_session.client('s3', region_name=settings.LAMB_AWS_REGION_NAME,
+                                                 endpoint_url=settings.LAMB_AWS_ENDPOINT_URL)
 
         # find bucket
-        exist_buckets = [b.name for b in s3.buckets.all()]
+        exist_buckets = [bucket['Name'] for bucket in self.s3_client.list_buckets()['Buckets']]
         if settings.LAMB_AWS_BUCKET_NAME not in exist_buckets:
             logger.warning('Have not found S3 %s bucket' % settings.LAMB_AWS_BUCKET_NAME)
             raise exc.ServerError('AWS bucket for store image not exist')
-        self.bucket = s3.Bucket(settings.LAMB_AWS_BUCKET_NAME)
 
     def store_image(self, image: PILImage.Image,
                     proposed_file_name: str,
                     request: LambRequest,
-                    image_format: Optional[str] = None) -> str:
+                    image_format: Optional[str] = None,
+                    private: Optional[bool] = False) -> str:
         """ Implements specific storage logic
         :return: URL of stored image
         """
@@ -70,14 +66,19 @@ class ImageUploadServiceAmazonS3(BaseUploader):
 
             # upload image
             try:
-                _ = self.bucket.put_object(
-                    ACL='public-read',
+                _ = self.s3_client.put_object(
+                    Bucket=settings.LAMB_AWS_BUCKET_NAME,
+                    ACL='private' if private else 'public-read',
                     Body=tf,
                     Key=relative_path,
                     ContentType=image_mime_type
                 )
                 if settings.LAMB_AWS_BUCKET_URL is None:
-                    bucket_url = f'http://{settings.LAMB_AWS_BUCKET_NAME}.s3.amazonaws.com/'
+                    if settings.LAMB_AWS_REGION_NAME is not None:
+                        bucket_url = f'https://s3.{settings.LAMB_AWS_REGION_NAME}.amazonaws.com/' \
+                                     f'{settings.LAMB_AWS_BUCKET_NAME}/'
+                    else:
+                        bucket_url = f'http://{settings.LAMB_AWS_BUCKET_NAME}.s3.amazonaws.com/'
                 else:
                     bucket_url = settings.LAMB_AWS_BUCKET_URL
                 uploaded_url = furl(bucket_url)
