@@ -88,3 +88,13 @@ class ImageUploadServiceAmazonS3(BaseUploader):
                 return uploaded_url
             except Exception as e:
                 raise exc.ServerError('Failed to save image') from e
+
+    def get_presigned_url(self, filename: str, expires_in: Optional[int] = 3600):
+        relative_path = self.construct_relative_path(filename)
+        presigned_url = self.s3_client.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={'Bucket': settings.LAMB_AWS_BUCKET_NAME, 'Key': relative_path},
+            ExpiresIn=expires_in
+        )
+        logger.debug(f'Received S3 presigned URL: {presigned_url}')
+        return presigned_url
