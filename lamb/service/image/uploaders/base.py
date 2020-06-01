@@ -63,13 +63,15 @@ class BaseUploader(object):
     def process_image(self, source_image: Union[PILImage.Image, str, BytesIO],
                       request: LambRequest,
                       slices: Iterable[ImageUploadSlice] = (), 
-                      image_format: Optional[str] = None) -> List[UploadedSlice]:
+                      image_format: Optional[str] = None,
+                      allow_svg: Optional[bool] = False) -> List[UploadedSlice]:
         """
         Processes single images
         :param source_image: PIL Image, file path, or bytes
         :param request: Request
         :param slices: Slicing configuration
         :param image_format: Optional image format to override
+        :param allow_svg: Flag to allow/disallow svg upload
         :return: List of uploaded slices info's
         """
 
@@ -80,12 +82,13 @@ class BaseUploader(object):
             else:
                 src = PILImage.open(source_image)
         except IOError as e:
-            # Seek to 0 if bytes and check if svg file
-            try:
-                source_image.seek(0)
-            except AttributeError:
-                pass
-            is_svg = file_is_svg(source_image)
+            if allow_svg:
+                # Seek to 0 if bytes and check if svg file
+                try:
+                    source_image.seek(0)
+                except AttributeError:
+                    pass
+                is_svg = file_is_svg(source_image)
             if not is_svg:
                 raise exc.InvalidParamTypeError('Could not open file as valid image') from e
         except Exception as e:
@@ -162,12 +165,15 @@ class BaseUploader(object):
     def process_request(self, request: LambRequest,
                         slicing: Iterable[ImageUploadSlice] = (),
                         required_count: Optional[int] = None,
-                        image_format: Optional[str] = None) -> List[List[UploadedSlice]]:
+                        image_format: Optional[str] = None,
+                        allow_svg: Optional[bool] = False) -> List[List[UploadedSlice]]:
         """
         Performs uploading of request's image files.
         :param request: Request
         :param slicing: Slicing configuration
         :param required_count: Count of images that should be in request
+        :param image_format: Optional image format to override
+        :param allow_svg: Flag to allow/disallow svg upload
         :return: List of uploaded slices info's collection for each image.
         """
         # try to decode image stored as base64 fields
@@ -207,7 +213,8 @@ class BaseUploader(object):
                 source_image=uploaded_file,
                 slices=slicing,
                 request=request,
-                image_format=image_format
+                image_format=image_format,
+                allow_svg=allow_svg
             )
             result.append(processed_image_slices)
 

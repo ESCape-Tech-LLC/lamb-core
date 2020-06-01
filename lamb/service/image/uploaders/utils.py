@@ -35,7 +35,8 @@ def upload_images(request: LambRequest,
                   image_class: Type[AbstractImage],
                   envelope_folder: Optional[str] = None,
                   limit: Optional[int] = None,
-                  uploader_class: Optional[Type[BaseUploader]] = None) -> List[AbstractImage]:
+                  uploader_class: Optional[Type[BaseUploader]] = None,
+                  allow_svg: Optional[bool] = False) -> List[AbstractImage]:
     """
     Uploads image from request to project storage.
 
@@ -45,6 +46,7 @@ def upload_images(request: LambRequest,
     :param image_class: Instances class for result
     :param envelope_folder: Destination subfolder inside storage
     :param limit: Upload images count limit
+    :param allow_svg: Flag to allow/disallow svg upload
 
     :return: List of Image model instances.
     """
@@ -56,7 +58,8 @@ def upload_images(request: LambRequest,
     stored_slices = uploader.process_request(
         request=request,
         slicing=slicing,
-        required_count=limit
+        required_count=limit,
+        allow_svg=allow_svg
     )
     # store images info
     result = list()
