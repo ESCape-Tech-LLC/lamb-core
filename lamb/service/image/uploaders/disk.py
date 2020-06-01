@@ -2,7 +2,7 @@
 
 import os
 
-from typing import Optional
+from typing import Optional, Union, BinaryIO
 from urllib.parse import urljoin
 from django.conf import settings
 
@@ -17,17 +17,12 @@ __all__ = ['ImageUploadServiceDisk']
 class ImageUploadServiceDisk(BaseUploader):
     """
     Local folder uploader
-
     """
 
-    def store_image(self, image: PILImage.Image,
+    def store_image(self, image: Union[PILImage.Image, BinaryIO],
                     proposed_file_name: str,
                     request: LambRequest,
                     image_format: Optional[str] = None) -> str:
-    # # def store_image(self,
-    #                 image: PILImage.Image,
-    #                 proposed_file_name: str,
-    #                 request: LambRequest) -> str:
         """ Implements specific storage logic
         :return: URL of stored image
         """
@@ -41,11 +36,16 @@ class ImageUploadServiceDisk(BaseUploader):
             os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 
             # store file on disk
-            image.save(
-                output_file_path,
-                image_format or image.format,
-                quality=settings.LAMB_IMAGE_UPLOAD_QUALITY
-            )
+            if isinstance(image, PILImage.Image):
+                image.save(
+                    output_file_path,
+                    image_format or image.format,
+                    quality=settings.LAMB_IMAGE_UPLOAD_QUALITY
+                )
+            else:
+                image.seek(0)
+                with open(output_file_path, 'wb') as f:
+                    f.write(image.read())
 
             # get result url
             result = urljoin(settings.LAMB_STATIC_URL, static_relative_path)
