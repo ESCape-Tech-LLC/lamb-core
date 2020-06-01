@@ -19,7 +19,7 @@ import enum
 import sys
 
 from datetime import datetime, date, timedelta
-from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any, Callable
+from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any, Callable, BinaryIO
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from asgiref.sync import sync_to_async
@@ -36,6 +36,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from django.http import HttpRequest
 from django.conf import settings
 from PIL import Image as PILImage
+from xml.etree import cElementTree
 
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError,\
     UpdateRequiredError, ExternalServiceError
@@ -60,7 +61,7 @@ __all__ = [
     'list_chunks',
 
     'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache', 'timed_lru_cache_clear',
-    'async_download_resources', 'async_download_images', 'image_convert_to_rgb'
+    'async_download_resources', 'async_download_images', 'image_convert_to_rgb', 'file_is_svg'
 ]
 
 
@@ -875,3 +876,13 @@ def image_convert_to_rgb(image: PILImage.Image) -> PILImage.Image:
         return background
     else:
         return image.convert('RGB')
+
+
+def file_is_svg(file: Union[str, BinaryIO]) -> bool:
+
+    try:
+        tag = next(cElementTree.iterparse(file, ('start',)))[1].tag
+    except cElementTree.ParseError:
+        return False
+
+    return tag == '{http://www.w3.org/2000/svg}svg'
