@@ -3,6 +3,8 @@
 import enum
 import logging
 # noinspection PyCompatibility
+from typing import Optional
+
 from dataclasses import dataclass, asdict
 
 from lamb.json.mixins import ResponseEncodableMixin
@@ -48,10 +50,10 @@ class ImageUploadSlice:
 @dataclass(frozen=True)
 class UploadedSlice(ResponseEncodableMixin):
     title: str
-    mode: ImageUploadMode
+    mode: Optional[ImageUploadMode]
     url: str
-    width: int
-    height: int
+    width: Optional[int]
+    height: Optional[int]
 
     def response_encode(self, request=None):
         return asdict(self)

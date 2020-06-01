@@ -11,7 +11,7 @@ from PIL import Image as PILImage
 from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from lamb.utils import compact, LambRequest
+from lamb.utils import compact, LambRequest, file_is_svg
 from lamb import exc
 
 from .types import ImageUploadMode, ImageUploadSlice, UploadedSlice
@@ -60,74 +60,102 @@ class BaseUploader(object):
         result = os.path.join(*path_components)
         return result
 
-    def process_image(self, source_image: Union[PILImage.Image, str],
+    def process_image(self, source_image: Union[PILImage.Image, str, BytesIO],
                       request: LambRequest,
                       slices: Iterable[ImageUploadSlice] = (), 
                       image_format: Optional[str] = None) -> List[UploadedSlice]:
         """
         Processes single images
-        :param source_image: PIL Image or file
+        :param source_image: PIL Image, file path, or bytes
         :param request: Request
         :param slices: Slicing configuration
         :param image_format: Optional image format to override
         :return: List of uploaded slices info's
         """
+
+        is_svg = False
         try:
             if isinstance(source_image, PILImage.Image):
                 src = source_image
             else:
                 src = PILImage.open(source_image)
         except IOError as e:
-            raise exc.InvalidParamTypeError('Could not open file as valid image') from e
+            # Seek to 0 if bytes and check if svg file
+            try:
+                source_image.seek(0)
+            except AttributeError:
+                pass
+            is_svg = file_is_svg(source_image)
+            if not is_svg:
+                raise exc.InvalidParamTypeError('Could not open file as valid image') from e
         except Exception as e:
             logger.exception(e)
             raise exc.ServerError('Failed to process file as image') from e
 
         # store data
         filename_base = str(uuid.uuid4())
-        image_format = image_format or src.format
+        image_format = 'svg' if is_svg else image_format or src.format
         filename_extension = image_format.lower()
-        result = list()
 
-        for s in slices:
-            # create copy if size known
-            image_copy = src.copy()
-
-            # modify according to s config
-            if s.mode == ImageUploadMode.Resize:
-                image_copy.thumbnail((s.side, s.side), PILImage.ANTIALIAS)
-            elif s.mode == ImageUploadMode.Crop:
-                shortest = min(image_copy.size)
-                left = (image_copy.size[0] - shortest) / 2
-                top = (image_copy.size[1] - shortest) / 2
-                right = image_copy.size[0] - left
-                bottom = image_copy.size[1] - top
-                image_copy = image_copy.crop((left, top, right, bottom))
-                image_copy.thumbnail((s.side, s.side), PILImage.ANTIALIAS)
-
-            # hack to save image format
-            image_copy.format = src.format
-
-            # prepare file name
-            filename = '_'.join(pc for pc in (filename_base, s.suffix)
-                                if pc is not None and len(pc))
-            proposed_file_name = f'{filename}.{filename_extension}'
-
-            # store info about new slice
+        if is_svg:
+            proposed_file_name = f'{filename_base}.{filename_extension}'
             image_url = self.store_image(
-                image=image_copy,
+                image=source_image,
                 proposed_file_name=proposed_file_name,
                 request=request,
                 image_format=image_format
             )
+            result = [
+                UploadedSlice(
+                    title=s.title,
+                    mode=None,
+                    url=image_url,
+                    width=None,
+                    height=None
+                ) for s in slices
+            ]
+        else:
+            result = list()
 
-            result.append(UploadedSlice(
-                title=s.title,
-                mode=s.mode,
-                url=image_url,
-                width=image_copy.size[0],
-                height=image_copy.size[1]
-            ))
+            for s in slices:
+                # create copy if size known
+                image_copy = src.copy()
+
+                # modify according to s config
+                if s.mode == ImageUploadMode.Resize:
+                    image_copy.thumbnail((s.side, s.side), PILImage.ANTIALIAS)
+                elif s.mode == ImageUploadMode.Crop:
+                    shortest = min(image_copy.size)
+                    left = (image_copy.size[0] - shortest) / 2
+                    top = (image_copy.size[1] - shortest) / 2
+                    right = image_copy.size[0] - left
+                    bottom = image_copy.size[1] - top
+                    image_copy = image_copy.crop((left, top, right, bottom))
+                    image_copy.thumbnail((s.side, s.side), PILImage.ANTIALIAS)
+
+                # hack to save image format
+                image_copy.format = src.format
+
+                # prepare file name
+                filename = '_'.join(pc for pc in (filename_base, s.suffix)
+                                    if pc is not None and len(pc))
+                proposed_file_name = f'{filename}.{filename_extension}'
+
+                # store info about new slice
+                image_url = self.store_image(
+                    image=image_copy,
+                    proposed_file_name=proposed_file_name,
+                    request=request,
+                    image_format=image_format
+                )
+
+                result.append(UploadedSlice(
+                    title=s.title,
+                    mode=s.mode,
+                    url=image_url,
+                    width=image_copy.size[0],
+                    height=image_copy.size[1]
+                ))
 
         return result
 
@@ -158,13 +186,13 @@ class BaseUploader(object):
 
                 f = SimpleUploadedFile(key, data, content_type=mime_type)
                 files[key] = f
-                logger.debug(f'did patch FILES object to incldue image from POST base64 encoded data')
-            except:
+                logger.debug(f'did patch FILES object to include image from POST base64 encoded data')
+            except Exception:
                 continue
 
         # check request
         if len(files) == 0:
-            raise exc.InvalidBodyStructureError('Uploading image missed')
+            raise exc.InvalidBodyStructureError('Uploading image is missing')
         if required_count is not None:
             if not isinstance(required_count, int):
                 logger.warning('Invalid data type received for required_count = %s' % required_count)
