@@ -6,7 +6,7 @@ from typing import List, Type, Optional
 from django.conf import settings
 
 from lamb.exc import ServerError
-from lamb.utils import LambRequest, import_class_by_name
+from lamb.utils import LambRequest, import_by_name
 
 from .types import ImageUploadSlice
 from .base import BaseUploader
@@ -24,7 +24,7 @@ def get_default_uploader_class() -> Type[BaseUploader]:
     :return: Imported uploader class.
     """
     logger.info('Image uploader created: %s' % settings.LAMB_IMAGE_UPLOAD_ENGINE)
-    result = import_class_by_name(settings.LAMB_IMAGE_UPLOAD_ENGINE)
+    result = import_by_name(settings.LAMB_IMAGE_UPLOAD_ENGINE)
     if not issubclass(result, BaseUploader):
         raise ServerError('Improperly configured image uploader')
     return result

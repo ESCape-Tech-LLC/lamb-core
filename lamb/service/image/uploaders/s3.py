@@ -3,7 +3,7 @@
 import logging
 import tempfile
 
-from typing import Optional
+from typing import Optional, BinaryIO, Union
 from django.conf import settings
 from furl import furl
 from boto3.session import Session as AWSSession
@@ -39,7 +39,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             logger.warning('Have not found S3 %s bucket' % settings.LAMB_AWS_BUCKET_NAME)
             raise exc.ServerError('AWS bucket for store image not exist')
 
-    def store_image(self, image: PILImage.Image,
+    def store_image(self, image: Union[PILImage.Image, BinaryIO],
                     proposed_file_name: str,
                     request: LambRequest,
                     image_format: Optional[str] = None,
@@ -51,14 +51,18 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             # store image in temp file
             relative_path = self.construct_relative_path(proposed_file_name)
             logger.debug('Processing image: <%s, %s>: %s to %s'
-                         % (image.format, proposed_file_name, image, relative_path))
+                         % (image_format, proposed_file_name, image, relative_path))
 
-            image_format = image_format or image.format
-            image.save(
-                tf,
-                image_format or image.format,
-                quality=settings.LAMB_IMAGE_UPLOAD_QUALITY
-            )
+            if isinstance(image, PILImage.Image):
+                image_format = image_format or image.format
+                image.save(
+                    tf,
+                    image_format or image.format,
+                    quality=settings.LAMB_IMAGE_UPLOAD_QUALITY
+                )
+            else:
+                image.seek(0)
+                tf.write(image.read())
             tf.seek(0)
 
             # construct mime/type
