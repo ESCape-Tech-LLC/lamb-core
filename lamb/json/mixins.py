@@ -73,6 +73,8 @@ class ResponseEncodableMixin(object):
                     orm_attr_name = orm_descriptor.key
                 elif isinstance(orm_descriptor, hybrid_property):
                     orm_attr_name = orm_descriptor.__name__
+                elif isinstance(orm_descriptor,property):
+                    orm_attr_name = orm_descriptor.fget.__name__
                 else:
                     logger.warning(f'Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}')
                     raise exc.ServerError('Could not serialize data')
