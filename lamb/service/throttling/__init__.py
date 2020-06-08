@@ -134,7 +134,7 @@ def redis_rate_check_lua(conn: redis.Redis,
     # check and sort limits
     logger.debug(f'Lua throttling. Start rate check: {conn, bucket_name_base, limits, increment}')
     rate_limits = _redis_rate_parse_limits(bucket_name_base, limits)
-    logger.info(f'Lua throttling. Limits: {rate_limits}')
+    logger.debug(f'Lua throttling. Limits: {rate_limits}')
 
     # on-demand script create
     if not hasattr(conn, 'redis_rate_check_lua'):
@@ -190,16 +190,16 @@ def redis_rate_check_lua(conn: redis.Redis,
     increment = 1 if increment else 0
     json_args = [[rl.key, rl.limit, rl.duration] for rl in rate_limits]
     json_args = json.dumps(json_args)
-    logger.info(f'Lua throttling. Calling redis_rate_check_lua: keys={bucket_name_base}, args={json_args, increment}')
+    logger.debug(f'Lua throttling. Calling redis_rate_check_lua: keys={bucket_name_base}, args={json_args, increment}')
     res = conn.redis_rate_check_lua(keys=[bucket_name_base], args=[json_args, increment])
     logger.info(f'Lua throttling. Response binary: {res}')
 
     # analyse and wrap results
     try:
         res = json.loads(res)
-        logger.info(f'Lua throttling. Response json: {res}')
+        logger.debug(f'Lua throttling. Response json: {res}')
         res_rate_limits = _redis_rate_parse_response(res)
-        logger.info(f'Lua throttling. Response parsed: {res_rate_limits}')
+        logger.debug(f'Lua throttling. Response parsed: {res_rate_limits}')
         if any([not rl.success for rl in res_rate_limits]):
             raise ThrottlingError(limits=res_rate_limits)
         return res_rate_limits
