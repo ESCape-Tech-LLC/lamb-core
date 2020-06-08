@@ -199,6 +199,12 @@ class ThrottlingError(ClientError):
     _status_code = 429
     _message = 'Too many requests'
 
+    limits: list
+
+    def __init__(self, *args, limits: list = [], **kwargs):
+        super(ThrottlingError, self).__init__(*args, **kwargs)
+        self.limits = limits
+
 
 class UpdateRequiredError(ClientError):
     """ Client side error for control requests device info fields in manner of version and platform pairs check"""
