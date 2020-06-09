@@ -74,7 +74,7 @@ class RateLimit():
 
     @property
     def success(self) -> bool:
-        return self.current < self.limit
+        return self.current <= self.limit
 
 
 def _redis_rate_parse_limits(bucket_name_base, limits: List[Tuple[int, int]]) -> List[RateLimit]:
