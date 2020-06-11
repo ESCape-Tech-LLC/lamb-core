@@ -171,9 +171,9 @@ def redis_rate_check_lua(conn: redis.Redis,
                 if increment == 1 then
                     redis.call('INCR', bname)
                     redis.call('EXPIRE', bname, duration)
-                    current = current + 1
                 end
             end
+            current = current + 1
             
             --> pack result
             local result_record = {}
