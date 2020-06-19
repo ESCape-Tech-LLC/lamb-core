@@ -107,6 +107,7 @@ setup(
         'openpyxl',
         'django-ipware',
         'asgiref',
-        'python-redis-lock'
+        'python-redis-lock',
+        'colour'
     ]
 )
