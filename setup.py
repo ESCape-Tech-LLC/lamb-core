@@ -105,7 +105,7 @@ setup(
         'pymemcache',
         'dataclasses',
         'openpyxl',
-        'django-ipware',
+        'django-ipware<3',
         'asgiref',
         'python-redis-lock',
         'colour'
