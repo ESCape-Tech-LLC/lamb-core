@@ -4,6 +4,7 @@ __author__ = 'KoNEW'
 import logging
 import warnings
 import uuid
+import re
 
 from collections import OrderedDict
 from django.conf import settings
@@ -13,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 from lamb.json import JsonResponse
 from lamb.exc import *
 from lamb.utils import *
+from lamb.utils.transformers import transform_uuid
 
 
 # parse http status overriding options
@@ -128,7 +130,17 @@ class LambTracingMiddleware(object):
         self.get_response = get_response
 
     def __call__(self, request: LambRequest) -> HttpResponse:
-        request.lamb_trace_id = str(uuid.uuid4()).replace('-', '')
-        logger.debug(f'request trace_id attached: {request.lamb_trace_id}')
+        if 'HTTP_X_LAMB_TRACEID' in request.META:
+            try:
+                trace_id = dpath_value(request.META, 'HTTP_X_LAMB_TRACEID', str, transform=transform_uuid)
+                logger.debug(f'request trace_id inherited from request header: {trace_id}')
+            except Exception as e:
+                logger.warning(f'trace_id extract failed: {e}')
+                trace_id = uuid.uuid4()
+        else:
+            trace_id = uuid.uuid4()
+
+        request.lamb_trace_id = str(trace_id).replace('-', '')
+        logger.info(f'request trace_id attached: {request.lamb_trace_id}')
         response = self.get_response(request)
         return response
