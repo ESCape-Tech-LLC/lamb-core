@@ -5,7 +5,7 @@ __author__ = 'KoNEW'
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import Column, text, ForeignKey
+from sqlalchemy import Column, text, ForeignKey, Index
 from sqlalchemy import BIGINT, VARCHAR, TIMESTAMP, FLOAT
 from sqlalchemy.orm import relationship
 
@@ -14,10 +14,11 @@ from lamb.db.mixins import TableConfigMixin
 from lamb.json.mixins import ResponseEncodableMixin
 
 
-__all__ = [ 'LambExecutionTimeMarker', 'LambExecutionTimeMetric' ]
+__all__ = ['LambExecutionTimeMarker', 'LambExecutionTimeMetric']
 
 
-class LambExecutionTimeMetric(TableConfigMixin, ResponseEncodableMixin, DeclarativeBase):
+class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
+    __tablename__ = 'lamb_execution_time_metric'
 
     # columns
     metric_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
@@ -38,13 +39,18 @@ class LambExecutionTimeMetric(TableConfigMixin, ResponseEncodableMixin, Declarat
         self.start_time = datetime.now()
         self.elapsed_time = -1.0
 
+    # meta
+    __table_args__ = (
+        Index('lamb_execution_time_metric_start_time_idx', start_time.desc()),
+    )
 
-class LambExecutionTimeMarker(TableConfigMixin, ResponseEncodableMixin, DeclarativeBase):
 
+class LambExecutionTimeMarker(ResponseEncodableMixin, DeclarativeBase):
+    __tablename__ = 'lamb_execution_time_marker'
     #columns
     f_metric_id = Column(BIGINT,
                          ForeignKey(LambExecutionTimeMetric.metric_id, onupdate='CASCADE', ondelete='CASCADE'),
-                         nullable=False)
+                         nullable=False, index=True)
     marker_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
     absolute_interval = Column(FLOAT(), nullable=False)
     relative_interval = Column(FLOAT(), nullable=False)
@@ -53,3 +59,8 @@ class LambExecutionTimeMarker(TableConfigMixin, ResponseEncodableMixin, Declarat
 
     # relations
     metric = relationship(LambExecutionTimeMetric, uselist=False)  # type: LambExecutionTimeMetric
+
+    # meta
+    __table_args__ = (
+        Index('lamb_execution_time_metric_f_metric_id_idx', f_metric_id),
+    )
