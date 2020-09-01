@@ -37,6 +37,7 @@ from django.http import HttpRequest
 from django.conf import settings
 from PIL import Image as PILImage
 from xml.etree import cElementTree
+from crequest.middleware import CrequestMiddleware
 
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError,\
     UpdateRequiredError, ExternalServiceError
@@ -48,7 +49,7 @@ __all__ = [
     'compact_dict', 'compact_list', 'compact',
     'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
 
-    'get_request_body_encoding', 'get_request_accept_encoding',
+    'get_request_body_encoding', 'get_request_accept_encoding', 'get_current_request',
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
     'dpath_value',
 
@@ -130,7 +131,7 @@ def parse_body_as_json(request: HttpRequest) -> dict:
         raise InvalidBodyStructureError('Could not parse body as JSON object') from e
 
 
-# reponse utilities
+# response utilities
 PV = TypeVar('PV', list, Query)
 
 
@@ -546,6 +547,10 @@ def get_request_accept_encoding(request: HttpRequest) -> str:
     return _get_encoding_for_header(request, 'HTTP_ACCEPT')
 
 
+def get_current_request() -> Optional[LambRequest]:
+    return CrequestMiddleware.get_request(None)
+
+
 # datetime
 def datetime_end(value: Union[date, datetime]) -> datetime:
     if not isinstance(value, (date, datetime)):
@@ -729,6 +734,13 @@ def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
     return {k: v if k not in masking_keys else '*****' for k, v in dct.items()}
 
 
+def list_chunks(lst: list, n: int):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+
+# time cached
 _timed_lru_cache_functions: Dict[Callable, Callable] = {}
 
 
@@ -765,12 +777,6 @@ def timed_lru_cache_clear():
         logger.warning(f'time_lru_cache cleared for: {func} -> {wrapped_func}')
 
 
-def list_chunks(lst: list, n: int):
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
-
-
 # async downloads
 @enum.unique
 class AsyncFallStrategy(str, enum.Enum):
@@ -782,7 +788,6 @@ class AsyncFallStrategy(str, enum.Enum):
 def _handle_async_fall(e: Exception, fall_strategy: AsyncFallStrategy):
     if fall_strategy == AsyncFallStrategy.RAISING:
         raise e
-        # raise ExternalServiceError(f'Could not download resource, network error: {url}') from e
     elif fall_strategy == AsyncFallStrategy.NONE:
         return None
     elif fall_strategy == AsyncFallStrategy.EXCEPTION:
