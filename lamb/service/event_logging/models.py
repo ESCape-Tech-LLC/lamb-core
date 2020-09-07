@@ -4,7 +4,7 @@ import enum
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import Column, ForeignKey, BIGINT, TIMESTAMP, VARCHAR, text
+from sqlalchemy import Column, ForeignKey, BIGINT, BOOLEAN, TIMESTAMP, VARCHAR, text
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy_utils import UUIDType
 
@@ -13,6 +13,9 @@ from lamb.json.mixins import ResponseEncodableMixin
 from lamb.types import DeviceInfoType
 from lamb.types.intenum import IntEnumType
 from lamb.types.jsonb import SUAJSONBType
+
+
+__all__ = ['EventSourceType', 'EventTrack', 'EventRecord']
 
 
 IP_MAX_LENGTH = 20
@@ -51,7 +54,8 @@ class EventRecord(ResponseEncodableMixin, DeclarativeBase):
         ForeignKey(EventTrack.track_id, onupdate='CASCADE', ondelete='CASCADE'),
         nullable=False
     )
-    time_mark = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'))
+    timemark = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'))
+    timemark_ntp = Column(BOOLEAN, nullable=False, default=False, server_default=text('FALSE'))
     context = Column(SUAJSONBType(native=True), nullable=True)
 
     # relations
