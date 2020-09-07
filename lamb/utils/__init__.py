@@ -70,12 +70,13 @@ logger = logging.getLogger(__name__)
 
 
 class LambRequest(HttpRequest):
-    """ Class used only for proper type hinting in pycharm, not guarantee that properties will exist
+    """ Class used only for proper type hinting in pycharm, does not guarantee that properties will exist
     :type lamb_db_session: sqlalchemy.orm.Session | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     :type lamb_device_info: lamb.types.DeviceInfo | None
     :type lamb_trace_id: str | None
     :type lamb_locale: lamb.types.LambLocale | None
+    :type lamb_track_id: str | None
     """
     def __init__(self):
         super(LambRequest, self).__init__()
@@ -84,6 +85,7 @@ class LambRequest(HttpRequest):
         self.lamb_device_info = None
         self.lamb_trace_id = None
         self.lamb_locale = None
+        self.lamb_track_id = None
 
 
 # compatibility

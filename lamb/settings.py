@@ -61,6 +61,10 @@ LAMB_VERBOSE_SQL_LOG = False
 LAMB_VERBOSE_SQL_LOG_THRESHOLD = None
 
 
+# event logging
+LAMB_EVENT_LOGGING_HEADER_TRACKID = 'HTTP_X_LAMB_TRACKID'
+
+
 # services
 LAMB_REDIS_URL = 'redis://localhost:6379/0'
 
