@@ -48,7 +48,8 @@ class EventRecord(ResponseEncodableMixin, DeclarativeBase):
     __tablename__ = 'lamb_event_record'
 
     # columns
-    record_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
+    record_id = Column(UUIDType(binary=True, native=True), nullable=False, primary_key=True,
+                       server_default=text('gen_random_uuid()'))
     track_id = Column(
         UUIDType(binary=True, native=True),
         ForeignKey(EventTrack.track_id, onupdate='CASCADE', ondelete='CASCADE'),
