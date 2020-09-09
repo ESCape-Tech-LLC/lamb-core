@@ -7,9 +7,11 @@ from typing import List
 from sqlalchemy import Column, ForeignKey, BOOLEAN, TIMESTAMP, VARCHAR, text
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, validates
+from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET
 from sqlalchemy_utils import UUIDType
 
 from lamb.db.session import DeclarativeBase
+from lamb.db.mixins import TimeMarksMixin
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.types import DeviceInfoType
 from lamb.types.intenum import IntEnumType
@@ -19,15 +21,13 @@ from lamb.types.jsonb import SUAJSONBType
 __all__ = ['EventSourceType', 'EventTrack', 'EventRecord']
 
 
-IP_MAX_LENGTH = 20
+@enum.unique
+class EventSourceType(str, enum.Enum):
+    SERVER = 'SERVER'
+    CLIENT = 'CLIENT'
 
 
-class EventSourceType(enum.IntEnum):
-    SERVER = 0
-    CLIENT = 1
-
-
-class EventTrack(ResponseEncodableMixin, DeclarativeBase):
+class EventTrack(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):
     __abstract__ = True
 
     __tablename__ = 'lamb_event_track'
@@ -35,17 +35,15 @@ class EventTrack(ResponseEncodableMixin, DeclarativeBase):
     # columns
     track_id = Column(UUIDType(binary=True, native=True), nullable=False, primary_key=True,
                       server_default=text('gen_random_uuid()'))
-    source = Column(
-        IntEnumType(EventSourceType),
-        nullable=False,
-        default=EventSourceType.SERVER,
-        server_default=str(EventSourceType.SERVER.value)
-    )
     device_info = Column(DeviceInfoType, nullable=True, default=None, server_default=text('NULL'))
-    ip_address = Column(VARCHAR(IP_MAX_LENGTH), nullable=True, default=None, server_default=text('NULL'))
+
+    # relations
+    @declared_attr
+    def records(self) -> List['EventRecord']:
+        return relationship('EventRecord', uselist=True, passive_updates=True, passive_deletes=True)  # type: List[EventRecord]
 
 
-class EventRecord(ResponseEncodableMixin, DeclarativeBase):
+class EventRecord(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):
     __abstract__ = True
 
     __tablename__ = 'lamb_event_record'
@@ -55,6 +53,17 @@ class EventRecord(ResponseEncodableMixin, DeclarativeBase):
     # columns
     record_id = Column(UUIDType(binary=True, native=True), nullable=False, primary_key=True,
                        server_default=text('gen_random_uuid()'))
+    source = Column(
+        ENUM(EventSourceType, name='event_source'),
+        nullable=False,
+        default=EventSourceType.CLIENT,
+        server_default=EventSourceType.CLIENT.value
+    )
+    event = Column(VARCHAR, nullable=True, default=None, server_default=text('NULL'))
+    timemark = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'))
+    timemark_ntp = Column(BOOLEAN, nullable=False, default=False, server_default=text('FALSE'))
+    context = Column(JSONB, nullable=True, default={}, server_default=text("'{}'"))
+    ip_address = Column(INET, nullable=True, default=None, server_default=text('NULL'))
 
     @declared_attr
     def track_id(self):
@@ -64,18 +73,7 @@ class EventRecord(ResponseEncodableMixin, DeclarativeBase):
             nullable=False
         )
 
-    timemark = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'))
-    timemark_ntp = Column(BOOLEAN, nullable=False, default=False, server_default=text('FALSE'))
-    context = Column(SUAJSONBType(native=True), nullable=True)
-
     # relations
     @declared_attr
     def track(self):
-        return relationship(self.__event_track_model__.__name__, uselist=False, backref='records')  # type: EventTrack
-
-    @validates('ip_address')
-    def validate_variable_name(self, key, value):
-        if not isinstance(value, str):
-            return value
-
-        return value[:IP_MAX_LENGTH]
+        return relationship(self.__event_track_model__.__name__, uselist=False)  # type: EventTrack

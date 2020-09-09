@@ -86,4 +86,3 @@ class ResponseEncodableMixin(object):
         response_attribute_names = _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__]
         result = {orm_attr: getattr(self, orm_attr) for orm_attr in response_attribute_names}
         return result
-        # parse flags
