@@ -30,6 +30,7 @@ try:
     _HOST = settings.DATABASES['default'].get('HOST', None)
     _ENGINE = settings.DATABASES['default'].get('ENGINE', None)
     _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
+    _PORT = settings.DATABASES['default'].get('PORT', None)
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.') + 1:]
 
@@ -47,9 +48,12 @@ try:
         CONNECTION_STRING.host = ''
     if _NAME is not None:
         CONNECTION_STRING.path.add(_NAME)
+    if _PORT is not None:
+        CONNECTION_STRING.port = int(_PORT)
     if _OPTS is not None:
         CONNECTION_STRING.args.update(_OPTS)
     CONNECTION_STRING = CONNECTION_STRING.url
+    print(f'connection string: {CONNECTION_STRING}')
 
     # pre-fill default engine opts and modify with server settings
     ENGINE_OPTS_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_POOLED', None)
