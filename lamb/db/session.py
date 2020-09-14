@@ -53,7 +53,6 @@ try:
     if _OPTS is not None:
         CONNECTION_STRING.args.update(_OPTS)
     CONNECTION_STRING = CONNECTION_STRING.url
-    print(f'connection string: {CONNECTION_STRING}')
 
     # pre-fill default engine opts and modify with server settings
     ENGINE_OPTS_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_POOLED', None)
