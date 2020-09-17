@@ -2,8 +2,9 @@
 
 import logging
 import re
-
 from typing import Optional, BinaryIO, Union, Tuple
+from typing.io import IO
+
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from furl import furl
@@ -43,7 +44,7 @@ class S3Uploader(AWSBase):
         self.region_name = region_name
         self.bucket_url = bucket_url
 
-    def put_object(self, body: Union[BinaryIO, InMemoryUploadedFile], relative_path: str,
+    def put_object(self, body: Union[BinaryIO, InMemoryUploadedFile, IO], relative_path: str,
                    file_type: str, private: Optional[bool] = False) -> str:
         """
         Uploads file to S3
