@@ -74,6 +74,17 @@ class S3Uploader(AWSBase):
         logger.debug(f'Uploaded S3 URL: {uploaded_url}')
         return uploaded_url
 
+    def delete_object(self, relative_path: str):
+        """
+        Removes file from S3
+
+        :param relative_path: relative path to stored file
+        """
+        self._client.delete_object(
+            Bucket=self.bucket_name,
+            Key=relative_path
+        )
+
     def generate_presigned_url(self, relative_path: str, expires_in: Optional[int] = 3600) -> str:
         """
         Generates presigned url for a stored in S3 file
