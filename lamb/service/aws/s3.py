@@ -20,15 +20,23 @@ __all__ = ['S3Uploader']
 class S3Uploader(AWSBase):
 
     def __init__(self,
-                 aws_access_key_id: Optional[str] = settings.LAMB_AWS_ACCESS_KEY,
-                 aws_secret_access_key: Optional[str] = settings.LAMB_AWS_SECRET_KEY,
-                 bucket_name: Optional[str] = settings.LAMB_AWS_BUCKET_NAME,
-                 region_name: Optional[str] = settings.LAMB_AWS_REGION_NAME,
-                 endpoint_url: Optional[str] = settings.LAMB_AWS_ENDPOINT_URL,
-                 bucket_url: Optional[str] = settings.LAMB_AWS_BUCKET_URL,
+                 aws_access_key_id: Optional[str] = None,
+                 aws_secret_access_key: Optional[str] = None,
+                 bucket_name: Optional[str] = None,
+                 region_name: Optional[str] = None,
+                 endpoint_url: Optional[str] = None,
+                 bucket_url: Optional[str] = None,
                  *args,
                  **kwargs):
+        # inject defaults
+        aws_access_key_id = aws_access_key_id or settings.LAMB_AWS_ACCESS_KEY
+        aws_secret_access_key = aws_secret_access_key or settings.LAMB_AWS_SECRET_KEY
+        bucket_name = bucket_name or settings.LAMB_AWS_BUCKET_NAME
+        region_name = region_name or settings.LAMB_AWS_REGION_NAME
+        endpoint_url = endpoint_url or settings.LAMB_AWS_ENDPOINT_URL
+        bucket_url = bucket_url or settings.LAMB_AWS_BUCKET_URL
 
+        # process
         super(S3Uploader, self).__init__(aws_access_key_id, aws_secret_access_key, *args, **kwargs)
 
         self._client = self._aws_session.client('s3', region_name=region_name, endpoint_url=endpoint_url)
