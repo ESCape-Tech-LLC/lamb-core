@@ -30,8 +30,11 @@ Column names based wrapper around Excel worksheet
 
 
 class Workbook(object):
-    def __init__(self, filename, create_columns: bool = True, read_only: bool = False):
-        self._workbook = openpyxl.load_workbook(filename, data_only=True, read_only=read_only)
+    def __init__(self, filename: Optional[str] = None, create_columns: bool = True, read_only: bool = False):
+        if filename is not None:
+            self._workbook = openpyxl.load_workbook(filename, data_only=True, read_only=read_only)
+        else:
+            self._workbook = OpenpyxlWorkbook()
         self._create_columns = create_columns
         self._filename = filename
 
