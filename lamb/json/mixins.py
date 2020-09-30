@@ -5,7 +5,7 @@ import logging
 
 from typing import Optional, List
 from sqlalchemy import inspect, Column
-from sqlalchemy.orm import ColumnProperty, RelationshipProperty
+from sqlalchemy.orm import ColumnProperty, RelationshipProperty, SynonymProperty
 from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -50,12 +50,15 @@ class ResponseEncodableMixin(object):
             # extract attribute names
             response_attributes = self.response_attributes()
             if response_attributes is None:
-                # for DeclarativeMeta support auto descritors discovery
+                # for DeclarativeMeta support auto descriptors discovery
                 response_attributes = []
                 ins = inspect(self.__class__)
 
                 # append plain columns
                 response_attributes.extend(ins.mapper.column_attrs.values())
+
+                # append synonyms
+                response_attributes.extend(ins.mapper.synonyms.values())
 
                 # append hybrid properties
                 response_attributes.extend([
@@ -69,11 +72,11 @@ class ResponseEncodableMixin(object):
                     orm_attr_name = orm_descriptor
                 elif isinstance(orm_descriptor, Column):
                     orm_attr_name = orm_descriptor.name
-                elif isinstance(orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute)):
+                elif isinstance(orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute, SynonymProperty)):
                     orm_attr_name = orm_descriptor.key
                 elif isinstance(orm_descriptor, hybrid_property):
                     orm_attr_name = orm_descriptor.__name__
-                elif isinstance(orm_descriptor,property):
+                elif isinstance(orm_descriptor, property):
                     orm_attr_name = orm_descriptor.fget.__name__
                 else:
                     logger.warning(f'Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}')
