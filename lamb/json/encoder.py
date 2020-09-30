@@ -10,7 +10,7 @@ import logging
 
 from django.conf import settings
 from decimal import Decimal
-
+from sqlalchemy_utils import PhoneNumber
 from lazy import lazy
 
 from lamb.json.mixins import ResponseEncodableMixin
@@ -43,6 +43,8 @@ class JsonEncoder(json.JSONEncoder):
             result = str(obj)
         elif isinstance(obj, set):
             result = list(obj)
+        elif isinstance(obj, PhoneNumber):
+            result = obj.e164
         elif isinstance(obj, ResponseEncodableMixin):
             result = obj.response_encode(self.request)
         else:
