@@ -130,20 +130,10 @@ def remove_image_from_storage(image: AbstractImage, fail_silently: Optional[bool
             continue
 
         # Else try to find and remove S3 file
-        region, bucket, path = None, None, None
         try:
-            region, bucket, path = S3Uploader.s3_parse_url(slice_info.url)
-        except ValueError:
-            logger.debug(f'No S3 object found for url: {slice_info.url}')
-
-        if region and bucket and path:
-            try:
-                s3_uploader = S3Uploader(region_name=region, bucket_name=bucket)
-                s3_uploader.delete_object(path)
-                continue
-            except Exception:
-                if not fail_silently:
-                    raise
-            continue
+            S3Uploader.remove_by_url(slice_info.url)
+        except Exception:
+            if not fail_silently:
+                raise
 
     logger.debug('Successfully finished removing image file from storage')

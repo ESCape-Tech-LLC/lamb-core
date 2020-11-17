@@ -131,3 +131,9 @@ class S3Uploader(AWSBase):
             raise ValueError('No S3 url match found')
 
         return match.group('region'), match.group('bucket'), match.group('path')
+
+    @classmethod
+    def remove_by_url(cls, url):
+        region, bucket, path = cls.s3_parse_url(url)
+        s3_uploader = cls(region_name=region, bucket_name=bucket)
+        s3_uploader.delete_object(path)
