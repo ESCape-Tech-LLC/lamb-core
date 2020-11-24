@@ -291,3 +291,10 @@ Will generate response:
 	  "error_message": "HTTP method PUT is not allowed for path=/api/books/. Allowed methods (GET,POST)",
 	  "details": null
 	}
+	
+
+# Relase notes:
+
+## 2.1.18
+
+- feature: support for `SESSION_OPTS` in project database connection

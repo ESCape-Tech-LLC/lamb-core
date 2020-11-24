@@ -31,6 +31,8 @@ try:
     _ENGINE = settings.DATABASES['default'].get('ENGINE', None)
     _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
     _PORT = settings.DATABASES['default'].get('PORT', None)
+    _SESSION_OPTS = settings.DATABASES['default'].get('SESSION_OPTS', {})
+
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.') + 1:]
 
@@ -86,8 +88,10 @@ except KeyError as e:
 DeclarativeBase = declarative_base()
 metadata = DeclarativeBase.metadata
 metadata.bind = _engine
-_session_maker = sessionmaker(bind=_engine)
-_no_poll_session_maker = sessionmaker(bind=_no_pool_engine)
+print(f'SESSION OPTS: {_SESSION_OPTS}')
+
+_session_maker = sessionmaker(bind=_engine, **_SESSION_OPTS)
+_no_poll_session_maker = sessionmaker(bind=_no_pool_engine, **_SESSION_OPTS)
 
 
 def lamb_db_session_maker(pooled: bool = True) -> sa.orm.session.Session:

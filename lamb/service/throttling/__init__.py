@@ -184,7 +184,7 @@ def redis_rate_check_lua(conn: redis.Redis,
         return cjson.encode(result)
         '''
         conn.redis_rate_check_lua = conn.register_script(redis_rate_check_lua_)
-        logger.info(f'Lua throttling. Script compiled and loaded: {conn.redis_rate_check_lua}')
+        logger.debug(f'Lua throttling. Script compiled and loaded: {conn.redis_rate_check_lua}')
 
     # check limits
     increment = 1 if increment else 0
@@ -192,7 +192,7 @@ def redis_rate_check_lua(conn: redis.Redis,
     json_args = json.dumps(json_args)
     logger.debug(f'Lua throttling. Calling redis_rate_check_lua: keys={bucket_name_base}, args={json_args, increment}')
     res = conn.redis_rate_check_lua(keys=[bucket_name_base], args=[json_args, increment])
-    logger.info(f'Lua throttling. Response binary: {res}')
+    logger.debug(f'Lua throttling. Response binary: {res}')
 
     # analyse and wrap results
     try:
@@ -201,6 +201,7 @@ def redis_rate_check_lua(conn: redis.Redis,
         res_rate_limits = _redis_rate_parse_response(res)
         logger.debug(f'Lua throttling. Response parsed: {res_rate_limits}')
         if any([not rl.success for rl in res_rate_limits]):
+            logger.warning(f'Lua throttling. Limit reached on response: {res_rate_limits}')
             raise ThrottlingError(limits=res_rate_limits)
         return res_rate_limits
     except ApiError:
