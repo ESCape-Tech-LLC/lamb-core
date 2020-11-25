@@ -32,7 +32,6 @@ try:
     _OPTS = settings.DATABASES['default'].get('CONNECT_OPTS', None)
     _PORT = settings.DATABASES['default'].get('PORT', None)
     _SESSION_OPTS = settings.DATABASES['default'].get('SESSION_OPTS', {})
-
     if _ENGINE is not None:
         _ENGINE = _ENGINE[_ENGINE.rindex('.') + 1:]
 
@@ -67,7 +66,8 @@ try:
         }
     if ENGINE_OPTS_POOLED is None:
         ENGINE_OPTS_POOLED = {}
-    logger.info(f'database engine options would be used for pooled connections: {ENGINE_OPTS_POOLED}')
+    logger.info(f'database engine options would be used for pooled connections: {ENGINE_OPTS_POOLED},'
+                f' session_opts: {_SESSION_OPTS}')
     _engine = create_engine(CONNECTION_STRING, **ENGINE_OPTS_POOLED)
 
     ENGINE_OPTS_NON_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_NON_POOLED', None)
@@ -79,7 +79,8 @@ try:
         }
     if ENGINE_OPTS_NON_POOLED is None:
         ENGINE_OPTS_NON_POOLED = {}
-    logger.info(f'database engine options would be used for non-pooled connections: {ENGINE_OPTS_NON_POOLED}')
+    logger.info(f'database engine options would be used for non-pooled connections: {ENGINE_OPTS_NON_POOLED},'
+                f' session_opts: {_SESSION_OPTS}')
     _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, **ENGINE_OPTS_NON_POOLED)
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
@@ -88,8 +89,6 @@ except KeyError as e:
 DeclarativeBase = declarative_base()
 metadata = DeclarativeBase.metadata
 metadata.bind = _engine
-print(f'SESSION OPTS: {_SESSION_OPTS}')
-
 _session_maker = sessionmaker(bind=_engine, **_SESSION_OPTS)
 _no_poll_session_maker = sessionmaker(bind=_no_pool_engine, **_SESSION_OPTS)
 
