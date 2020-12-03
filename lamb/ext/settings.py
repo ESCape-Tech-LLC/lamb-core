@@ -64,7 +64,11 @@ class JsonConverter(BaseConverter):
 
     def process_result_value(self, value):
         if value is not None:
-            return json.dumps(value)
+            if isinstance(value, str):
+                value = json.loads(value)
+            result = json.dumps(value)
+            logger.debug(f'JsonConverter.process_result_value.RESULT: {value, value.__class__} as {result, result.__class__}')
+            return result
         return None
 
 
