@@ -14,11 +14,12 @@ from lamb.db.patterns import DbEnum
 from lamb.db.context import lamb_db_context
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.utils.transformers import transform_boolean
 
 
 __all__ = [
     'AbstractSettingsStorage', 'AbstractSettingsValue',
-    'BaseConverter', 'SimpleTypeConverter', 'JsonConverter', 'IntBooleanConverter'
+    'BaseConverter', 'SimpleTypeConverter', 'JsonConverter', 'IntBooleanConverter', 'BooleanConverter'
 
 ]
 
@@ -91,6 +92,21 @@ class IntBooleanConverter(BaseConverter):
             return '1'
         else:
             return '0'
+
+
+class BooleanConverter(BaseConverter):
+
+    def process_bind_param(self, value):
+        if value is None:
+            return None
+
+        value = transform_boolean(value)
+        return value
+
+    def process_result_value(self, value):
+        if value is None:
+            return None
+        return str(value)
 
 
 class AbstractSettingsValueCache:
