@@ -124,7 +124,7 @@ class AbstractSettingsValueCache:
 
     def __get__(self, obj: 'AbstractSettingsValue', objtype: Type['AbstractSettingsValue']) -> 'AbstractSettingsStorage':
         value = None
-        if obj._cached and obj.__cache_timeout__ != 0:
+        if obj._cached and obj.__cache_timeout__ not in (0, None):
             value = cache.get(self.key_func(obj, obj.value))
         return value
 
@@ -139,7 +139,7 @@ class AbstractSettingsValueCache:
             )
 
     def __delete__(self, obj: 'AbstractSettingsValue'):
-        if obj._cached and obj.__cache_timeout__ != 0:
+        if obj._cached and obj.__cache_timeout__ not in (0, None):
             cache.delete(self.key_func(obj, obj.value))
 
 
