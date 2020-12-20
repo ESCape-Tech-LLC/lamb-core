@@ -57,7 +57,7 @@ __all__ = [
 
     'datetime_end', 'datetime_begin',
 
-    'check_device_info_min_versions',
+    'check_device_info_min_versions', 'check_device_info_versions_above',
 
     'list_chunks',
 
@@ -705,31 +705,60 @@ class DeprecationClassHelper(object):
 
 
 def check_device_info_min_versions(request: LambRequest, min_versions: List[Tuple[str, int]]):
-    # TODO: migrate to support independent device_info object and not only request
     """ Minimum app version checker
 
     If request object have info about platform and app build will check compatibility of versions:
     - by default for requests without device info and not specified platforms - skip without exception
     - raise `UpdateRequiredError` if version detected and below minimal requirements
     """
-    if request is None:
-        return
-    if request.lamb_device_info.app_build is None:
-        return
-    if request.lamb_device_info.device_platform is None:
-        return
+    warnings.warn('check_device_info_min_versions method is deprecated, use check_device_info_versions_above version',
+                  DeprecationWarning, stacklevel=2)
+    result = check_device_info_versions_above(source=request, versions=min_versions, default=True)
+    if not result:
+        raise UpdateRequiredError
 
-    for min_v in min_versions:
+
+def check_device_info_versions_above(source: Any,
+                                     versions: List[Tuple[str, int]],
+                                     default: bool
+                                     ) -> bool:
+    """ Application versions check function
+
+        If request/device_info object have info about platform and app build will check compatibility of versions:
+        - `default` value used in case of device_info version missing
+        - for matched platforms compare app_build field and returns True/False depends on result
+    """
+    from lamb.types.device_info import DeviceInfo
+
+    # prepare params
+    if isinstance(source, HttpRequest):
+        _source = getattr(source, 'lamb_device_info', None)
+    else:
+        _source = source
+
+    if not isinstance(_source, (DeviceInfo, None)):
+        logger.warning(f'received object: {source, source.__class__}')
+        raise ServerError(f'Invalid object received for version checking')
+
+    # early return
+    if source is None:
+        return default
+    if _source.app_build is None:
+        return default
+    if _source.device_platform is None:
+        return default
+
+    for min_v in versions:
         try:
-            _platform = min_v[0]
-            _min_app_build = min_v[1]
-            if request.lamb_device_info.device_platform == _platform and _min_app_build > request.lamb_device_info.app_build:
-                raise UpdateRequiredError
-        except UpdateRequiredError:
-            raise
+            _platform = min_v[0].lower()
+            _min_app_build = int(min_v[1])
+            if _source.device_platform.lower() == _platform and _min_app_build > _source.app_build:
+                return False
         except Exception as e:
-            logger.warning('Skip min version checking for %s cause of invalid structure, error: %s' % (min_v, e))
+            logger.warning(f'Skip above version checking for {min_v} cause of invalid structure, error: {e}')
             continue
+
+    return True
 
 
 def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
