@@ -736,7 +736,7 @@ def check_device_info_versions_above(source: Any,
     else:
         _source = source
 
-    if not isinstance(_source, (DeviceInfo, None)):
+    if not isinstance(_source, (DeviceInfo, None.__class__)):
         logger.warning(f'received object: {source, source.__class__}')
         raise ServerError(f'Invalid object received for version checking')
 
