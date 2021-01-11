@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import json
 from datetime import datetime
 from typing import Union
@@ -159,7 +160,7 @@ class InAppGoogle(InAppAbstract):
             product_id=self.product_id,
             status=_get_status(receipt, active_until),
             active_until=active_until,
-            order_id=self._parse_data(receipt, 'orderId')
+            order_id=self.purchase_token
         )
 
         return purchase_data
