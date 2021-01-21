@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import re
 import dataclasses
+import json
 
 from typing import Optional, Any, Callable, List, Tuple, Dict
 
@@ -75,7 +76,6 @@ class Binding(ResponseEncodableMixin, object):
 
     def __post_init__(self):
         get_card_type_parser()(self)
-        # self = get_card_type_parser()(self)
 
     def response_encode(self, request=None) -> dict:
         return dataclasses.asdict(self)
@@ -157,7 +157,7 @@ class RBSPaymentEngine(object):
             if params is None:
                 params = {}
 
-            if  add_credentials:
+            if add_credentials:
                 if self.merchant_token is not None:
                     params['token'] = self.merchant_token
                 else:
@@ -165,7 +165,6 @@ class RBSPaymentEngine(object):
                     params['password'] = self.merchant_password
             params = compact(params)
             _masked_params = masked_dict(params, 'password', 'token')
-
 
             # execute request
             method_url = furl(self.endpoint)
@@ -245,29 +244,33 @@ class RBSPaymentEngine(object):
                  session_timeout_secs: Optional[int] = None,
                  expiration_date: Optional[datetime] = None,
                  binding_id: Optional[str] = None,
-                 features: Optional[str] = None
+                 features: Optional[str] = None,
+                 **kwargs
                  ) -> Tuple[RBSResponse, str, str]:
         """ Register payment and returns (rbs_response, orderId, formUrl) """
         # make request
+        params = {
+            'orderNumber': str(order_number) if order_number is not None else None,
+            'amount': int(amount * self.currency_multiplier_callback(currency)),
+            'currency': currency,
+            'returnUrl': success_uri,
+            'failUrl': fail_uri,
+            'description': description,
+            'language': language,
+            'pageView': page_view,
+            'clientId': str(client_id) if client_id is not None else None,
+            'merchantLogin': child_merchant_login,
+            'jsonParams': json.dumps(json_params, ensure_ascii=False, indent=None) if json_params is not None else None,
+            'sessionTimeoutSecs': session_timeout_secs,
+            'expirationDate': expiration_date.strftime('%Y-%m-%dT%H:%M:%S') if isinstance(expiration_date, datetime) else None,
+            'bindingId': str(binding_id) if binding_id is not None else None,
+            'features': features
+        }
+        params.update(**kwargs)
+        logger.warning(f'register.do params: {params}')
         result = self._make_request(
             method='rest/register.do',
-            params={
-                'orderNumber': str(order_number) if order_number is not None else None,
-                'amount': int(amount * self.currency_multiplier_callback(currency)),
-                'currency': currency,
-                'returnUrl': success_uri,
-                'failUrl': fail_uri,
-                'description': description,
-                'language': language,
-                'pageView': page_view,
-                'clientId': str(client_id) if client_id is not None else None,
-                'merchantLogin': child_merchant_login,
-                'jsonParams': json_params,
-                'sessionTimeoutSecs': session_timeout_secs,
-                'expirationDate': expiration_date.strftime('%Y-%m-%dT%H:%M:%S') if isinstance(expiration_date, datetime) else None,
-                'bindingId': str(binding_id) if binding_id is not None else None,
-                'features': features
-            }
+            params=params
         )
 
         # validate status
@@ -278,6 +281,8 @@ class RBSPaymentEngine(object):
         try:
             order_id = dpath_value(result.content, 'orderId', str)
             form_url = dpath_value(result.content, 'formUrl', str)
+            logger.warning(f'register.do result: {result}')
+            logger.warning(f'register.do result.content: {result.content}')
             return result, order_id, form_url
         except ApiError as e:
             logger.error(f'RBS content: {result.content}')
