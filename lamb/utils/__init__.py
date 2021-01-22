@@ -751,7 +751,7 @@ def check_device_info_versions_above(source: Any,
     for min_v in versions:
         try:
             _platform = min_v[0].lower()
-            _min_app_build = int(min_v[1])
+            _min_app_build = int(min_v[1]) if not isinstance(min_v[1], (int, float)) else min_v[1]
             if _source.device_platform.lower() == _platform and _min_app_build > _source.app_build:
                 return False
         except Exception as e:
