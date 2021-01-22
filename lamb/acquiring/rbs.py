@@ -148,8 +148,8 @@ class RBSPaymentEngine(object):
                 logger.error(f'invalid marchant params: merchant_login={self.merchant_login}, password={self.merchant_password}')
                 raise ImproperlyConfiguredError
 
-    def _make_request(self, method: str, params: dict = None,  http_method: str = 'GET', add_credentials: bool = True,
-                      as_json: bool = False):
+    def _make_request(self, method: str, params: dict = None, http_method: str = 'GET', add_credentials: bool = True,
+                      as_json: bool = False, method_replace_path: bool = False):
         logger.debug(f'Execute RBS request, method={method} params={params}')
 
         try:
@@ -168,7 +168,10 @@ class RBSPaymentEngine(object):
 
             # execute request
             method_url = furl(self.endpoint)
-            method_url.path.add(method)
+            if not method_replace_path:
+                method_url.path.add(method)
+            else:
+                method_url.path.load(method)
             method_url = method_url.url
 
             logger.info(f'RBS call params: [{http_method}] -> {method_url}: {_masked_params}')
@@ -267,7 +270,6 @@ class RBSPaymentEngine(object):
             'features': features
         }
         params.update(**kwargs)
-        logger.warning(f'register.do params: {params}')
         result = self._make_request(
             method='rest/register.do',
             params=params
