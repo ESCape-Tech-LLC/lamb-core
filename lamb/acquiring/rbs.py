@@ -514,13 +514,3 @@ class RBSPaymentEngine(object):
             raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
 
         return result
-        # # validate response format
-        # try:
-        #     order_id = dpath_value(result.content, 'orderId', str)
-        #     form_url = dpath_value(result.content, 'formUrl', str)
-        #     logger.warning(f'register.do result: {result}')
-        #     logger.warning(f'register.do result.content: {result.content}')
-        #     return result, order_id, form_url
-        # except ApiError as e:
-        #     logger.error(f'RBS content: {result.content}')
-        #     raise RBSCallError('RBS failed due invalid response format', rbs_response=result) from e
