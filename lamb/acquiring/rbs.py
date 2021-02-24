@@ -190,10 +190,6 @@ class RBSPaymentEngine(object):
                 else:
                     req_kwargs['data'] = params
                 response = requests.post(**req_kwargs)
-                # response = requests.post(
-                #     url=method_url,
-                #     json=params
-                # )
 
             if response.status_code != 200:
                 logger.error(f'RBS call to method {method} failed due invalid http status code={response.status_code}, '
@@ -492,3 +488,39 @@ class RBSPaymentEngine(object):
         if result.error_code != 0:
             raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
         return result
+
+    def reverse(self,
+                rbs_order_id: str,
+                amount: Optional[float] = None,
+                json_params: Optional[dict] = None,
+                language: Optional[str] = None
+                ):
+        """ Reverse payment on server side """
+        # make request
+        params = {
+            'amount': amount,
+            'orderId': rbs_order_id,
+            'jsonParams': json_params,
+            'language': language
+        }
+        params = compact(params)
+        result = self._make_request(
+            method='rest/reverse.do',
+            params=params
+        )
+
+        # validate status
+        if result.error_code != 0:
+            raise RBSCallError('RBS failed due invalid error_code', rbs_response=result)
+
+        return result
+        # # validate response format
+        # try:
+        #     order_id = dpath_value(result.content, 'orderId', str)
+        #     form_url = dpath_value(result.content, 'formUrl', str)
+        #     logger.warning(f'register.do result: {result}')
+        #     logger.warning(f'register.do result.content: {result.content}')
+        #     return result, order_id, form_url
+        # except ApiError as e:
+        #     logger.error(f'RBS content: {result.content}')
+        #     raise RBSCallError('RBS failed due invalid response format', rbs_response=result) from e
