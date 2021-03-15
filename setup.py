@@ -85,7 +85,7 @@ setup(
         'boto3',
         'celery==4.4.2',
         'dpath @ git+https://git@github.com/MrJuicyBacon/dpath-python#egg=dpath',
-        'sqlalchemy',
+        'sqlalchemy<1.4',
         'sqlalchemy-utils',
         'Pillow<7.0.0',
         'requests',
