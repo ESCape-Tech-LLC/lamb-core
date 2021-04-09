@@ -2,14 +2,16 @@
 
 import logging
 import re
-from typing import Optional, BinaryIO, Union, Tuple
-from typing.io import IO
+from typing import IO, Optional, BinaryIO, Union, Tuple
 
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from furl import furl
 
 from lamb import exc
+from lamb.service.cdn_engines import BaseCDNEngine, cdn_engine_identity_map
+from lamb.utils import import_by_name
+
 from .base import AWSBase
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,43 @@ __all__ = ['S3Uploader']
 
 
 class S3Uploader(AWSBase):
+    @staticmethod
+    def make_cdn_engine(**kwargs):
+        if 'cdn_engine_class' in kwargs:
+            cdn_engine_class = kwargs['cdn_engine_class']
+            if cdn_engine_class is None:
+                return None
+        else:
+            cdn_engine_class = None
+        if 'cdn_engine' in kwargs:
+            cdn_engine = kwargs['cdn_engine']
+            if cdn_engine is None:
+                return None
+            if not isinstance(cdn_engine, BaseCDNEngine):
+                raise TypeError(f'Wrong cdn_engine class instance. Required subclass of BaseCDNEngine.')
+            return cdn_engine
+
+        # if not in kwargs, try get from settings
+        if not cdn_engine_class:
+            try:
+                cdn_engine_class = settings.LAMB_CDN_ENGINE_CLASS
+            except AttributeError:
+                return None
+
+        # try to find suitable cdn engine
+        if isinstance(cdn_engine_class, str):
+            cdn_engine_class = cdn_engine_identity_map[cdn_engine_class.lower()] \
+                if cdn_engine_class.lower() in cdn_engine_identity_map \
+                else import_by_name(cdn_engine_class)
+        if not issubclass(cdn_engine_class, BaseCDNEngine):
+            raise TypeError(f'Wrong cdn_engine class. Required subclass of BaseCDNEngine.')
+
+        engine_kwargs = {}
+        for param in cdn_engine_class.required_param_list:
+            if param in kwargs:
+                engine_kwargs[param] = kwargs[param]
+
+        return cdn_engine_class(**engine_kwargs)
 
     def __init__(self,
                  aws_access_key_id: Optional[str] = None,
@@ -35,6 +74,7 @@ class S3Uploader(AWSBase):
         region_name = region_name or settings.LAMB_AWS_REGION_NAME
         endpoint_url = endpoint_url or settings.LAMB_AWS_ENDPOINT_URL
         bucket_url = bucket_url or settings.LAMB_AWS_BUCKET_URL
+        cdn_engine = self.make_cdn_engine(**kwargs)
 
         # process
         super(S3Uploader, self).__init__(aws_access_key_id, aws_secret_access_key, *args, **kwargs)
@@ -51,6 +91,7 @@ class S3Uploader(AWSBase):
         self.bucket_name = bucket_name
         self.region_name = region_name
         self.bucket_url = bucket_url
+        self.cdn_engine = cdn_engine
 
     def put_object(self, body: Union[BinaryIO, InMemoryUploadedFile, IO], relative_path: str,
                    file_type: str, private: Optional[bool] = False) -> str:
@@ -70,6 +111,11 @@ class S3Uploader(AWSBase):
             Key=relative_path,
             ContentType=file_type
         )
+        if self.cdn_engine:
+            uploaded_url = self.cdn_engine.get_image_cdn_url(uploader=self, relative_path=relative_path)
+            logger.debug(f'uploaded s3 CDN url: {uploaded_url}')
+            return uploaded_url
+
         if self.bucket_url is None:
             if self.region_name is not None:
                 bucket_url = f'https://s3.{self.region_name}.amazonaws.com/{self.bucket_name}/'
@@ -111,7 +157,7 @@ class S3Uploader(AWSBase):
         return presigned_url
 
     @staticmethod
-    def s3_parse_url(url: str) -> Tuple[str, str, str]:
+    def s3_parse_url(url: str) -> Tuple[Optional[str], Optional[str], str]:
         """
         :return: Tuple of aws region name, bucket name, and file path
         """
@@ -128,7 +174,8 @@ class S3Uploader(AWSBase):
                 break
 
         if match is None:
-            raise ValueError('No S3 url match found')
+            # m.b. url with cdn or without region. try to work with it
+            return None, settings.LAMB_AWS_BUCKET_NAME, str(furl(url).path)
 
         return match.group('region'), match.group('bucket'), match.group('path')
 

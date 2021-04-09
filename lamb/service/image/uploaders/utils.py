@@ -2,18 +2,18 @@
 
 import logging
 import os
-from typing import List, Type, Optional, Tuple
+from typing import List, Optional, Tuple, Type
+from urllib.parse import urljoin
 
 from django.conf import settings
-from urllib.parse import urljoin
 
 from lamb.exc import ServerError
 from lamb.service.aws.s3 import S3Uploader
 from lamb.utils import LambRequest, import_by_name
 
-from .types import ImageUploadSlice
-from .base import BaseUploader
 from ..model import AbstractImage
+from .base import BaseUploader
+from .types import ImageUploadSlice
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,8 @@ def upload_images(request: LambRequest,
                   envelope_folder: Optional[str] = None,
                   limit: Optional[int] = None,
                   uploader_class: Optional[Type[BaseUploader]] = None,
-                  allow_svg: Optional[bool] = False) -> List[AbstractImage]:
+                  allow_svg: Optional[bool] = False,
+                  *args, **kwargs) -> List[AbstractImage]:
     """
     Uploads image from request to project storage.
 
@@ -57,7 +58,7 @@ def upload_images(request: LambRequest,
     if uploader_class is None:
         uploader_class = get_default_uploader_class()
 
-    uploader = uploader_class(envelope_folder=envelope_folder)
+    uploader = uploader_class(envelope_folder=envelope_folder, *args, **kwargs)
     stored_slices = uploader.process_request(
         request=request,
         slicing=slicing,

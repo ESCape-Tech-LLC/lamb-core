@@ -2,14 +2,15 @@
 
 import logging
 import tempfile
+from typing import BinaryIO, Optional, Union
 
-from typing import Optional, BinaryIO, Union
-from django.conf import settings
 from boto3.session import Session as AWSSession
+from django.conf import settings
 
 from lamb import exc
 from lamb.service.aws.s3 import S3Uploader
 from lamb.utils import LambRequest
+
 from .base import BaseUploader, PILImage
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
     """
     aws_session: AWSSession
 
-    def __init__(self, envelope_folder: Optional[str] = None):
+    def __init__(self, envelope_folder: Optional[str] = None, *args, **kwargs):
         super().__init__(envelope_folder=envelope_folder)
 
         self._s3_uploader = S3Uploader(
@@ -33,6 +34,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             region_name=settings.LAMB_AWS_REGION_NAME,
             endpoint_url=settings.LAMB_AWS_ENDPOINT_URL,
             bucket_url=settings.LAMB_AWS_BUCKET_URL,
+            *args, **kwargs
         )
 
     def store_image(self, image: Union[PILImage.Image, BinaryIO],
