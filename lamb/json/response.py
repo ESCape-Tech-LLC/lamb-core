@@ -15,6 +15,7 @@ __all__ = ['JsonResponse']
 
 _encoder_class = None
 
+
 class JsonResponse(HttpResponse):
 
     def __init__(self, data=None, status=200, callback=None, request=None):
@@ -38,7 +39,8 @@ class JsonResponse(HttpResponse):
             _response_indent = settings.LAMB_RESPONSE_JSON_INDENT
 
             if _response_indent is not None:
-                content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default, sort_keys=False)
+                content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default,
+                                     sort_keys=False)
             else:
                 content = json.dumps(data, ensure_ascii=False, default=encoder.default, sort_keys=False)
 
@@ -47,7 +49,7 @@ class JsonResponse(HttpResponse):
                     and 'HTTP_ACCEPT' in request.META.keys() \
                     and request.META['HTTP_ACCEPT'].lower().startswith('application/xml'):
                 content = json.loads(content)
-                content = {'response':content}
+                content = {'response': content}
                 content = xmltodict.unparse(content)
 
             # return result

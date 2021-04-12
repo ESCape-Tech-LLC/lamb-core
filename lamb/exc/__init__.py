@@ -3,8 +3,7 @@ __author__ = 'KoNEW'
 
 import logging
 from enum import IntEnum, unique
-from typing import Any, Optional, List
-from django.conf import settings
+from typing import Any, List, Optional, Type, Union
 
 __all__ = [
     'LambExceptionCodes', 'ApiError',
@@ -201,9 +200,9 @@ class ThrottlingError(ClientError):
 
     limits: list
 
-    def __init__(self, *args, limits: list = [], **kwargs):
+    def __init__(self, *args, limits: None, **kwargs):
         super(ThrottlingError, self).__init__(*args, **kwargs)
-        self.limits = limits
+        self.limits = limits or []
 
 
 class UpdateRequiredError(ClientError):
@@ -222,27 +221,28 @@ class HumanFriendlyError(ClientError):
 
 class HumanFriendlyMultipleError(HumanFriendlyError):
 
-    wrapped_errors: List[Exception]
+    wrapped_errors: List[ApiError]
 
-    def __init__(self, *args, wrapped_errors: List[ApiError] = list(), **kwargs):
+    def __init__(self, *args, wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None, **kwargs):
         self.wrapped_errors = []
-        # _msg_components = []
-        for e in wrapped_errors:
-            if isinstance(e, ApiError):
-                _e = e
-            elif issubclass(e, ApiError):
-                _e = e()
-            else:
-                logger.warning(f'invalid exception type for wrapping: {e.__class__} -> {e}')
-                raise ServerError(f'Incorrect use of human multiple error block') from self
-            self.wrapped_errors.append(_e)
+        if wrapped_errors:
+            # _msg_components = []
+            for e in wrapped_errors:
+                if isinstance(e, ApiError):
+                    _e = e
+                elif issubclass(e, ApiError):
+                    _e = e()
+                else:
+                    logger.warning(f'invalid exception type for wrapping: {e.__class__} -> {e}')
+                    raise ServerError(f'Incorrect use of human multiple error block') from self
+                self.wrapped_errors.append(_e)
 
         if len(args) == 0 and 'message' not in kwargs:
             msg = '. '.join([e.message or '' for e in self.wrapped_errors])
             kwargs.update({
                 'message': msg
             })
-            logger.warning(f'overrided: {msg}')
+            logger.warning(f'overridden: {msg}')
         super().__init__(*args, **kwargs)
 
         self.error_details = {

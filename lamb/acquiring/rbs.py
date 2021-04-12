@@ -3,7 +3,6 @@ __author__ = 'KoNEW'
 
 import logging
 import requests
-import copy
 import hmac
 import hashlib
 import re
@@ -14,12 +13,9 @@ from typing import Optional, Any, Callable, List, Tuple, Dict
 
 from datetime import datetime
 from furl import furl
-from lazy import lazy
-from sqlalchemy.orm.session import Session as SASession
 from django.conf import settings
-from lamb.exc import ServerError, ImproperlyConfiguredError, ExternalServiceError, ApiError
+from lamb.exc import ServerError, ImproperlyConfiguredError, ExternalServiceError, ApiError, InvalidParamValueError
 from lamb.utils import dpath_value, compact, masked_dict, import_by_name
-from lamb.acquiring.base import AbstractPaymentEngine
 from lamb.json.mixins import ResponseEncodableMixin
 
 

@@ -6,9 +6,6 @@ from sqlalchemy.orm.session import Session as SASession
 
 from lamb.exc import ServerError
 
-__all__ = [
-]
-
 logger = logging.getLogger(__name__)
 
 
@@ -21,7 +18,7 @@ class AbstractPaymentEngine(object):
 
     def __init__(self, db_session: SASession, **kwargs):
         self.db_session = db_session
-        if not isinstance(self.db_session, Session):
+        if not isinstance(self.db_session, SASession):
             logger.warning('Improperly configured AbstractPaymentEngine - invalid db_session param type')
             raise ServerError('Improperly configured server side call')
 

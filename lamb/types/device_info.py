@@ -6,10 +6,8 @@ import dataclasses
 import json
 
 from typing import Optional
-from dataclasses import dataclass
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 from lamb import exc
 from lamb.json.encoder import JsonEncoder
 from lamb.types import LambLocale
@@ -86,3 +84,6 @@ class DeviceInfoType(types.TypeDecorator):
             result = value
         result = DeviceInfo(**result)
         return result
+
+    def process_literal_param(self, value, dialect):
+        return str(value)

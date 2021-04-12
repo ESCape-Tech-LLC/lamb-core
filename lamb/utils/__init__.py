@@ -257,7 +257,6 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
             settings.LAMB_PAGINATION_KEY_ITEMS in result.keys():
 
         result[settings.LAMB_PAGINATION_KEY_ITEMS] = {'item': result[settings.LAMB_PAGINATION_KEY_ITEMS]}
-        tm.append_marker('vary based on header')
 
     return result
 
@@ -289,7 +288,7 @@ def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
             orm_attr_name = ormd.__name__
         else:
             logger.warning(f'Unsupported orm_descriptor type: {ormd, ormd.__class__}')
-            raise exc.ServerError('Could not serialize data')
+            raise ServerError('Could not serialize data')
         result.append(orm_attr_name)
 
     return result
@@ -652,9 +651,9 @@ def string_to_uuid(value: str = '', key: Optional[str] = None) -> uuid.UUID:
     return transform_uuid(value, key)
 
 
-def url_append_components(baseurl: str = '', components: List[str] =list()) -> str:
+def url_append_components(baseurl: str = '', components: List[str] = None) -> str:
     """ Append path components to url """
-    components = [str(c) for c in components]
+    components = [str(c) for c in components] if components else []
     split = urlsplit(baseurl)
     scheme, netloc, path, query, fragment = (split[:])
     if len(path) > 0:
