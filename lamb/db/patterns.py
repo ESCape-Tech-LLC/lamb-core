@@ -18,7 +18,15 @@ def get_class_by_name(base, classname):
     :param classname: SQLAlchemy Table name
     :return: Declarative class or None.
     """
-    return base._decl_class_registry[classname]
+
+    if not hasattr(base, 'TABLES_BY_CLASS'):
+        base.CLASSES_BY_NAME = {}
+        for mapper in base.registry.mappers:
+            cls = mapper.class_
+            if not cls.__name__.startswith('_'):
+                base.CLASSES_BY_NAME[cls.__name__] = cls
+
+    return base.CLASSES_BY_NAME.get(classname, None)
 
 
 @enum.unique
