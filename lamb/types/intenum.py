@@ -7,8 +7,9 @@ import enum
 
 from typing import Optional, TypeVar, Type, Any
 from sqlalchemy.dialects.postgresql import SMALLINT
-from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
+
 from lamb import exc
+from lamb.types.scalar_coercible import ScalarCoercible
 
 
 __all__ = [

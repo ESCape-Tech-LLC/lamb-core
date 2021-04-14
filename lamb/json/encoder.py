@@ -2,20 +2,17 @@
 __author__ = 'KoNEW'
 
 
-import json
 import datetime
-import time
-import uuid
+import json
 import logging
+import uuid
 
-from django.conf import settings
 from decimal import Decimal
-from sqlalchemy_utils import PhoneNumber
-from lazy import lazy
+from django.conf import settings
 
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.types import PhoneNumber
 from lamb.utils import import_by_name
-from lamb.exc import ServerError
 
 
 __all__ = ['JsonEncoder']

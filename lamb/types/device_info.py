@@ -9,7 +9,6 @@ from typing import Optional
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
 from lamb import exc
-from lamb.json.encoder import JsonEncoder
 from lamb.types import LambLocale
 from lamb.json.mixins import ResponseEncodableMixin
 
@@ -49,7 +48,7 @@ class DeviceInfoType(types.TypeDecorator):
     impl = types.Unicode(10)
     python_type = DeviceInfo
 
-    def __init__(self, *args, encoder_class=JsonEncoder, **kwargs):
+    def __init__(self, *args, encoder_class=None, **kwargs):
         self._encoder_class = encoder_class
         super().__init__(*args, **kwargs)
 

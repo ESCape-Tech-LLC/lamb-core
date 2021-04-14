@@ -2,10 +2,10 @@
 __author__ = 'KoNEW'
 
 import enum
-from sqlalchemy_utils import get_primary_keys
 from lamb.db.session import DeclarativeBase
 from lamb.db.context import lamb_db_context
 from lamb.exc import *
+from lamb.utils import get_primary_keys
 
 __all__ = [
     'DbEnum', 'ConfigEnum'
@@ -84,7 +84,7 @@ class DbEnum(enum.Enum):
     def _setup_db_item(self, item):
         """ Designed item initializer
 
-        This method should be overriden in subclass if they have custom fields on database level.
+        This method should be overridden in subclass if they have custom fields on database level.
         By default method only assign primary key of underline table to value of self instance.
 
         :param item: Database table record instance

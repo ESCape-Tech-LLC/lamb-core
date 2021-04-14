@@ -17,20 +17,20 @@ import asyncio
 import requests
 import enum
 import sys
+import sqlalchemy
 
 from datetime import datetime, date, timedelta
 from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any, Callable, BinaryIO
+from inspect import isclass
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from asgiref.sync import sync_to_async
-from PIL import Image as PILImage
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
-from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
 from sqlalchemy import Column
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import ColumnProperty, RelationshipProperty, synonym
+from sqlalchemy.orm import ColumnProperty
 from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from django.http import HttpRequest
@@ -45,7 +45,8 @@ from .dpath import dpath_value
 
 
 __all__ = [
-    'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'random_string', 'url_append_components', 'clear_white_space',
+    'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'random_string', 'url_append_components',
+    'clear_white_space',
     'compact_dict', 'compact_list', 'compact',
     'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
 
@@ -62,7 +63,8 @@ __all__ = [
     'list_chunks',
 
     'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache', 'timed_lru_cache_clear',
-    'async_download_resources', 'async_download_images', 'image_convert_to_rgb', 'file_is_svg'
+    'async_download_resources', 'async_download_images', 'image_convert_to_rgb', 'file_is_svg', 'str_coercible',
+    'get_columns', 'get_primary_keys',
 ]
 
 
@@ -147,7 +149,8 @@ def paginated(data: PV, request: LambRequest) -> dict:
     return response_paginated(data, request)
 
 
-def response_paginated(data: PV, request: LambRequest = None, params: Dict = None, add_extended_query: bool = False) -> dict:
+def response_paginated(data: PV, request: LambRequest = None, params: Dict = None,
+                       add_extended_query: bool = False) -> dict:
     """ Pagination utility
 
     Will search for limit/offset params in `request.GET` object and apply it to data, returning
@@ -607,8 +610,8 @@ def import_by_name(name: str):
 
 
 def import_class_by_name(name):
-    warnings.warn('import_class_by_name deprecated, use lamb.utils.transformers.import_by_name instead', DeprecationWarning,
-                  stacklevel=2)
+    warnings.warn('import_class_by_name deprecated, use lamb.utils.transformers.import_by_name instead',
+                  DeprecationWarning, stacklevel=2)
     return import_by_name(name=name)
 
 
@@ -921,3 +924,59 @@ def file_is_svg(file: Union[str, BinaryIO]) -> bool:
         return False
 
     return tag == '{http://www.w3.org/2000/svg}svg'
+
+
+def str_coercible(cls):
+    def __str__(self):
+        return self.__unicode__()
+
+    cls.__str__ = __str__
+    return cls
+
+
+def get_columns(mixed):
+    """
+    Return a collection of all Column objects for given SQLAlchemy
+    object.
+
+    The type of the collection depends on the type of the object to return the
+    columns from.
+
+    :param mixed:
+        SA Table object, SA Mapper, SA declarative class, SA declarative class
+        instance or an alias of any of these objects
+    """
+    if isinstance(mixed, sqlalchemy.sql.selectable.Selectable):
+        try:
+            return mixed.selected_columns
+        except AttributeError:  # SQLAlchemy <1.4
+            return mixed.c
+    if isinstance(mixed, sqlalchemy.orm.util.AliasedClass):
+        return sqlalchemy.inspect(mixed).mapper.columns
+    if isinstance(mixed, sqlalchemy.orm.Mapper):
+        return mixed.columns
+    if isinstance(mixed, InstrumentedAttribute):
+        return mixed.property.columns
+    if isinstance(mixed, ColumnProperty):
+        return mixed.columns
+    if isinstance(mixed, sqlalchemy.Column):
+        return [mixed]
+    if not isclass(mixed):
+        mixed = mixed.__class__
+    return sqlalchemy.inspect(mixed).columns
+
+
+def get_primary_keys(mixed):
+    """
+    Return an OrderedDict of all primary keys for given Table object,
+    declarative class or declarative class instance.
+
+    :param mixed:
+        SA Table object, SA declarative class or SA declarative class instance
+    """
+    return OrderedDict(
+        (
+            (key, column) for key, column in get_columns(mixed).items()
+            if column.primary_key
+        )
+    )

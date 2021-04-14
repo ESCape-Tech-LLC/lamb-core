@@ -6,16 +6,13 @@ from typing import List
 
 from sqlalchemy import Column, ForeignKey, BOOLEAN, TIMESTAMP, VARCHAR, text
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, validates
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET
-from sqlalchemy_utils import UUIDType
 
 from lamb.db.session import DeclarativeBase
 from lamb.db.mixins import TimeMarksMixin
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.types import DeviceInfoType
-from lamb.types.intenum import IntEnumType
-from lamb.types.jsonb import SUAJSONBType
+from lamb.types import DeviceInfoType, UUIDType
 
 
 __all__ = ['EventSourceType', 'EventTrack', 'EventRecord']
@@ -40,7 +37,8 @@ class EventTrack(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):
     # relations
     @declared_attr
     def records(self) -> List['EventRecord']:
-        return relationship('EventRecord', uselist=True, passive_updates=True, passive_deletes=True)  # type: List[EventRecord]
+        return relationship('EventRecord', uselist=True, passive_updates=True,
+                            passive_deletes=True)  # type: List[EventRecord]
 
 
 class EventRecord(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):

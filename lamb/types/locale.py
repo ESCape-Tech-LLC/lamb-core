@@ -5,10 +5,10 @@ import logging
 import babel
 
 from sqlalchemy import types
-from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
 from lamb.exc import ServerError, InvalidParamValueError
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.types.scalar_coercible import ScalarCoercible
 
 __all__ = [
     'LambLocale', 'LambLocaleType'
@@ -24,7 +24,7 @@ class LambLocale(ResponseEncodableMixin, babel.Locale):
 
 class LambLocaleType(types.TypeDecorator, ScalarCoercible):
     """
-    LambLocaleType based on sqlalchemy_utils LocaleType data field.
+    LambLocaleType based on LocaleType data field.
     """
 
     impl = types.Unicode(10)
@@ -51,3 +51,6 @@ class LambLocaleType(types.TypeDecorator, ScalarCoercible):
             except (ValueError, babel.UnknownLocaleError) as e:
                 raise InvalidParamValueError('Unknown or unsupported locale value %s' % value)
         return value
+
+    def process_literal_param(self, value, dialect):
+        return str(value)
