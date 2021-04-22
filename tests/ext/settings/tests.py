@@ -9,6 +9,7 @@ from tests.testcases import LambTestCase
 
 class SettingsValue(AbstractSettingsValue):
     __table_class__ = 'SettingsStorage'
+    __cache_timeout__ = 10
 
     email_code_length = (
         'email_code_length',
