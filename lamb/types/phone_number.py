@@ -120,7 +120,7 @@ class PhoneNumberType(types.TypeDecorator, ScalarCoercible):
     def __init__(self, region='US', max_length=20, *args, **kwargs):
         # Bail if phonenumbers is not found.
         if phonenumbers is None:
-            raise ImproperlyConfigured(
+            raise ImproperlyConfiguredError(
                 "'phonenumbers' is required to use 'PhoneNumberType'"
             )
 

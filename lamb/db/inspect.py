@@ -2,24 +2,15 @@
 __author__ = 'KoNEW'
 
 import logging
-import re
-import typing
+
 import sqlalchemy as sa
-
-from typing import Set, List
 from lazy import lazy
-from sqlalchemy import Column
 from sqlalchemy.inspection import inspect
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import ColumnProperty, RelationshipProperty, synonym
-from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
-from sqlalchemy.ext.declarative import DeclarativeMeta
 
-from lamb.utils import LambRequest, dpath_value, string_to_uuid
 from lamb.exc import *
 
 
-__all__ = [ 'ModelInspector' ]
+__all__ = ['ModelInspector']
 
 
 logger = logging.getLogger(__name__)

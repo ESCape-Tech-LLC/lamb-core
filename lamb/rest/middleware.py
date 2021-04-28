@@ -18,23 +18,10 @@ from lamb.utils.transformers import transform_uuid
 
 
 # parse http status overriding options
-try:
-    # backward compatibility
-    _should_override_status = settings.LAMB_REST_HTTP_STATUS_ALWAYS_200
-    warnings.warn('Use of deprecated settings param LAMB_REST_HTTP_STATUS_ALWAYS_200, '
-                  'use LAMB_RESPONSE_OVERRIDE_STATUS_200 instead', DeprecationWarning)
-except (ImportError, AttributeError):
-    _should_override_status = settings.LAMB_RESPONSE_OVERRIDE_STATUS_200
+_should_override_status = settings.LAMB_RESPONSE_OVERRIDE_STATUS_200
 
 # parse apps to apply
-try:
-    # backward compatibility
-    _apply_to_apps = settings.LAMB_REST_APPLIED_APPS
-
-    warnings.warn('Use of deprecated settings param LAMB_REST_APPLIED_APPS, '
-                  'use LAMB_RESPONSE_APPLY_TO_APPS instead', DeprecationWarning)
-except (ImportError, AttributeError):
-    _apply_to_apps = settings.LAMB_RESPONSE_APPLY_TO_APPS
+_apply_to_apps = settings.LAMB_RESPONSE_APPLY_TO_APPS
 
 
 logger = logging.getLogger(__name__)

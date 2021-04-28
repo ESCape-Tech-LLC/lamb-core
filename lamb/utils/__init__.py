@@ -45,20 +45,20 @@ from .dpath import dpath_value
 
 
 __all__ = [
-    'LambRequest', 'parse_body_as_json',  'dpath_value', 'string_to_uuid', 'random_string', 'url_append_components',
+    'LambRequest', 'parse_body_as_json',  'dpath_value', 'random_string', 'url_append_components',
     'clear_white_space',
-    'compact_dict', 'compact_list', 'compact',
-    'paginated', 'response_paginated', 'response_sorted', 'response_filtered',
+    'compact',
+    'response_paginated', 'response_sorted', 'response_filtered',
 
     'get_request_body_encoding', 'get_request_accept_encoding', 'get_current_request',
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
     'dpath_value',
 
-    'import_class_by_name', 'import_by_name', 'inject_app_defaults',
+    'import_by_name', 'inject_app_defaults',
 
     'datetime_end', 'datetime_begin',
 
-    'check_device_info_min_versions', 'check_device_info_versions_above',
+    'check_device_info_versions_above',
 
     'list_chunks',
 
@@ -90,27 +90,6 @@ class LambRequest(HttpRequest):
         self.lamb_track_id = None
 
 
-# compatibility
-VT = TypeVar('VT')
-
-
-def validated_interval(value: Optional[VT],
-                       bottom: VT,
-                       top: VT,
-                       key: str = None,
-                       allow_none: bool = False) -> Optional[VT]:
-    from lamb.utils.validators import validate_range
-    warnings.warn('validated_interval method is deprecated, use validate_range version',
-                  DeprecationWarning, stacklevel=2)
-    return validate_range(
-        value=value,
-        min_value=bottom,
-        max_value=top,
-        key=key,
-        allow_none=allow_none
-    )
-
-
 # parsing
 def parse_body_as_json(request: HttpRequest) -> dict:
     """  Parse request object to dictionary as JSON
@@ -137,16 +116,6 @@ def parse_body_as_json(request: HttpRequest) -> dict:
 
 # response utilities
 PV = TypeVar('PV', list, Query)
-
-
-def paginated(data: PV, request: LambRequest) -> dict:
-    """ Deprected version of pagination utility
-
-    :param data: Instance of list or query to be paginated
-    :param request: Http request
-    """
-    warnings.warn('paginated method is deprecated, use response_paginated version', DeprecationWarning, stacklevel=2)
-    return response_paginated(data, request)
 
 
 def response_paginated(data: PV, request: LambRequest = None, params: Dict = None,
@@ -370,7 +339,7 @@ def _sorting_apply_sorters(sorters: List[Sorter],
 def response_sorted(
         query: Query,
         model_class: DeclarativeMeta,
-        params: dict = None,
+        params: dict,
         default_sorting: str = None,
         **kwargs) -> Query:
     """ Apply order by sortings to sqlalchemy query instance from params dictionary
@@ -384,12 +353,6 @@ def response_sorted(
     :param start_sorting: Initial sorting step - if provided in kwargs it would be parsed as descriptor and applied
         to query before all other descriptors.
     """
-    # check deprecation
-    if 'params_dict' in kwargs and params is None:
-        warnings.warn('response_sorted `params_dict` param is deprecated, use `params` instead', DeprecationWarning,
-                      stacklevel=2)
-        params = kwargs.pop('params_dict')
-
     # check params
     if not isinstance(params, dict):
         raise ServerError('Improperly configured sorting params dictionary')
@@ -488,18 +451,6 @@ def compact(obj: Union[list, dict]) -> Union[list, dict]:
         return {k: v for k, v in obj.items() if v is not None}
     else:
         return obj
-
-
-def compact_dict(dct: dict) -> dict:
-    """ Compact dict by removing keys with None value """
-    warnings.warn('compact_dict deprecated, use compact instead', DeprecationWarning, stacklevel=2)
-    return compact(dct)
-
-
-def compact_list(lst: list) -> list:
-    """ Compact list by removing None values """
-    warnings.warn('compact_list deprecated, use compact instead', DeprecationWarning, stacklevel=2)
-    return compact(lst)
 
 
 # content/response encoding
@@ -609,12 +560,6 @@ def import_by_name(name: str):
     return res
 
 
-def import_class_by_name(name):
-    warnings.warn('import_class_by_name deprecated, use lamb.utils.transformers.import_by_name instead',
-                  DeprecationWarning, stacklevel=2)
-    return import_by_name(name=name)
-
-
 def inject_app_defaults(application: str):
     """Inject an application's default settings"""
     try:
@@ -638,20 +583,6 @@ def inject_app_defaults(application: str):
     except ImportError:
         # Silently skip failing settings modules
         pass
-
-
-def string_to_uuid(value: str = '', key: Optional[str] = None) -> uuid.UUID:
-    """ Convert string into UUID value
-
-    :param value: Value to convert in uuid object
-    :param key: Optional key value to include in exception details info
-
-    :raises InvalidParamValueError: If converting process failed
-    """
-    from lamb.utils.transformers import transform_uuid
-    warnings.warn('string_to_uuid deprecated, use lamb.utils.transformers.transform_uuid instead', DeprecationWarning,
-                  stacklevel=2)
-    return transform_uuid(value, key)
 
 
 def url_append_components(baseurl: str = '', components: List[str] = None) -> str:
@@ -704,20 +635,6 @@ class DeprecationClassHelper(object):
     def __getattr__(self, attr):
         self._warn()
         return getattr(self.new_target, attr)
-
-
-def check_device_info_min_versions(request: LambRequest, min_versions: List[Tuple[str, int]]):
-    """ Minimum app version checker
-
-    If request object have info about platform and app build will check compatibility of versions:
-    - by default for requests without device info and not specified platforms - skip without exception
-    - raise `UpdateRequiredError` if version detected and below minimal requirements
-    """
-    warnings.warn('check_device_info_min_versions method is deprecated, use check_device_info_versions_above version',
-                  DeprecationWarning, stacklevel=2)
-    result = check_device_info_versions_above(source=request, versions=min_versions, default=True)
-    if not result:
-        raise UpdateRequiredError
 
 
 def check_device_info_versions_above(source: Any,

@@ -149,13 +149,7 @@ class FieldValueFilter(Filter):
         self.allowed_compares = allowed_compares
 
     # def apply_to_query(self, query: Query, request: LambRequest = None, params: Dict = None) -> Query:
-    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
-        # check deprecation
-        if 'request' in kwargs and params is None:
-            warnings.warn('apply_to_query `request` param is deprecated, use `params` instead', DeprecationWarning,
-                          stacklevel=2)
-            params = kwargs.pop('request').GET
-
+    def apply_to_query(self, query: Query, params, **kwargs) -> Query:
         # check for equality
         if '__eq__' in self.allowed_compares:
             param_value = self.get_param_value(params, key_path=self.arg_name)
@@ -373,7 +367,7 @@ class PostgresqlFastTextSearchFilter(Filter):
         else:
             self._tsquery_func = tsquery_func
 
-    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: Dict, **kwargs) -> Query:
         # extract param
         param_value = self.get_param_value(params=params)
         if param_value is None:
@@ -474,7 +468,7 @@ class JsonDataFilter(ColumnValueFilter):
         return result
 
     # def apply_to_query(self, query, request):
-    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: Dict, **kwargs) -> Query:
         # early return
         param_value = self.get_param_value(params, key_path=self.arg_name)
         if param_value is None:
