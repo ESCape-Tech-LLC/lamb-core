@@ -25,6 +25,7 @@ from inspect import isclass
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from asgiref.sync import sync_to_async
+from cassandra.cqlengine.query import ModelQuerySet
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
 from sqlalchemy.inspection import inspect
@@ -115,7 +116,7 @@ def parse_body_as_json(request: HttpRequest) -> dict:
 
 
 # response utilities
-PV = TypeVar('PV', list, Query)
+PV = TypeVar('PV', list, Query, ModelQuerySet)
 
 
 def response_paginated(data: PV, request: LambRequest = None, params: Dict = None,
@@ -176,6 +177,8 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
     result[settings.LAMB_PAGINATION_KEY_LIMIT] = limit
 
     if isinstance(data, Query):
+        # SQL
+
         # def get_count(q):
         #     # TODO: Add dynamic count function choose based on any join presented in query
         #     # TODO: modify query - returns invalid count in case of join with one-to-many objects
@@ -201,7 +204,17 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
                 result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data.offset(extended_offset)\
                     .limit(extended_limit)\
                     .all()
+    elif isinstance(data, ModelQuerySet):
+        # Cassandra
+
+        result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count() if not total_omit else None
+        if limit == -1:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.all()[offset:]
+        else:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = data.all()[offset:offset+limit]
     elif isinstance(data, list):
+        # List
+
         if not total_omit:
             result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(data)
         else:
