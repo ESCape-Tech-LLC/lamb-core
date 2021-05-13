@@ -57,24 +57,28 @@ class ExecutionTimeMeter(object):
             previous_timestamp = marker.timestamp
         return result
 
+    def get_log_messages(self, header: str = None):
+        total_elapsed = self.get_total_time()
+        measurements = self.get_measurements()
+
+        message_elements = list()
+        if isinstance(header, str):
+            final_header = header + ' measures: '
+        else:
+            final_header = 'Time measures: '
+        message_elements.append(final_header)
+        message_elements.append(f'Total time: {total_elapsed:.6f} sec.')
+
+        # print values
+        for m in measurements:
+            message_elements.append(f'\t{m[0]}: {m[2]:.6f} sec. [{m[3]:.2f} %%] ({m[1]:.6f} sec.)')
+
+        return message_elements
+
     def log_marks(self, header: str = None):
         """ Log collected markers using standard logging module """
         try:
-            total_elapsed = self.get_total_time()
-            measurements = self.get_measurements()
-
-            message_elements = list()
-            if isinstance(header, str):
-                final_header = header + ' measures: '
-            else:
-                final_header = 'Time measures: '
-            message_elements.append(final_header)
-            message_elements.append(f'Total time: {total_elapsed:.6f} sec.')
-
-            # print values
-            for m in measurements:
-                message_elements.append(f'\t{m[0]}: {m[2]:.6f} sec. [{m[3]:.2f} %%] ({m[1]:.6f} sec.)')
-                # message_elements.append('\t%s: %.6f sec. [%.2f %%] (%.6f sec.)' % (m[0], m[2], m[3], m[1]))
+            message_elements = self.get_log_messages(header)
             message = '\n'.join(message_elements)
             logger.info(message)
         except:
