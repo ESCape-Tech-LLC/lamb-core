@@ -141,6 +141,6 @@ class LambTracingMiddleware(object):
             trace_id = uuid.uuid4()
 
         request.lamb_trace_id = str(trace_id).replace('-', '')
-        logger.info(f'request trace_id attached: {request.lamb_trace_id}')
+        logger.debug(f'request trace_id attached: {request.lamb_trace_id}')
         response = self.get_response(request)
         return response

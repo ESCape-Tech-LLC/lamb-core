@@ -7,7 +7,7 @@ from typing import List
 from sqlalchemy import Column, ForeignKey, BOOLEAN, TIMESTAMP, VARCHAR, text
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, validates
-from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET
+from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET, UUID
 from sqlalchemy_utils import UUIDType
 
 from lamb.db.session import DeclarativeBase
