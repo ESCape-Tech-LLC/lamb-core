@@ -1,0 +1,1 @@
+from lamb.service.partitioning.maintenance import maintenance_of_partitioned_tables
