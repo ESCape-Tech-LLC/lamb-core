@@ -76,3 +76,11 @@ LAMB_CARD_TYPE_PARSER = 'lamb.acquiring.rbs._default_card_type_parser'
 # database default configs
 DB_PORT = None
 DB_SESSION_OPTS = None
+
+# partitioning
+# table name, number available months, required action (delete\detach\None)
+LAMB_PARTITIONING_SETTINGS = [
+    ('lamb_event_track',  3, 'delete'),
+    ('lamb_event_record', 3, 'delete'),
+    ('lamb_execution_time_metric', 3, 'delete'),
+]
