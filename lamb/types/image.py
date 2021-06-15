@@ -1,18 +1,22 @@
+# -*- coding: utf-8 -*-
+
 import enum
 import json
 import logging
-import sqlalchemy as sa
+from typing import Optional, Type, TypeVar
 
-from typing import Optional, Type, TypeVar, List
+import sqlalchemy as sa
+from botocore.exceptions import BotoCoreError
 from dataclasses import dataclass, asdict
+from django.conf import settings
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
 
 from lamb import exc
 from lamb.json import JsonEncoder
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.service.aws.s3 import S3Uploader
 from lamb.utils import DeprecationClassHelper
-
 
 __all__ = [
     'Mode', 'SliceRule',
@@ -75,6 +79,15 @@ class ImageSlice(ResponseEncodableMixin):
     height: Optional[int]
 
     def response_encode(self, request=None):
+        if 'ImageUploadServiceAmazonS3' in settings.LAMB_IMAGE_UPLOAD_ENGINE:
+            bucket_url = getattr(settings, 'LAMB_AWS_BUCKET_URL', None)
+            if bucket_url:
+                s3_uploader = S3Uploader()
+                _, _, path = s3_uploader.s3_parse_url(self.url)
+                try:
+                    self.url = s3_uploader.generate_presigned_url(path, 300)
+                except BotoCoreError:
+                    pass
         return asdict(self)
 
 

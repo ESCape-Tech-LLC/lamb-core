@@ -2,9 +2,9 @@
 
 import logging
 import re
-from typing import Optional, BinaryIO, Union, Tuple
-from typing.io import IO
+from typing import BinaryIO, IO, Optional, Tuple, Union
 
+from botocore.config import Config
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from furl import furl
@@ -39,7 +39,9 @@ class S3Uploader(AWSBase):
         # process
         super(S3Uploader, self).__init__(aws_access_key_id, aws_secret_access_key, *args, **kwargs)
 
-        self._client = self._aws_session.client('s3', region_name=region_name, endpoint_url=endpoint_url)
+        config = Config(signature_version='s3v4')
+        self._client = self._aws_session.client('s3', region_name=region_name, endpoint_url=endpoint_url,
+                                                config=config)
 
         # Check if bucket exists
         exist_buckets = [bucket['Name'] for bucket in self._client.list_buckets()['Buckets']]
@@ -74,7 +76,7 @@ class S3Uploader(AWSBase):
             if self.region_name is not None:
                 bucket_url = f'https://s3.{self.region_name}.amazonaws.com/{self.bucket_name}/'
             else:
-                bucket_url = f'http://{self.bucket_name}.s3.amazonaws.com/'
+                bucket_url = f'https://{self.bucket_name}.s3.amazonaws.com/'
         else:
             bucket_url = self.bucket_url
         uploaded_url = furl(bucket_url)
@@ -116,10 +118,13 @@ class S3Uploader(AWSBase):
         :return: Tuple of aws region name, bucket name, and file path
         """
 
-        patterns = (
+        patterns = [
             r'^https?://s3.(?P<region>[\w-]+).amazonaws.com/(?P<bucket>[_\.\w-]+)/(?P<path>[/_\.\w-]+)$',
             r'^https?://(?P<bucket>[_\.\w-]+).s3-(?P<region>[\w-]+).amazonaws.com/(?P<path>[/_\.\w-]+)$',
-        )
+        ]
+        bucket_url = getattr(settings, 'LAMB_AWS_BUCKET_URL', None)
+        if bucket_url:
+            patterns.insert(0, rf'^{bucket_url}/(?P<path>[/_\.\w-]+)$')
         match = None
 
         for pattern in patterns:
@@ -130,7 +135,21 @@ class S3Uploader(AWSBase):
         if match is None:
             raise ValueError('No S3 url match found')
 
-        return match.group('region'), match.group('bucket'), match.group('path')
+        if bucket_url:
+            try:
+                region = match.group('region')
+            except IndexError:
+                region = None
+
+            try:
+                bucket = match.group('bucket')
+            except IndexError:
+                bucket = None
+        else:
+            region = match.group('region')
+            bucket = match.group('bucket')
+
+        return region, bucket, match.group('path')
 
     @classmethod
     def remove_by_url(cls, url):
