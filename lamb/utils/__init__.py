@@ -62,7 +62,9 @@ __all__ = [
     'list_chunks',
 
     'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache', 'timed_lru_cache_clear',
-    'async_download_resources', 'async_download_images', 'image_convert_to_rgb', 'file_is_svg'
+    'async_download_resources', 'async_download_images', 'async_request_urls',
+
+    'image_convert_to_rgb', 'file_is_svg'
 ]
 
 
@@ -257,7 +259,6 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
             settings.LAMB_PAGINATION_KEY_ITEMS in result.keys():
 
         result[settings.LAMB_PAGINATION_KEY_ITEMS] = {'item': result[settings.LAMB_PAGINATION_KEY_ITEMS]}
-        tm.append_marker('vary based on header')
 
     return result
 
@@ -289,7 +290,7 @@ def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
             orm_attr_name = ormd.__name__
         else:
             logger.warning(f'Unsupported orm_descriptor type: {ormd, ormd.__class__}')
-            raise exc.ServerError('Could not serialize data')
+            raise ServerError('Could not serialize data')
         result.append(orm_attr_name)
 
     return result
@@ -829,11 +830,11 @@ def _handle_async_fall(e: Exception, fall_strategy: AsyncFallStrategy):
 
 
 @sync_to_async
-def _async_download_url(url: Optional[str],
-                        timeout,
-                        fall_strategy: AsyncFallStrategy,
-                        headers: Optional[Dict[str, Any]] = None
-                        ) -> Optional[bytes]:
+def _async_request_url(url: Optional[str],
+                       timeout,
+                       fall_strategy: AsyncFallStrategy,
+                       headers: Optional[Dict[str, Any]] = None
+                       ) -> Optional[Union[requests.Response, Exception]]:
     logger.debug(f'downloading resource from url: {url}, timeout={timeout}, headers={headers}')
     if url is None:
         return None
@@ -843,30 +844,37 @@ def _async_download_url(url: Optional[str],
             res = requests.get(url, timeout=timeout, headers=headers)
             if res.status_code != 200:
                 raise ExternalServiceError(f'Could not download resource, invalid status: {url}')
-            return res.content
+            return res
         except Exception as e:
             return _handle_async_fall(e, fall_strategy)
-            # if fall_strategy == AsyncFallStrategy.RAISING:
-            #     raise
-            # elif fall_strategy == AsyncFallStrategy.NONE:
-            #     return None
-            # elif fall_strategy == AsyncFallStrategy.EXCEPTION:
-            #     return e
-            # else:
-            #     logger.warning(f'Invalid strategy received: {fall_strategy}')
-            #     raise ServerError('Invalid async fall strategy mode')
 
 
-async def _async_download_resources(urls: List[Optional[str]],
-                                    timeout: int,
-                                    fall_strategy: AsyncFallStrategy,
-                                    headers: Optional[Dict[str, Any]] = None
-                                    ) -> List[Optional[bytes]]:
+async def _async_request_resources(urls: List[Optional[str]],
+                                   timeout: int,
+                                   fall_strategy: AsyncFallStrategy,
+                                   headers: Optional[Dict[str, Any]] = None
+                                   ) -> List[Optional[Union[requests.Response, Exception]]]:
     tasks = []
     for url in urls:
-        tasks.append(_async_download_url(url=url, timeout=timeout, headers=headers, fall_strategy=fall_strategy))
+        tasks.append(_async_request_url(url=url, timeout=timeout, headers=headers, fall_strategy=fall_strategy))
     result = await asyncio.gather(*tasks)
 
+    return result
+
+
+def async_request_urls(urls: List[Optional[str]],
+                  timeout=30,
+                  headers: Optional[Dict[str, Any]] = None,
+                  fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING
+                  ) -> List[Optional[Union[requests.Response, Exception]]]:
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            _async_request_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
+        )
+    finally:
+        loop.close()
     return result
 
 
@@ -875,14 +883,8 @@ def async_download_resources(urls: List[Optional[str]],
                              headers: Optional[Dict[str, Any]] = None,
                              fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING
                              ) -> List[Optional[bytes]]:
-    loop = asyncio.new_event_loop()
-    try:
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(
-            _async_download_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
-        )
-    finally:
-        loop.close()
+    result = async_request_urls(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
+    result = [res.content if isinstance(res, requests.Response) else res for res in result]
     return result
 
 
