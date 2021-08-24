@@ -83,7 +83,7 @@ setup(
     install_requires=[
         'django>=2.0.0,<3.0',
         'boto3',
-        'celery==4.4.2',
+        'celery==4.4.7',
         'dpath @ git+https://git@github.com/MrJuicyBacon/dpath-python#egg=dpath',
         'sqlalchemy<1.4',
         'sqlalchemy-utils',

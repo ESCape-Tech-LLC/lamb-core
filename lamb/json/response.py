@@ -40,9 +40,9 @@ class JsonResponse(HttpResponse):
 
             if orjson is not None:
                 if _response_indent is not None:
-                    options = orjson.OPT_INDENT_2 | orjson.OPT_APPEND_NEWLINE
+                    options = orjson.OPT_INDENT_2 | orjson.OPT_APPEND_NEWLINE | orjson.orjson.OPT_PASSTHROUGH_DATETIME
                 else:
-                    options = 0
+                    options = 0 | orjson.OPT_PASSTHROUGH_DATETIME
                 content = orjson.dumps(data, default=encoder.default, option=options)
             else:
                 if _response_indent is not None:

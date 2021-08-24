@@ -293,8 +293,11 @@ Will generate response:
 	}
 	
 
-# Relase notes:
+# Release notes:
 
-## 2.1.18
-
+2.1.18:
 - feature: support for `SESSION_OPTS` in project database connection
+
+2.4.3:
+- fix: json encode date-format in case of `orjson` available
+- fix: update `celery` dependency for latest binary compatible version
