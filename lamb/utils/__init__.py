@@ -40,7 +40,7 @@ from xml.etree import cElementTree
 from crequest.middleware import CrequestMiddleware
 
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError,\
-    UpdateRequiredError, ExternalServiceError
+    UpdateRequiredError, ExternalServiceError, ImproperlyConfiguredError
 from .dpath import dpath_value
 
 
@@ -53,7 +53,7 @@ __all__ = [
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
     'dpath_value',
 
-    'import_class_by_name', 'import_by_name', 'inject_app_defaults',
+    'import_class_by_name', 'import_by_name', 'inject_app_defaults', 'get_settings_value',
 
     'datetime_end', 'datetime_begin',
 
@@ -612,6 +612,29 @@ def import_class_by_name(name):
     warnings.warn('import_class_by_name deprecated, use lamb.utils.transformers.import_by_name instead', DeprecationWarning,
                   stacklevel=2)
     return import_by_name(name=name)
+
+
+def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: bool = True, **kwargs):
+    if len(names) == 0:
+        raise InvalidParamValueError(f'At least one setting name required')
+    elif len(names) == 1:
+        names_msg = names[0]
+    else:
+        names_msg = f'{names[0]} ({"/".join(names[1:])})'
+
+    for index, name in enumerate(names):
+        try:
+            result = dpath_value(settings, key_path=name, req_type=req_type, allow_none=allow_none, **kwargs)
+            if index > 0:
+                warnings.warn('Use of deprecated settings param %s, use %s instead' % (name, names[0]),
+                              DeprecationWarning)
+            return result
+        except (ImportError, AttributeError, InvalidBodyStructureError):
+            continue
+        except Exception as e:
+            raise ImproperlyConfiguredError(f'Could not locate {names_msg} settings value with params:'
+                                            f' req_type={req_type}, allow_none={allow_none}, kwargs={kwargs}') from e
+    raise ImproperlyConfiguredError(f'Could not locate {names_msg} settings value')
 
 
 def inject_app_defaults(application: str):

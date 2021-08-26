@@ -48,7 +48,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
 
 class DeviceInfoType(types.TypeDecorator):
     """ Database storage """
-    impl = types.Unicode(10)
+    impl = types.VARCHAR
     python_type = DeviceInfo
 
     def __init__(self, *args, encoder_class=JsonEncoder, **kwargs):
