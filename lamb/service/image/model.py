@@ -20,17 +20,17 @@ from .uploaders.types import ImageUploadSlice, UploadedSlice, ImageUploadMode
 
 __all__ = ['AbstractImage', 'UploadedSlicesType', 'ImageMixin']
 
+
 logger = logging.getLogger(__name__)
 
 
 class UploadedSlicesType(types.TypeDecorator):
+    # TODO: check with non PostgreSQL backend
     """ Storage for UploadedSlice items
 
-    Use different ways to store internal data for different diaclets:
+    Use different ways to store internal data for different dialects:
         - postgresql: will use JSONB field type as storage
         - else: will use VARCHAR field type as storage
-
-    TODO: check with non PostgreSQL backend
     """
     impl = sa.VARCHAR
     python_type = list
@@ -81,9 +81,7 @@ class UploadedSlicesType(types.TypeDecorator):
 
 
 class ImageMixin(object):
-    """
-    Abstract mixin for image subclasses.
-    """
+    """ Abstract mixin for image subclasses. """
     __slicing__: List[ImageUploadSlice] = [ImageUploadSlice('origin', -1, ImageUploadMode.NoAction, '')]
     slices_info = Column(UploadedSlicesType, nullable=False)
 
