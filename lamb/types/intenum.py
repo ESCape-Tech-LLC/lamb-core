@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 ET = TypeVar('ET', enum.Enum, enum.IntEnum)
 
 
+# database storage support
 class IntEnumType(sa.types.TypeDecorator, ScalarCoercible):
     # meta
     impl = sa.Integer

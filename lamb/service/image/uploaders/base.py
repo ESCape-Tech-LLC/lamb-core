@@ -6,17 +6,17 @@ import logging
 import base64
 
 from typing import List, Iterable, Union, Optional
-from dataclasses import asdict
 from PIL import Image as PILImage
 from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from lamb.utils import compact, LambRequest, file_is_svg
 from lamb import exc
+from lamb.types.image import Mode, SliceRule, ImageSlice
 
-from .types import ImageUploadMode, ImageUploadSlice, UploadedSlice
 
 logger = logging.getLogger(__name__)
+
 
 __all__ = ['BaseUploader']
 
@@ -62,9 +62,9 @@ class BaseUploader(object):
 
     def process_image(self, source_image: Union[PILImage.Image, str, BytesIO],
                       request: LambRequest,
-                      slices: Iterable[ImageUploadSlice] = (), 
+                      slices: Iterable[SliceRule] = (),
                       image_format: Optional[str] = None,
-                      allow_svg: Optional[bool] = False) -> List[UploadedSlice]:
+                      allow_svg: Optional[bool] = False) -> List[ImageSlice]:
         """
         Processes single images
         :param source_image: PIL Image, file path, or bytes
@@ -109,7 +109,7 @@ class BaseUploader(object):
                 image_format=image_format
             )
             result = [
-                UploadedSlice(
+                ImageSlice(
                     title=s.title,
                     mode=None,
                     url=image_url,
@@ -125,9 +125,9 @@ class BaseUploader(object):
                 image_copy = src.copy()
 
                 # modify according to s config
-                if s.mode == ImageUploadMode.Resize:
+                if s.mode == Mode.Resize:
                     image_copy.thumbnail((s.side, s.side), PILImage.ANTIALIAS)
-                elif s.mode == ImageUploadMode.Crop:
+                elif s.mode == Mode.Crop:
                     shortest = min(image_copy.size)
                     left = (image_copy.size[0] - shortest) / 2
                     top = (image_copy.size[1] - shortest) / 2
@@ -152,7 +152,7 @@ class BaseUploader(object):
                     image_format=image_format
                 )
 
-                result.append(UploadedSlice(
+                result.append(ImageSlice(
                     title=s.title,
                     mode=s.mode,
                     url=image_url,
@@ -162,18 +162,22 @@ class BaseUploader(object):
 
         return result
 
-    def process_request(self, request: LambRequest,
-                        slicing: Iterable[ImageUploadSlice] = (),
+    def process_request(self,
+                        request: LambRequest,
+                        slicing: Iterable[SliceRule] = (),
                         required_count: Optional[int] = None,
                         image_format: Optional[str] = None,
-                        allow_svg: Optional[bool] = False) -> List[List[UploadedSlice]]:
+                        allow_svg: Optional[bool] = False
+                        ) -> List[List[ImageSlice]]:
         """
         Performs uploading of request's image files.
+
         :param request: Request
         :param slicing: Slicing configuration
         :param required_count: Count of images that should be in request
         :param image_format: Optional image format to override
         :param allow_svg: Flag to allow/disallow svg upload
+
         :return: List of uploaded slices info's collection for each image.
         """
         # try to decode image stored as base64 fields
@@ -224,7 +228,9 @@ class BaseUploader(object):
                     proposed_file_name: str,
                     request: LambRequest, 
                     image_format: Optional[str] = None) -> str:
-        """ Implements specific storage logic
+        """
+        Implements specific storage logic
+
         :return: URL of stored image
         """
-        raise exc.ServerError('Abstract image upload service doesn\'t realize store image logic')
+        raise exc.ServerError('Abstract image upload service does not realize store image logic')

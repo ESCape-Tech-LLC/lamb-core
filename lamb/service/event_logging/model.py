@@ -6,16 +6,14 @@ from typing import List
 
 from sqlalchemy import Column, ForeignKey, BOOLEAN, TIMESTAMP, VARCHAR, text
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship, validates
-from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET, UUID
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET
 from sqlalchemy_utils import UUIDType
 
 from lamb.db.session import DeclarativeBase
 from lamb.db.mixins import TimeMarksMixin
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.types import DeviceInfoType
-from lamb.types.intenum import IntEnumType
-from lamb.types.jsonb import SUAJSONBType
 
 
 __all__ = ['EventSourceType', 'EventTrack', 'EventRecord']

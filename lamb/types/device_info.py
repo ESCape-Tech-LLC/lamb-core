@@ -5,14 +5,11 @@ import logging
 import dataclasses
 import json
 
-from typing import Optional, Dict, Any, TypeVar, Type, Generic
-from dataclasses import dataclass
+from typing import Optional, Dict, Any, TypeVar, Type
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 from functools import partial
 from django.conf import settings
-from django.utils.functional import SimpleLazyObject
 from ipware import get_client_ip
 
 from lamb import exc
@@ -30,10 +27,10 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-# base class
+# info class
 @dataclasses.dataclass()
 class DeviceInfo(ResponseEncodableMixin, object):
-    """A device info class """
+    """ A device info class """
     device_family: Optional[str] = None
     device_platform: Optional[str] = None
     device_os: Optional[str] = None

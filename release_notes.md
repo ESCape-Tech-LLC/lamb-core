@@ -9,6 +9,9 @@
   - `DeviceInfoMiddleware` adopted to act based on dynamic device info class
   - `DeviceInfo` collects new fields: `ip_address`, `ip_routable`
   - New config `LAMB_DEVICE_INFO_COLLECT_IP = True` can be used to turn on/off ip info collection
+* Images:
+  - deep refactoring
+  - add support for images list slices data type
 
 # 2.4.4:
 
