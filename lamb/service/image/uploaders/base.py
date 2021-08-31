@@ -5,14 +5,14 @@ import uuid
 import logging
 import base64
 
-from typing import List, Iterable, Union, Optional
+from typing import List, Iterable, Union, Optional, Type
 from PIL import Image as PILImage
 from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from lamb.utils import compact, LambRequest, file_is_svg
 from lamb import exc
-from lamb.types.image import Mode, SliceRule, ImageSlice
+from lamb.types.image import Mode, SliceRule, ImageSlice, IT
 
 
 logger = logging.getLogger(__name__)
@@ -64,14 +64,19 @@ class BaseUploader(object):
                       request: LambRequest,
                       slices: Iterable[SliceRule] = (),
                       image_format: Optional[str] = None,
-                      allow_svg: Optional[bool] = False) -> List[ImageSlice]:
+                      allow_svg: Optional[bool] = False,
+                      slice_class: Type[IT] = ImageSlice
+                      ) -> List[IT]:
         """
-        Processes single images
+        Processes single image
+
         :param source_image: PIL Image, file path, or bytes
         :param request: Request
         :param slices: Slicing configuration
         :param image_format: Optional image format to override
         :param allow_svg: Flag to allow/disallow svg upload
+        :param slice_class: support for special slicing class
+
         :return: List of uploaded slices info's
         """
 
@@ -109,7 +114,7 @@ class BaseUploader(object):
                 image_format=image_format
             )
             result = [
-                ImageSlice(
+                slice_class(
                     title=s.title,
                     mode=None,
                     url=image_url,
@@ -152,7 +157,7 @@ class BaseUploader(object):
                     image_format=image_format
                 )
 
-                result.append(ImageSlice(
+                result.append(slice_class(
                     title=s.title,
                     mode=s.mode,
                     url=image_url,
@@ -167,8 +172,9 @@ class BaseUploader(object):
                         slicing: Iterable[SliceRule] = (),
                         required_count: Optional[int] = None,
                         image_format: Optional[str] = None,
-                        allow_svg: Optional[bool] = False
-                        ) -> List[List[ImageSlice]]:
+                        allow_svg: Optional[bool] = False,
+                        slice_class: Type[IT] = ImageSlice
+                        ) -> List[List[IT]]:
         """
         Performs uploading of request's image files.
 
@@ -177,6 +183,7 @@ class BaseUploader(object):
         :param required_count: Count of images that should be in request
         :param image_format: Optional image format to override
         :param allow_svg: Flag to allow/disallow svg upload
+        :param slice_class: support for special slicing class
 
         :return: List of uploaded slices info's collection for each image.
         """
@@ -218,7 +225,8 @@ class BaseUploader(object):
                 slices=slicing,
                 request=request,
                 image_format=image_format,
-                allow_svg=allow_svg
+                allow_svg=allow_svg,
+                slice_class=slice_class
             )
             result.append(processed_image_slices)
 

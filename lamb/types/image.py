@@ -65,7 +65,7 @@ class SliceRule:
 
 
 # base storage bricks
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class ImageSlice(ResponseEncodableMixin):
     """ Real stored image single slice """
     title: str
