@@ -63,6 +63,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
                                       transform=_transform, default=None)
             app_build = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_BUILD, int, default=None)
 
+            # ip/geo fields
             if settings.LAMB_DEVICE_INFO_COLLECT_IP:
                 ip_address, ip_routable = get_client_ip(request)
             else:

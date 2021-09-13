@@ -3,11 +3,9 @@ __author__ = 'KoNEW'
 
 import logging
 
-from typing import Optional
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 
-from lamb import exc
 from lamb.utils import LambRequest
 from lamb.types import LambLocale
 

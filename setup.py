@@ -108,6 +108,7 @@ setup(
         'django-ipware<3',
         'asgiref',
         'python-redis-lock',
-        'colour'
+        'colour',
+        'geoip2'
     ]
 )
