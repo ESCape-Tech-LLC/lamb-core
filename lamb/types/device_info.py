@@ -79,7 +79,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
                     geoip2_info['country'] = {
                         'gid': country_info.country.geoname_id,
                         'name': country_info.country.name
-                    }
+                    } if country_info is not None else None
                 except Exception as e:
                     logger.debug(f'device_info geoip2 country parsing failed: {e}')
                     geoip2_info['country'] = None
@@ -91,7 +91,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
                         'gid': city_info.city.geoname_id,
                         'name': city_info.city.name,
                         'confidence': city_info.city.confidence
-                    }
+                    } if city_info is not None else None
                 except Exception as e:
                     logger.debug(f'device_info geoip2 city parsing failed: {e}')
                     geoip2_info['city'] = None
@@ -102,7 +102,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
                     geoip2_info['asn'] = {
                         'number': asn_info.autonomous_system_number,
                         'org': asn_info.autonomous_system_organization
-                    }
+                    } if asn_info is not None else None
                 except Exception as e:
                     logger.debug(f'device_info geoip2 asn parsing failed: {e}')
                     geoip2_info['asn'] = None
@@ -135,11 +135,6 @@ class DeviceInfo(ResponseEncodableMixin, object):
         return result
 
     # serialize
-    # def response_attributes(cls) -> List[str]:
-    #     return [
-    #         cls.device_family,
-    #         cls.device_platform
-    #     ]
     def response_encode(self, request=None) -> dict:
         result = dataclasses.asdict(self)
         result.pop('ip_address', None)
@@ -172,7 +167,6 @@ def get_device_info_class() -> Type[DT]:
 def device_info_factory(request: LambRequest) -> DeviceInfo:
     di_class = get_device_info_class()
     result = di_class(**di_class.parse_request(request))
-    logger.debug(f'device info factory parsed: {result}')
     return result
 
 
