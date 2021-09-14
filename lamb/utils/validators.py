@@ -104,7 +104,7 @@ def validate_length(
 
 
 def validate_phone_number(phone_number: Optional[str], region: Optional[str] = None,
-                          allow_none: bool = False, check_valid: bool = True) -> PhoneNumber:
+                          allow_none: bool = False, check_valid: bool = True) -> Optional[PhoneNumber]:
     """ Validate value as valid phone number """
     # early return
     if phone_number is None and allow_none:

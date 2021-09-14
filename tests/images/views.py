@@ -2,7 +2,7 @@ from lamb.json import JsonResponse
 from lamb.rest.decorators import rest_allowed_http_methods
 from lamb.rest.rest_view import RestView
 from lamb.utils import LambRequest
-from lamb.service.image import upload_images
+from lamb.service.image.utils import upload_images
 
 from .model import SimpleImage
 

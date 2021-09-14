@@ -113,7 +113,7 @@ def transform_string_enum(value: str, enum_class: Type[ET]) -> ET:
 
 
 def transform_uuid(value: str, key: Optional[str] = None) -> uuid.UUID:
-    """ Transofrms value into UUID version """
+    """ Transforms value into UUID version """
     if isinstance(value, uuid.UUID):
         return value
     try:

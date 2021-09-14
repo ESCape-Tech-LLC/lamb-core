@@ -254,21 +254,6 @@ class ColumnValueFilter(FieldValueFilter):
 
 
 # special syntax sugars
-# def _timestamp_transform_date(value: Union[datetime, date, str, int, float], format=settings.LAMB_RESPONSE_DATE_FORMAT) -> Union[datetime, date]:
-#     # try to convert as timestamp
-#     if isinstance(value, (str, int, float)):
-#         try:
-#             float_value = float(value)
-#             if len(str(float_value)) >= 11:
-#                 float_value = float_value / 1000
-#             result = datetime.fromtimestamp(float_value)
-#             return result
-#         except ValueError:
-#             pass
-#
-#     return transform_date(value, format)
-
-
 class DatetimeFilter(ColumnValueFilter):
 
     def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):

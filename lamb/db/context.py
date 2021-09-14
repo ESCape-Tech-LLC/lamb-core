@@ -2,10 +2,10 @@
 __author__ = 'KoNEW'
 
 import logging
-import sqlalchemy as sa
+
+from sqlalchemy.orm.session import Session as SASession
 
 from .session import lamb_db_session_maker
-from sqlalchemy.orm.session import Session as SASession
 
 
 logger = logging.getLogger(__name__)
