@@ -4,14 +4,19 @@
 **Features:**
 
 * Device's info collection scheme changed
-  - New config `LAMB_DEVICE_INFO_CLASS = 'lamb.types.device_info.DeviceInfo'`  can be used to specify project specific version of device info object. Project based subclass of `DeviceInfo` should implement `parse_request` method to provide additional dataclass fields
   - New methods `get_device_info_class` and `device_info_factory` act like abstract construction pipeline
-  - `DeviceInfoMiddleware` adopted to act based on dynamic device info class
-  - `DeviceInfo` collects new fields: `ip_address`, `ip_routable`
-  - New config `LAMB_DEVICE_INFO_COLLECT_IP = True` can be used to turn on/off ip info collection
+  - `DeviceInfoMiddleware` adapted to act based on dynamic device info class
+  - `DeviceInfo` collects new fields: `ip_address, ip_routable, geoip2_info`
+
 * Images:
   - deep refactoring
   - add support for images list slices data type
+
+* Configs:
+  - NEW: `LAMB_DEVICE_INFO_CLASS = 'lamb.types.device_info.DeviceInfo'`  can be used to specify project specific version of device info class to be used within middleware processing. Project based subclass of `DeviceInfo` should implement `parse_request` method to provide additional dataclass fields
+  - NEW: `LAMB_DEVICE_INFO_COLLECT_IP = True` can be used to turn on/off ip info collection
+  - NEW: `LAMB_DEVICE_INFO_COLLECT_GEO = True` can be used to turn on/off GeoIP2 info collection
+  - NEW: `LAMB_GEOIP2_DB_CITY = None, LAMB_GEOIP2_DB_COUNTRY = None, LAMB_GEOIP2_DB_ASN = None` should be used to specify GeoIP2 databases paths 
 
 # 2.4.4:
 

@@ -16,8 +16,11 @@ LAMB_DEVICE_DEFAULT_LOCALE = 'en_US'
 LAMB_DEVICE_INFO_CLASS = 'lamb.types.device_info.DeviceInfo'
 LAMB_DEVICE_INFO_COLLECT_IP = True
 LAMB_DEVICE_INFO_COLLECT_GEO = True
+
+# GeoIP2 support (maxmind)
 LAMB_GEOIP2_DB_CITY = None
 LAMB_GEOIP2_DB_COUNTRY = None
+LAMB_GEOIP2_DB_ASN = None
 
 # response/request configs
 LAMB_REQUEST_MULTIPART_PAYLOAD_KEY = 'payload'

@@ -5,7 +5,7 @@ import logging
 import dataclasses
 import json
 
-from typing import Optional, Dict, Any, TypeVar, Type
+from typing import Optional, Dict, Any, TypeVar, Type, List
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
 from functools import partial
@@ -18,6 +18,7 @@ from lamb.types import LambLocale
 from lamb.utils import LambRequest, dpath_value, import_by_name
 from lamb.utils.validators import validate_length
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.ext.geoip import *
 
 
 __all__ = [
@@ -39,6 +40,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
     device_locale: Optional[LambLocale] = None
     ip_address: Optional[str] = None
     ip_routable: Optional[bool] = None
+    geoip2_info: Optional[Dict[str, Any]] = None
 
     # construct
     def __post_init__(self):
@@ -67,7 +69,46 @@ class DeviceInfo(ResponseEncodableMixin, object):
             if settings.LAMB_DEVICE_INFO_COLLECT_IP:
                 ip_address, ip_routable = get_client_ip(request)
             else:
-                ip_address, ip_routable = None, None
+                ip_address, ip_routable, geoip2_info = None, None, None
+
+            if ip_address is not None and settings.LAMB_DEVICE_INFO_COLLECT_GEO:
+                geoip2_info = {}
+
+                try:
+                    country_info = get_country_info(ip_address)
+                    geoip2_info['country'] = {
+                        'gid': country_info.country.geoname_id,
+                        'name': country_info.country.name
+                    }
+                except Exception as e:
+                    logger.debug(f'device_info geoip2 country parsing failed: {e}')
+                    geoip2_info['country'] = None
+                    pass
+
+                try:
+                    city_info = get_city_info(ip_address)
+                    geoip2_info['city'] = {
+                        'gid': city_info.city.geoname_id,
+                        'name': city_info.city.name,
+                        'confidence': city_info.city.confidence
+                    }
+                except Exception as e:
+                    logger.debug(f'device_info geoip2 city parsing failed: {e}')
+                    geoip2_info['city'] = None
+                    pass
+
+                try:
+                    asn_info = get_asn_info(ip_address)
+                    geoip2_info['asn'] = {
+                        'number': asn_info.autonomous_system_number,
+                        'org': asn_info.autonomous_system_organization
+                    }
+                except Exception as e:
+                    logger.debug(f'device_info geoip2 asn parsing failed: {e}')
+                    geoip2_info['asn'] = None
+                    pass
+            else:
+                geoip2_info = None
 
             # normalize values
             if device_platform is not None:
@@ -84,7 +125,8 @@ class DeviceInfo(ResponseEncodableMixin, object):
                 app_version=app_version,
                 app_build=app_build,
                 ip_address=ip_address,
-                ip_routable=ip_routable
+                ip_routable=ip_routable,
+                geoip2_info=geoip2_info
             )
         except Exception as e:
             logger.warning(f'DeviceInfo request parsing failed due: {e}')
@@ -93,8 +135,16 @@ class DeviceInfo(ResponseEncodableMixin, object):
         return result
 
     # serialize
+    # def response_attributes(cls) -> List[str]:
+    #     return [
+    #         cls.device_family,
+    #         cls.device_platform
+    #     ]
     def response_encode(self, request=None) -> dict:
         result = dataclasses.asdict(self)
+        result.pop('ip_address', None)
+        result.pop('ip_routable', None)
+        result.pop('geoip2_info', None)
         if self.device_locale is not None:
             result['device_locale'] = self.device_locale.response_encode(request)
         else:
@@ -114,7 +164,7 @@ def get_device_info_class() -> Type[DT]:
 
     if _cached_device_info_class is None:
         _cached_device_info_class = import_by_name(settings.LAMB_DEVICE_INFO_CLASS)
-        logger.info(f'device info would be used: {_cached_device_info_class}')
+        logger.info(f'device info class would be used: {_cached_device_info_class}')
 
     return _cached_device_info_class
 
