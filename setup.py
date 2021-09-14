@@ -109,6 +109,7 @@ setup(
         'asgiref',
         'python-redis-lock',
         'colour',
-        'geoip2'
+        'geoip2',
+        'lazy_object_proxy'
     ]
 )
