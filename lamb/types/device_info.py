@@ -135,15 +135,22 @@ class DeviceInfo(ResponseEncodableMixin, object):
         return result
 
     # serialize
-    def response_encode(self, request=None) -> dict:
+    def to_json(self, request=None) -> dict:
+        """ Base encoding method - serialize all data """
         result = dataclasses.asdict(self)
-        result.pop('ip_address', None)
-        result.pop('ip_routable', None)
-        result.pop('geoip2_info', None)
         if self.device_locale is not None:
             result['device_locale'] = self.device_locale.response_encode(request)
         else:
             result['device_locale'] = None
+
+        return result
+
+    def response_encode(self, request=None) -> dict:
+        """ REST support serialize - include fields hiding """
+        result = self.to_json(request)
+        result.pop('ip_address', None)
+        result.pop('ip_routable', None)
+        result.pop('geoip2_info', None)
         return result
 
 
@@ -196,7 +203,7 @@ class DeviceInfoType(types.TypeDecorator):
             raise exc.ServerError('Invalid data type to store as device info')
 
         # store data
-        result = value.response_encode()
+        result = value.to_json()
         if dialect.name != 'postgresql':
             result = json.dumps(result, cls=self._encoder_class)
         return result
