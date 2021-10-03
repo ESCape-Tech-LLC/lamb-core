@@ -1,3 +1,15 @@
+# 2.4.6:
+
+**Features:**
+* Add support for CORS middleware out of box - useful for localhost debug purpose. Add `lamb.rest.middleware.LambCorsMiddleware` in middleware list and change configs to use
+
+* Configs:
+  - NEW: `LAMB_ADD_CORS_ENABLED = False` - basic boolean flag to add/skip CORS headers in reponse
+  - NEW: `LAMB_ADD_CORS_ORIGIN = '*'` - allowed origins
+  - NEW: `LAMB_ADD_CORS_METHODS = 'GET,POST,OPTIONS,DELETE,PATCH'` - allowed HTTP methods 
+  - NEW: `LAMB_ADD_CORS_CREDENTIALS = 'true'` - allowed credentials 
+  - NEW: `LAMB_ADD_CORS_HEADERS = ['User-Agent', 'Keep-Alive', 'Content-Type', 'Origin', 'Referer', 'Content-Length', 'Connection', 'Accept-Encoding', 'Accept', 'If-Modified-Since', 'Cache-Control', 'X-Requested-With', 'X-Lamb-Auth-Token', 'X-Lamb-Device-Family', 'X-Lamb-Device-Platform', 'X-Lamb-Device-OS-Version', 'X-Lamb-Device-Locale', 'X-Lamb-App-Version', 'X-Lamb-App-Build']` - allowed headers
+
 
 # 2.4.5:
 

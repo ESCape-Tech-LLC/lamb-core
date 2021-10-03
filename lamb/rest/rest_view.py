@@ -102,7 +102,6 @@ class RestView(object):
 
         return result
 
-
     @staticmethod
     def http_method_not_realized(request, *args, **kwargs):
         # print 'Required HTTP method is not realized. Error request path = %s' % request.path_info

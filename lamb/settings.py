@@ -84,3 +84,17 @@ LAMB_CARD_TYPE_PARSER = 'lamb.acquiring.rbs._default_card_type_parser'
 # database default configs
 DB_PORT = None
 DB_SESSION_OPTS = None
+
+
+# CORS support for local tests
+LAMB_ADD_CORS_ENABLED = False
+LAMB_ADD_CORS_ORIGIN = '*'
+LAMB_ADD_CORS_METHODS = 'GET,POST,OPTIONS,DELETE,PATCH'
+LAMB_ADD_CORS_CREDENTIALS = 'true'
+LAMB_ADD_CORS_HEADERS = [
+    'User-Agent', 'Keep-Alive', 'Content-Type', 'Origin', 'Referer', 'Content-Length', 'Connection',
+    'Accept-Encoding', 'Accept', 'If-Modified-Since', 'Cache-Control', 'X-Requested-With',
+
+    'X-Lamb-Auth-Token', 'X-Lamb-Device-Family', 'X-Lamb-Device-Platform', 'X-Lamb-Device-OS-Version',
+    'X-Lamb-Device-Locale', 'X-Lamb-App-Version', 'X-Lamb-App-Build',
+]

@@ -40,7 +40,7 @@ except (ImportError, AttributeError):
 logger = logging.getLogger(__name__)
 
 
-__all__ = ['LambRestApiJsonMiddleware', 'LambTracingMiddleware']
+__all__ = ['LambRestApiJsonMiddleware', 'LambTracingMiddleware', 'LambCorsMiddleware']
 
 
 class LambRestApiJsonMiddleware:
@@ -143,4 +143,23 @@ class LambTracingMiddleware(object):
         request.lamb_trace_id = str(trace_id).replace('-', '')
         logger.debug(f'request trace_id attached: {request.lamb_trace_id}')
         response = self.get_response(request)
+        return response
+
+
+class LambCorsMiddleware(object):
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: LambRequest) -> HttpResponse:
+        response = self.get_response(request)
+        if settings.LAMB_ADD_CORS_ENABLED:
+            response['Access-Control-Allow-Origin'] = settings.LAMB_ADD_CORS_ORIGIN
+            response['Access-Control-Allow-Methods'] = settings.LAMB_ADD_CORS_METHODS
+            response['Access-Control-Allow-Credentials'] = settings.LAMB_ADD_CORS_CREDENTIALS
+            response['Access-Control-Allow-Headers'] = ','.join(settings.LAMB_ADD_CORS_HEADERS)
+            logger.warning(f'adding CORS headers to response')
+        else:
+            logger.warning(f'skipping CORS headers adding on Lamb layer')
+
         return response
