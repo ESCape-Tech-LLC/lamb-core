@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 
-import logging
 import os
-from typing import List, Type, Optional, Tuple
+import logging
+
+from typing import Type, List, Optional, Tuple
+from urllib.parse import urljoin
 
 from django.conf import settings
-from urllib.parse import urljoin
 
 from lamb.exc import ServerError
 from lamb.service.aws.s3 import S3Uploader
-from lamb.utils import LambRequest, import_by_name
+from .uploaders import BaseUploader
+from .model import AbstractImage
+from lamb.types import SliceRule
+from lamb.utils import import_by_name, LambRequest
 
-from .types import ImageUploadSlice
-from .base import BaseUploader
-from ..model import AbstractImage
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['get_default_uploader_class', 'upload_images', 'parse_static_url', 'remove_image_from_storage']
+
+__all__ = [
+    'get_default_uploader_class', 'upload_images', 'parse_static_url', 'remove_image_from_storage'
+]
 
 
 def get_default_uploader_class() -> Type[BaseUploader]:
@@ -34,7 +38,7 @@ def get_default_uploader_class() -> Type[BaseUploader]:
 
 
 def upload_images(request: LambRequest,
-                  slicing: List[ImageUploadSlice],
+                  slicing: List[SliceRule],
                   image_class: Type[AbstractImage],
                   envelope_folder: Optional[str] = None,
                   limit: Optional[int] = None,

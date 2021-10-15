@@ -16,7 +16,7 @@ def _before_cursor_execute(conn, cursor, statement, parameters, context, execute
 
     if settings.LAMB_VERBOSE_SQL_LOG and settings.LAMB_VERBOSE_SQL_LOG_THRESHOLD is None:
         if executemany:
-            print(f'Start query: [mode=executemany] -> {statement % parameters[0]}')
+            print(f'Start query: [mode=executemany] -> {statement % parameters[0]} [total={len(parameters)}]')
         else:
             print(f'Start query: [mode=single] -> {statement % parameters}')
 

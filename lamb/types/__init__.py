@@ -5,3 +5,5 @@ from .phone_number import *
 from .locale import *
 from .device_info import *
 from .uuid import *
+from .intenum import *
+from .image import *

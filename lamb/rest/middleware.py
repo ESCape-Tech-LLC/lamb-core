@@ -27,7 +27,7 @@ _apply_to_apps = settings.LAMB_RESPONSE_APPLY_TO_APPS
 logger = logging.getLogger(__name__)
 
 
-__all__ = ['LambRestApiJsonMiddleware', 'LambTracingMiddleware']
+__all__ = ['LambRestApiJsonMiddleware', 'LambTracingMiddleware', 'LambCorsMiddleware']
 
 
 class LambRestApiJsonMiddleware:
@@ -128,6 +128,23 @@ class LambTracingMiddleware(object):
             trace_id = uuid.uuid4()
 
         request.lamb_trace_id = str(trace_id).replace('-', '')
-        logger.info(f'request trace_id attached: {request.lamb_trace_id}')
+        logger.debug(f'request trace_id attached: {request.lamb_trace_id}')
         response = self.get_response(request)
+        return response
+
+
+class LambCorsMiddleware(object):
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: LambRequest) -> HttpResponse:
+        response = self.get_response(request)
+        if settings.LAMB_ADD_CORS_ENABLED:
+            response['Access-Control-Allow-Origin'] = settings.LAMB_ADD_CORS_ORIGIN
+            response['Access-Control-Allow-Methods'] = settings.LAMB_ADD_CORS_METHODS
+            response['Access-Control-Allow-Credentials'] = settings.LAMB_ADD_CORS_CREDENTIALS
+            response['Access-Control-Allow-Headers'] = ','.join(settings.LAMB_ADD_CORS_HEADERS)
+            logger.warning(f'adding CORS headers to response')
+
         return response

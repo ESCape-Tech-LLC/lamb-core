@@ -15,15 +15,15 @@ __all__ = ['ImageUploadServiceDisk']
 
 
 class ImageUploadServiceDisk(BaseUploader):
-    """
-    Local folder uploader
-    """
+    """ Local folder uploader """
 
     def store_image(self, image: Union[PILImage.Image, BinaryIO],
                     proposed_file_name: str,
                     request: LambRequest,
                     image_format: Optional[str] = None) -> str:
-        """ Implements specific storage logic
+        """
+        Implements specific storage logic
+
         :return: URL of stored image
         """
         try:

@@ -2,8 +2,8 @@
 __author__ = 'KoNEW'
 
 import logging
-
 import sqlalchemy as sa
+
 from lazy import lazy
 from sqlalchemy.inspection import inspect
 

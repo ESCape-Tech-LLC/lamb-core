@@ -27,6 +27,7 @@ from collections import OrderedDict
 from asgiref.sync import sync_to_async
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.inspection import inspect
 from sqlalchemy import Column
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -40,7 +41,7 @@ from xml.etree import cElementTree
 from crequest.middleware import CrequestMiddleware
 
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError,\
-    UpdateRequiredError, ExternalServiceError
+    UpdateRequiredError, ExternalServiceError, ImproperlyConfiguredError
 from .dpath import dpath_value
 
 
@@ -54,7 +55,7 @@ __all__ = [
     'CONTENT_ENCODING_XML', 'CONTENT_ENCODING_JSON', 'CONTENT_ENCODING_MULTIPART',
     'dpath_value',
 
-    'import_by_name', 'inject_app_defaults',
+    'import_by_name', 'inject_app_defaults', 'get_settings_value',
 
     'datetime_end', 'datetime_begin',
 
@@ -63,7 +64,9 @@ __all__ = [
     'list_chunks',
 
     'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache', 'timed_lru_cache_clear',
-    'async_download_resources', 'async_download_images', 'image_convert_to_rgb', 'file_is_svg', 'str_coercible',
+    'async_download_resources', 'async_download_images', 'async_request_urls',
+
+    'image_convert_to_rgb', 'file_is_svg', 'str_coercible',
     'get_columns', 'get_primary_keys',
 ]
 
@@ -220,15 +223,6 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
                     data[extended_offset: extended_offset + extended_limit]
     else:
         result = data
-
-    # little hack for XML proper serialization
-    if request is not None and \
-            request.META is not None and \
-            'HTTP_ACCEPT' in request.META.keys() and \
-            request.META['HTTP_ACCEPT'] == 'application/xml' and \
-            settings.LAMB_PAGINATION_KEY_ITEMS in result.keys():
-
-        result[settings.LAMB_PAGINATION_KEY_ITEMS] = {'item': result[settings.LAMB_PAGINATION_KEY_ITEMS]}
 
     return result
 
@@ -560,6 +554,29 @@ def import_by_name(name: str):
     return res
 
 
+def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: bool = True, **kwargs):
+    if len(names) == 0:
+        raise InvalidParamValueError(f'At least one setting name required')
+    elif len(names) == 1:
+        names_msg = names[0]
+    else:
+        names_msg = f'{names[0]} ({"/".join(names[1:])})'
+
+    for index, name in enumerate(names):
+        try:
+            result = dpath_value(settings, key_path=name, req_type=req_type, allow_none=allow_none, **kwargs)
+            if index > 0:
+                warnings.warn('Use of deprecated settings param %s, use %s instead' % (name, names[0]),
+                              DeprecationWarning)
+            return result
+        except (ImportError, AttributeError, InvalidBodyStructureError):
+            continue
+        except Exception as e:
+            raise ImproperlyConfiguredError(f'Could not locate {names_msg} settings value with params:'
+                                            f' req_type={req_type}, allow_none={allow_none}, kwargs={kwargs}') from e
+    raise ImproperlyConfiguredError(f'Could not locate {names_msg} settings value')
+
+
 def inject_app_defaults(application: str):
     """Inject an application's default settings"""
     try:
@@ -748,11 +765,11 @@ def _handle_async_fall(e: Exception, fall_strategy: AsyncFallStrategy):
 
 
 @sync_to_async
-def _async_download_url(url: Optional[str],
-                        timeout,
-                        fall_strategy: AsyncFallStrategy,
-                        headers: Optional[Dict[str, Any]] = None
-                        ) -> Optional[bytes]:
+def _async_request_url(url: Optional[str],
+                       timeout,
+                       fall_strategy: AsyncFallStrategy,
+                       headers: Optional[Dict[str, Any]] = None
+                       ) -> Optional[Union[requests.Response, Exception]]:
     logger.debug(f'downloading resource from url: {url}, timeout={timeout}, headers={headers}')
     if url is None:
         return None
@@ -762,30 +779,37 @@ def _async_download_url(url: Optional[str],
             res = requests.get(url, timeout=timeout, headers=headers)
             if res.status_code != 200:
                 raise ExternalServiceError(f'Could not download resource, invalid status: {url}')
-            return res.content
+            return res
         except Exception as e:
             return _handle_async_fall(e, fall_strategy)
-            # if fall_strategy == AsyncFallStrategy.RAISING:
-            #     raise
-            # elif fall_strategy == AsyncFallStrategy.NONE:
-            #     return None
-            # elif fall_strategy == AsyncFallStrategy.EXCEPTION:
-            #     return e
-            # else:
-            #     logger.warning(f'Invalid strategy received: {fall_strategy}')
-            #     raise ServerError('Invalid async fall strategy mode')
 
 
-async def _async_download_resources(urls: List[Optional[str]],
-                                    timeout: int,
-                                    fall_strategy: AsyncFallStrategy,
-                                    headers: Optional[Dict[str, Any]] = None
-                                    ) -> List[Optional[bytes]]:
+async def _async_request_resources(urls: List[Optional[str]],
+                                   timeout: int,
+                                   fall_strategy: AsyncFallStrategy,
+                                   headers: Optional[Dict[str, Any]] = None
+                                   ) -> List[Optional[Union[requests.Response, Exception]]]:
     tasks = []
     for url in urls:
-        tasks.append(_async_download_url(url=url, timeout=timeout, headers=headers, fall_strategy=fall_strategy))
+        tasks.append(_async_request_url(url=url, timeout=timeout, headers=headers, fall_strategy=fall_strategy))
     result = await asyncio.gather(*tasks)
 
+    return result
+
+
+def async_request_urls(urls: List[Optional[str]],
+                  timeout=30,
+                  headers: Optional[Dict[str, Any]] = None,
+                  fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING
+                  ) -> List[Optional[Union[requests.Response, Exception]]]:
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            _async_request_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
+        )
+    finally:
+        loop.close()
     return result
 
 
@@ -794,14 +818,8 @@ def async_download_resources(urls: List[Optional[str]],
                              headers: Optional[Dict[str, Any]] = None,
                              fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING
                              ) -> List[Optional[bytes]]:
-    loop = asyncio.new_event_loop()
-    try:
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(
-            _async_download_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
-        )
-    finally:
-        loop.close()
+    result = async_request_urls(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
+    result = [res.content if isinstance(res, requests.Response) else res for res in result]
     return result
 
 

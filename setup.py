@@ -86,12 +86,12 @@ setup(
         'celery',
         'dpath @ git+https://git@github.com/MrJuicyBacon/dpath-python#egg=dpath',
         'sqlalchemy',
+        'sqlalchemy-utils',
         'Pillow',
         'requests',
         'python-magic',
         'python-dateutil',
         'phonenumbers',
-        'six',
         'ipaddress',
         'geopy',
         'furl',
@@ -108,6 +108,8 @@ setup(
         'django-ipware',
         'asgiref',
         'python-redis-lock',
-        'colour'
+        'colour',
+        'geoip2',
+        'lazy_object_proxy'
     ]
 )

@@ -13,6 +13,14 @@ LAMB_DEVICE_INFO_HEADER_APP_VERSION = 'HTTP_X_LAMB_APP_VERSION'
 LAMB_DEVICE_INFO_HEADER_APP_BUILD = 'HTTP_X_LAMB_APP_BUILD'
 LAMB_DEVICE_DEFAULT_LOCALE = 'en_US'
 
+LAMB_DEVICE_INFO_CLASS = 'lamb.types.device_info.DeviceInfo'
+LAMB_DEVICE_INFO_COLLECT_IP = True
+LAMB_DEVICE_INFO_COLLECT_GEO = True
+
+# GeoIP2 support (maxmind)
+LAMB_GEOIP2_DB_CITY = None
+LAMB_GEOIP2_DB_COUNTRY = None
+LAMB_GEOIP2_DB_ASN = None
 
 # response/request configs
 LAMB_REQUEST_MULTIPART_PAYLOAD_KEY = 'payload'
@@ -76,3 +84,17 @@ LAMB_CARD_TYPE_PARSER = 'lamb.acquiring.rbs._default_card_type_parser'
 # database default configs
 DB_PORT = None
 DB_SESSION_OPTS = None
+
+
+# CORS support for local tests
+LAMB_ADD_CORS_ENABLED = False
+LAMB_ADD_CORS_ORIGIN = '*'
+LAMB_ADD_CORS_METHODS = 'GET,POST,OPTIONS,DELETE,PATCH'
+LAMB_ADD_CORS_CREDENTIALS = 'true'
+LAMB_ADD_CORS_HEADERS = [
+    'User-Agent', 'Keep-Alive', 'Content-Type', 'Origin', 'Referer', 'Content-Length', 'Connection',
+    'Accept-Encoding', 'Accept', 'If-Modified-Since', 'Cache-Control', 'X-Requested-With',
+
+    'X-Lamb-Auth-Token', 'X-Lamb-Device-Family', 'X-Lamb-Device-Platform', 'X-Lamb-Device-OS-Version',
+    'X-Lamb-Device-Locale', 'X-Lamb-App-Version', 'X-Lamb-App-Build',
+]

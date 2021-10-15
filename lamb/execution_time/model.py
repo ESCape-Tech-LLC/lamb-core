@@ -55,7 +55,7 @@ class LambExecutionTimeMarker(ResponseEncodableMixin, DeclarativeBase):
     absolute_interval = Column(FLOAT(), nullable=False)
     relative_interval = Column(FLOAT(), nullable=False)
     percentage = Column(FLOAT(), nullable=False)
-    marker = Column(VARCHAR(100))
+    marker = Column(VARCHAR)
 
     # relations
     metric = relationship(LambExecutionTimeMetric, uselist=False)  # type: LambExecutionTimeMetric

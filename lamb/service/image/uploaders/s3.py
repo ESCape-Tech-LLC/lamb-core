@@ -18,9 +18,7 @@ __all__ = ['ImageUploadServiceAmazonS3']
 
 
 class ImageUploadServiceAmazonS3(BaseUploader):
-    """
-    Amazon S3 image uploader
-    """
+    """ Amazon S3 image uploader """
     aws_session: AWSSession
 
     def __init__(self, envelope_folder: Optional[str] = None):
@@ -40,7 +38,9 @@ class ImageUploadServiceAmazonS3(BaseUploader):
                     request: LambRequest,
                     image_format: Optional[str] = None,
                     private: Optional[bool] = False) -> str:
-        """ Implements specific storage logic
+        """
+        Implements specific storage logic
+
         :return: URL of stored image
         """
         with tempfile.TemporaryFile() as tf:
