@@ -1,3 +1,11 @@
+# 2.4.7
+**Features:**
+* Added support for various separators for Device Locale - `LAMB_DEVICE_INFO_LOCALE_VALID_SEPS` at config (`'_', '-'`, by default)
+
+**Fixes**
+* Device Locale parse error does not affect on other DeviceInfo attributes
+
+
 # 2.4.6:
 
 **Features:**
