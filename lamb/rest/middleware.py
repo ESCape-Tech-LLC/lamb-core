@@ -158,6 +158,6 @@ class LambCorsMiddleware(object):
             response['Access-Control-Allow-Methods'] = settings.LAMB_ADD_CORS_METHODS
             response['Access-Control-Allow-Credentials'] = settings.LAMB_ADD_CORS_CREDENTIALS
             response['Access-Control-Allow-Headers'] = ','.join(settings.LAMB_ADD_CORS_HEADERS)
-            logger.warning(f'adding CORS headers to response')
+            logger.debug(f'adding CORS headers to response')
 
         return response
