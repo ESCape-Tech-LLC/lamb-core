@@ -114,7 +114,11 @@ class DeviceInfo(ResponseEncodableMixin, object):
             if device_platform is not None:
                 device_platform = device_platform.lower()
             if device_locale is not None:
-                device_locale = LambLocale.parse(device_locale)
+                try:
+                    device_locale = LambLocale.parse(device_locale)
+                except Exception as e:
+                    logger.debug(f'device_info device_locale parsing failed: {e}')
+                    device_locale = None
 
             # construct and store device info
             result = dict(
