@@ -11,7 +11,7 @@ from datetime import date, datetime
 from django.conf import settings
 from django.http import QueryDict
 from dataclasses import dataclass
-from sqlalchemy import func
+from sqlalchemy import func, Float
 from sqlalchemy.sql.functions import Function
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.attributes import QueryableAttribute
@@ -20,14 +20,12 @@ from lamb.exc import InvalidParamTypeError, ServerError, InvalidParamValueError,
 from lamb.utils import dpath_value, LambRequest, datetime_begin, datetime_end, compact
 from lamb.utils.transformers import transform_date, transform_string_enum, transform_boolean
 
-
 __all__ = [
     'Filter', 'FieldValueFilter', 'ColumnValueFilter', 'DatetimeFilter', 'EnumFilter',
     'PostgresqlFastTextSearchFilter', 'ColumnBooleanFilter', 'JsonDataFilter'
 ]
 
 logger = logging.getLogger(__name__)
-
 
 # abstract
 T = TypeVar('T')
@@ -415,7 +413,11 @@ class JsonDataFilter(ColumnValueFilter):
         # parse parts
         functor_mapping = {
             '==': '__eq__',
-            '!=': '__ne__'
+            '!=': '__ne__',
+            '<=': '__le__',
+            '>=': '__ge__',
+            '<': '__lt__',
+            '>': '__gt__',
         }
 
         result = None
@@ -478,6 +480,14 @@ class JsonDataFilter(ColumnValueFilter):
                 query = query.filter(field.astext.__eq__(descriptor.value))
             elif descriptor.comparing_function == '__ne__':
                 query = query.filter(field.astext.__ne__(descriptor.value))
+            elif descriptor.comparing_function == '__lt__':
+                query = query.filter(field.astext.cast(Float).__lt__(descriptor.value))
+            elif descriptor.comparing_function == '__le__':
+                query = query.filter(field.astext.cast(Float).__le__(descriptor.value))
+            elif descriptor.comparing_function == '__ge__':
+                query = query.filter(field.astext.cast(Float).__ge__(descriptor.value))
+            elif descriptor.comparing_function == '__gt__':
+                query = query.filter(field.astext.cast(Float).__gt__(descriptor.value))
             else:
                 raise InvalidParamValueError('Unsupported comparing function %s' % descriptor.comparing_function)
 
