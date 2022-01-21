@@ -402,7 +402,7 @@ class JsonDataFilter(ColumnValueFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.req_type = str
-        self.req_type_transformer = None
+        self.req_type_transformer = kwargs.get('req_type_transformer')
 
     @staticmethod
     def _parse_descriptor(raw_descriptor):
