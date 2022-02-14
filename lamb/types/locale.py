@@ -12,7 +12,8 @@ from lamb.json.mixins import ResponseEncodableMixin
 
 # TODO: fix
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
-from lamb.types.scalar_coercible import ScalarCoercible
+from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
+# from lamb.types.scalar_coercible import ScalarCoercible
 
 __all__ = [
     'LambLocale', 'LambLocaleType'

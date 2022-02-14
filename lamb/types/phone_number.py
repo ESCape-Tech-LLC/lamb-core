@@ -4,7 +4,8 @@ import six
 from sqlalchemy import exc, types
 
 from lamb.exc import ImproperlyConfiguredError
-from lamb.types.scalar_coercible import ScalarCoercible
+# from lamb.types.scalar_coercible import ScalarCoercible
+from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 from lamb.utils import str_coercible
 
 try:

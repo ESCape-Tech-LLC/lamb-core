@@ -6,19 +6,14 @@ from typing import List
 
 from sqlalchemy import Column, ForeignKey, BOOLEAN, TIMESTAMP, VARCHAR, text
 from sqlalchemy.ext.declarative import declared_attr
-<<<<<<<<< Temporary merge branch 1
-from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET
-=========
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, INET, UUID
 from sqlalchemy_utils import UUIDType
->>>>>>>>> Temporary merge branch 2
 
 from lamb.db.session import DeclarativeBase
 from lamb.db.mixins import TimeMarksMixin
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.types import DeviceInfoType, UUIDType
+from lamb.types import DeviceInfoType
 
 
 __all__ = ['EventSourceType', 'EventTrack', 'EventRecord']
