@@ -7,6 +7,9 @@ import uuid
 import re
 
 from collections import OrderedDict
+
+from cassandra import DriverException
+from cassandra.cluster import NoHostAvailable
 from django.conf import settings
 from django.http import HttpResponse, StreamingHttpResponse
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
@@ -76,7 +79,7 @@ class LambRestApiJsonMiddleware:
         # process exception to response
         logger.exception('Handled exception:')
         if not isinstance(exception, ApiError):
-            if isinstance(exception, (SQLAlchemyError, DBAPIError)):
+            if isinstance(exception, (SQLAlchemyError, DBAPIError, NoHostAvailable, DriverException)):
                 exception = DatabaseError()
             else:
                 exception = ServerError()
@@ -128,6 +131,6 @@ class LambTracingMiddleware(object):
             trace_id = uuid.uuid4()
 
         request.lamb_trace_id = str(trace_id).replace('-', '')
-        logger.info(f'request trace_id attached: {request.lamb_trace_id}')
+        logger.debug(f'request trace_id attached: {request.lamb_trace_id}')
         response = self.get_response(request)
         return response

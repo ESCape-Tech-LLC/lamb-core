@@ -116,7 +116,7 @@ def parse_body_as_json(request: HttpRequest) -> dict:
 
 
 # response utilities
-PV = TypeVar('PV', list, Query)
+PV = TypeVar('PV', list, Query, ModelQuerySet)
 
 
 def response_paginated(data: PV, request: LambRequest = None, params: Dict = None,
