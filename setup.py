@@ -87,6 +87,7 @@ setup(
         'dpath @ git+https://git@github.com/MrJuicyBacon/dpath-python#egg=dpath',
         'sqlalchemy',
         'sqlalchemy-utils',
+        'cassandra-driver',
         'Pillow',
         'requests',
         'python-magic',

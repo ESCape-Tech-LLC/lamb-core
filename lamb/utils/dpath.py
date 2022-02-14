@@ -3,7 +3,7 @@
 import logging
 import dpath.util
 
-from typing import Callable, Optional, Union, List, Any
+from typing import Callable, Optional, Union, List, Any, Mapping
 from functools import singledispatch
 from lxml.etree import _Element as EtreeElement, _ElementTree as Etree
 from django.conf import Settings
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['dpath_value']
 
 
-def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree] = None,
+def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping] = None,
                 key_path: Union[str, List[str]] = None,
                 req_type: Optional[Callable] = None,
                 allow_none: bool = False,

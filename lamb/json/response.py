@@ -46,7 +46,8 @@ class JsonResponse(HttpResponse):
                 content = orjson.dumps(data, default=encoder.default, option=options)
             else:
                 if _response_indent is not None:
-                    content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default, sort_keys=False)
+                    content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default,
+                                         sort_keys=False)
                 else:
                     content = json.dumps(data, ensure_ascii=False, default=encoder.default, sort_keys=False)
 
