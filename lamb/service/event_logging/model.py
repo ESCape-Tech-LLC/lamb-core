@@ -52,17 +52,20 @@ class EventRecord(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):
     # columns
     record_id = Column(UUIDType(binary=True, native=True), nullable=False, primary_key=True,
                        server_default=text('gen_random_uuid()'))
-    source = Column(
-        ENUM(EventSourceType, name='event_source'),
-        nullable=False,
-        default=EventSourceType.CLIENT,
-        server_default=EventSourceType.CLIENT.value
-    )
     event = Column(VARCHAR, nullable=True, default=None, server_default=text('NULL'))
     timemark = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'))
     timemark_ntp = Column(BOOLEAN, nullable=False, default=False, server_default=text('FALSE'))
     context = Column(JSONB, nullable=True, default={}, server_default=text("'{}'"))
     ip_address = Column(INET, nullable=True, default=None, server_default=text('NULL'))
+
+    @declared_attr
+    def source(self):
+        return Column(
+            ENUM(EventSourceType, name='event_source', schema=self.metadata.schema),
+            nullable=False,
+            default=EventSourceType.CLIENT,
+            server_default=EventSourceType.CLIENT.value
+        )
 
     @declared_attr
     def track_id(self):

@@ -5,9 +5,9 @@ import logging
 
 from typing import Optional, TypeVar
 from django.core.validators import EmailValidator, ValidationError
+from sqlalchemy_utils import PhoneNumber
 
 from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError, ApiError
-from lamb.types import PhoneNumber
 
 
 logger = logging.getLogger(__name__)

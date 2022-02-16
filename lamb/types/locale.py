@@ -6,14 +6,10 @@ import logging
 import babel
 from django.conf import settings
 from sqlalchemy import types
+from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
 from lamb.exc import InvalidParamTypeError, InvalidParamValueError, ServerError
 from lamb.json.mixins import ResponseEncodableMixin
-
-# TODO: fix
-from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
-from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
-# from lamb.types.scalar_coercible import ScalarCoercible
 
 __all__ = [
     'LambLocale', 'LambLocaleType'
@@ -45,7 +41,7 @@ class LambLocale(ResponseEncodableMixin, babel.Locale):
 
 # database storage suport
 class LambLocaleType(types.TypeDecorator, ScalarCoercible):
-    """ LambLocaleType based on LocaleType data field """
+    """ LambLocaleType based on sqlalchemy_utils LocaleType data field """
 
     impl = types.Unicode(10)
     python_type = LambLocale
