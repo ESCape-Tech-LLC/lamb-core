@@ -12,7 +12,7 @@ from lamb.exc import ServerError
 from lamb.service.aws.s3 import S3Uploader
 from .uploaders import BaseUploader
 from .model import AbstractImage
-from lamb.types import SliceRule
+from lamb.types import IT, SliceRule
 from lamb.utils import import_by_name, LambRequest
 
 
@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    'get_default_uploader_class', 'upload_images', 'parse_static_url', 'remove_image_from_storage'
+    'get_default_uploader_class', 'create_image_slices', 'upload_images', 'parse_static_url',
+    'remove_image_from_storage'
 ]
 
 
@@ -37,13 +38,49 @@ def get_default_uploader_class() -> Type[BaseUploader]:
     return result
 
 
-def upload_images(request: LambRequest,
-                  slicing: List[SliceRule],
-                  image_class: Type[AbstractImage],
-                  envelope_folder: Optional[str] = None,
-                  limit: Optional[int] = None,
-                  uploader_class: Optional[Type[BaseUploader]] = None,
-                  allow_svg: Optional[bool] = False) -> List[AbstractImage]:
+def create_image_slices(
+        request: LambRequest,
+        slicing: List[SliceRule],
+        envelope_folder: Optional[str] = None,
+        limit: Optional[int] = None,
+        uploader_class: Optional[Type[BaseUploader]] = None,
+        allow_svg: Optional[bool] = False
+) -> List[List[IT]]:
+    """
+    Uploads images from request and generates slices.
+
+    :param request: Request
+    :param uploader_class: Uploader engine class
+    :param slicing: Images sizes configuration
+    :param envelope_folder: Destination subfolder inside storage
+    :param limit: Upload images count limit
+    :param allow_svg: Flag to allow/disallow svg upload
+
+    :return: List of stored slices.
+    """
+    # upload images
+    if uploader_class is None:
+        uploader_class = get_default_uploader_class()
+
+    uploader = uploader_class(envelope_folder=envelope_folder)
+    stored_slices = uploader.process_request(
+        request=request,
+        slicing=slicing,
+        required_count=limit,
+        allow_svg=allow_svg
+    )
+    return stored_slices
+
+
+def upload_images(
+        request: LambRequest,
+        slicing: List[SliceRule],
+        image_class: Type[AbstractImage],
+        envelope_folder: Optional[str] = None,
+        limit: Optional[int] = None,
+        uploader_class: Optional[Type[BaseUploader]] = None,
+        allow_svg: Optional[bool] = False
+) -> List[AbstractImage]:
     """
     Uploads image from request to project storage.
 
@@ -57,18 +94,15 @@ def upload_images(request: LambRequest,
 
     :return: List of Image model instances.
     """
-    # upload images
-    if uploader_class is None:
-        uploader_class = get_default_uploader_class()
-
-    uploader = uploader_class(envelope_folder=envelope_folder)
-    stored_slices = uploader.process_request(
+    stored_slices = create_image_slices(
         request=request,
         slicing=slicing,
-        required_count=limit,
+        envelope_folder=envelope_folder,
+        limit=limit,
+        uploader_class=uploader_class,
         allow_svg=allow_svg
     )
-    # store images info
+    # Create images of specified class
     result = list()
     for ss in stored_slices:
         image = image_class()

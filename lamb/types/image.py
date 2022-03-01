@@ -17,7 +17,7 @@ from lamb.utils import DeprecationClassHelper
 __all__ = [
     'Mode', 'SliceRule',
 
-    'ImageSlice',
+    'ImageSlice', 'IT',
 
     'ImageSlicesType', 'ImageListSlicesType',
 
