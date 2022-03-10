@@ -1,3 +1,8 @@
+# 2.4.9
+**Features:**
+* Added logs lines formatting support via `LAMB_LOG_LINES_FORMAT` config (`PREFIX` added info before each line, `SINGLE_LINE` concatenates strings into one, `DEFAULT` - for default)
+  * NB: Don't forget set LOGGING.formatters.\<name>.class as `lamb.types.logging.LambFormatter`
+
 # 2.4.8
 **Features:**
 * Added support <=, >=, <, > for JsonDataFilter
