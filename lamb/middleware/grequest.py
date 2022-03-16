@@ -1,0 +1,57 @@
+# -*- coding: utf-8 -*-
+__author__ = 'KoNEW'
+import contextvars
+
+_request = contextvars.ContextVar('request', default=None)
+
+import threading
+
+import logging
+import uuid
+
+
+from django.conf import settings
+from django.http import HttpResponse
+
+from lamb.utils import dpath_value, LambRequest
+from lamb.utils.transformers import transform_uuid
+from lamb.middleware.async_mixin import AsyncMiddlewareMixin
+
+__all__ = ['LambGRequestMiddleware']
+
+
+logger = logging.getLogger(__name__)
+
+
+class LambGRequestMiddleware(AsyncMiddlewareMixin):
+    """
+    Provides storage for the "current" request object, so that code anywhere
+    in your project can access it, without it having to be passed to that code
+    from the view.
+
+    Drop in replacement for CRequestMiddleware
+    """
+
+    def _call(self, request) -> HttpResponse:
+        self.__class__.set_request(request)
+        response = self.get_response(request)
+        self.__class__.del_request()
+        return response
+
+    async def _acall(self, request) -> HttpResponse:
+        self.__class__.set_request(request)
+        response = await self.get_response(request)
+        self.__class__.del_request()
+        return response
+
+    @classmethod
+    def get_request(cls, default=None):
+        return _request.get()
+
+    @classmethod
+    def set_request(cls, request):
+        _request.set(request)
+
+    @classmethod
+    def del_request(cls):
+        _request.set(None)

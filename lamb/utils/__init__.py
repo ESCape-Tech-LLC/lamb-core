@@ -590,6 +590,7 @@ def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: 
     raise ImproperlyConfiguredError(f'Could not locate {names_msg} settings value')
 
 
+
 def inject_app_defaults(application: str):
     """Inject an application's default settings"""
     try:

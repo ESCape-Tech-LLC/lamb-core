@@ -56,10 +56,10 @@ class AsyncMiddlewareMixin:
     def __call__(self, request):
         # Exit out to async mode, if needed
         if asyncio.iscoroutinefunction(self.get_response):
-            logger.warning(f'{self}. Running mode: ASYNC')
+            # logger.warning(f'{self}. Running mode: ASYNC')
             return self._acall(request)
         else:
-            logger.warning(f'{self}. Running mode: SYNC')
+            # logger.warning(f'{self}. Running mode: SYNC')
             return self._call(request)
 
     def _call(self, request) -> HttpResponse:
