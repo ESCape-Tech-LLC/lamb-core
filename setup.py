@@ -88,8 +88,10 @@ setup(
         # 'dpath @ git+https://git@github.com/MrJuicyBacon/dpath-python#egg=dpath',
         'sqlalchemy',
         'sqlalchemy-utils',
-        # 'cassandra-driver',
-        'Pillow-SIMD',
+        'cassandra-driver',
+        # 'scylla-driver',
+        # 'Pillow-SIMD',
+        'Pillow',
         'requests',
         'python-magic',
         'python-dateutil',
@@ -114,5 +116,7 @@ setup(
         'geoip2',
         'lazy_object_proxy',
         'psycopg2-binary'
-    ]
+    ],
+    extra_requires={
+    }
 )

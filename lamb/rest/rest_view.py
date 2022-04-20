@@ -5,7 +5,7 @@ __author__ = 'KoNEW'
 import six
 import logging
 import json
-import xmltodict
+# import xmltodict
 
 from functools import update_wrapper
 from lazy import lazy
