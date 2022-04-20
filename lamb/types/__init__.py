@@ -6,3 +6,4 @@ from .locale import *
 from .device_info import *
 from .intenum import *
 from .image import *
+from .logging import *
