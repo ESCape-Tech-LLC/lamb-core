@@ -39,7 +39,9 @@ from django.http import HttpRequest
 from django.conf import settings
 from PIL import Image as PILImage
 from xml.etree import cElementTree
-from crequest.middleware import CrequestMiddleware
+# from crequest.middleware import CrequestMiddleware
+
+from lamb.middleware.grequest import LambGRequestMiddleware
 
 from lamb.exc import InvalidBodyStructureError, InvalidParamTypeError, InvalidParamValueError, ServerError,\
     UpdateRequiredError, ExternalServiceError, ImproperlyConfiguredError
@@ -510,7 +512,7 @@ def get_request_accept_encoding(request: HttpRequest) -> str:
 
 
 def get_current_request() -> Optional[LambRequest]:
-    return CrequestMiddleware.get_request(None)
+    return LambGRequestMiddleware.get_request(None)
 
 
 # datetime

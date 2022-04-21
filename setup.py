@@ -105,7 +105,7 @@ setup(
         'lxml',
         'uwsgi',
         'babel',
-        'django-crequest',
+        # 'django-crequest',
         # 'pymemcache',
         # 'dataclasses',
         'openpyxl',
