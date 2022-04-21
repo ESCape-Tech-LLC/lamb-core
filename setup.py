@@ -84,7 +84,7 @@ setup(
         'django',
         'boto3',
         'celery',
-        'dpath @ git+https://git@github.com/MrJuicyBacon/dpath-python#egg=dpath',
+        'dpath',
         'sqlalchemy',
         'sqlalchemy-utils',
         'cassandra-driver',
