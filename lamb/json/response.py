@@ -2,7 +2,6 @@
 __author__ = 'KoNEW'
 
 import json
-import xmltodict
 
 from django.http import HttpResponse
 from django.conf import settings
