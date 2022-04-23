@@ -4,17 +4,17 @@ import contextvars
 
 _request = contextvars.ContextVar('request', default=None)
 
-import threading
+# import threading
 
 import logging
-import uuid
+# import uuid
 
 
-from django.conf import settings
+# from django.conf import settings
 from django.http import HttpResponse
 
-from lamb.utils import dpath_value, LambRequest
-from lamb.utils.transformers import transform_uuid
+# from lamb.utils import dpath_value, LambRequest
+# from lamb.utils.transformers import transform_uuid
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
 
 __all__ = ['LambGRequestMiddleware']

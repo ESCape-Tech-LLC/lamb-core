@@ -9,6 +9,7 @@ import logging
 from django.apps import AppConfig
 
 from lamb.utils import inject_app_defaults
+from lamb.utils.logging import inject_logging_factory
 
 
 logger = logging.getLogger(__name__)

@@ -71,8 +71,7 @@ LAMB_VERBOSE_SQL_LOG_THRESHOLD = None
 
 # logging
 LAMB_LOG_LINES_FORMAT = 'DEFAULT'
-# event logging
-LAMB_EVENT_LOGGING_HEADER_TRACKID = 'HTTP_X_LAMB_TRACKID'
+LAMB_LOGGING_HEADER_XRAY = 'HTTP_X_LAMB_XRAY'
 
 
 # services
@@ -97,6 +96,8 @@ LAMB_ADD_CORS_HEADERS = [
     'User-Agent', 'Keep-Alive', 'Content-Type', 'Origin', 'Referer', 'Content-Length', 'Connection',
     'Accept-Encoding', 'Accept', 'If-Modified-Since', 'Cache-Control', 'X-Requested-With',
 
-    'X-Lamb-Auth-Token', 'X-Lamb-Device-Family', 'X-Lamb-Device-Platform', 'X-Lamb-Device-OS-Version',
+    'X-Lamb-Auth-Token',
+    'X-Lamb-Device-Family', 'X-Lamb-Device-Platform', 'X-Lamb-Device-OS-Version',
     'X-Lamb-Device-Locale', 'X-Lamb-App-Version', 'X-Lamb-App-Build',
+    'X-Lamb-XRay', 'X-Lamb-TrackID'
 ]

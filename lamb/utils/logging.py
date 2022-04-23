@@ -1,8 +1,41 @@
-from logging import LogRecord, Formatter
+import logging
 
+from logging import LogRecord, Formatter, Filter
 from django.conf import settings
 
-__all__ = ['LambFormatter']
+
+__all__ = ['LambFormatter', 'inject_logging_factory']
+
+
+logger = logging.getLogger(__name__)
+
+
+def inject_logging_factory():
+
+    old_factory = logging.getLogRecordFactory()
+
+    def _logging_factory(*args, **kwargs):
+        from lamb.utils import get_current_request
+        record = old_factory(*args, **kwargs)
+
+        # attach attributes
+        r = get_current_request()
+        _fields = [
+            'app_user_id',
+            'xray'
+        ]
+
+        for field in _fields:
+            try:
+                setattr(record, field, getattr(r, field))
+            except:
+                setattr(record, field, None)
+
+        # return
+        return record
+
+    logging.setLogRecordFactory(_logging_factory)
+    logger.warning('Lamb logging factory injected')
 
 
 class LambFormatter(Formatter):
