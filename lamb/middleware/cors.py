@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class LambCorsMiddleware(AsyncMiddlewareMixin):
 
-    def process_response(self, response: HttpResponse) -> HttpResponse:
+    def process_response(self, _, response: HttpResponse) -> HttpResponse:
         if settings.LAMB_ADD_CORS_ENABLED:
             response['Access-Control-Allow-Origin'] = settings.LAMB_ADD_CORS_ORIGIN
             response['Access-Control-Allow-Methods'] = settings.LAMB_ADD_CORS_METHODS

@@ -32,6 +32,7 @@ def inject_logging_factory():
                 setattr(record, field, None)
 
         # return
+        # print(f'factory invoked: {args, kwargs}')
         return record
 
     logging.setLogRecordFactory(_logging_factory)

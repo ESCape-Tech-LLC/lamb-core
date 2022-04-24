@@ -21,7 +21,6 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'tests.api.urls'
 
 LAMB_SQLITE_TEST_DB = 'test.db'
-LAMB_RESPONSE_OVERRIDE_STATUS_200 = False
 LAMB_RESPONSE_APPLY_TO_APPS = [
     'tests',
 ]

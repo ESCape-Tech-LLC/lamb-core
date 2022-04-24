@@ -12,6 +12,7 @@ __all__ = ['AsyncMiddlewareMixin']
 logger = logging.getLogger(__name__)
 
 
+from django.utils.deprecation import MiddlewareMixin
 class AsyncMiddlewareMixin:
     """
     Syntax sugar for class based sync/async compatible middleware:
@@ -56,20 +57,26 @@ class AsyncMiddlewareMixin:
     def __call__(self, request):
         # Exit out to async mode, if needed
         if asyncio.iscoroutinefunction(self.get_response):
-            # logger.warning(f'{self}. Running mode: ASYNC')
+            logger.warning(f'{self}. Running mode: ASYNC')
             return self._acall(request)
         else:
-            # logger.warning(f'{self}. Running mode: SYNC')
+            logger.warning(f'{self}. Running mode: SYNC')
             return self._call(request)
 
     def _call(self, request) -> HttpResponse:
-        response = self.get_response(request)
+        response = None
+        if hasattr(self, 'process_request'):
+            response = self.process_request(request)
+        response = response or self.get_response(request)
         if hasattr(self, 'process_response'):
-            response = self.process_response(response)
+            response = self.process_response(request, response)
         return response
 
     async def _acall(self, request) -> HttpResponse:
-        response = await self.get_response(request)
+        response = None
+        if hasattr(self, 'process_request'):
+            response = self.process_request(request)
+        response = response or await self.get_response(request)
         if hasattr(self, 'process_response'):
-            response = self.process_response(response)
+            response = self.process_response(request, response)
         return response
