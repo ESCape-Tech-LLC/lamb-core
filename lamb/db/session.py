@@ -100,3 +100,41 @@ def lamb_db_session_maker(pooled: bool = True) -> sa.orm.session.Session:
     else:
         session = _no_poll_session_maker()
     return session
+
+
+# async support
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+# ASYNC_ASYNC_CONNECTION_STRING =
+ASYNC_CONNECTION_STRING = furl()
+ASYNC_CONNECTION_STRING.scheme = 'postgresql+asyncpg'
+ASYNC_CONNECTION_STRING.username = _USER
+ASYNC_CONNECTION_STRING.password = _PASS
+if _HOST is not None:
+    ASYNC_CONNECTION_STRING.host = _HOST
+else:
+    ASYNC_CONNECTION_STRING.host = ''
+if _NAME is not None:
+    ASYNC_CONNECTION_STRING.path.add(_NAME)
+if _PORT is not None:
+    ASYNC_CONNECTION_STRING.port = int(_PORT)
+if _OPTS is not None:
+    ASYNC_CONNECTION_STRING.args.update(_OPTS)
+ASYNC_CONNECTION_STRING.args['prepared_statement_cache_size'] = 10
+ASYNC_CONNECTION_STRING = ASYNC_CONNECTION_STRING.url
+print(f'ASYNC_CONNECTION_STRING: {ASYNC_CONNECTION_STRING}')
+_ASYNC_ENGINE_OPTS = {
+    'pool_recycle': 3600,
+    'pool_size': 50,
+    'max_overflow': 50,
+    'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
+}
+_async_engine = create_async_engine(
+    ASYNC_CONNECTION_STRING,  **_ASYNC_ENGINE_OPTS
+)
+_ASYNC_ENGINE_OPTS_NOPOOL = {
+    'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
+}
+_async_engine_nopool = create_async_engine(ASYNC_CONNECTION_STRING, poolclass=NullPool, **_ASYNC_ENGINE_OPTS_NOPOOL)
+
+async_session_factory = sessionmaker(bind=_async_engine, class_=AsyncSession)
+async_session_factory_noloop = sessionmaker(bind=_async_engine_nopool, class_=AsyncSession)

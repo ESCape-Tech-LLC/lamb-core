@@ -6,7 +6,8 @@ import logging
 from importlib import import_module
 from django.core.management.base import CommandError, LabelCommand
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
-from sqlalchemy.schema import DropTable, DropSequence
+from sqlalchemy.schema import DropTable, DropSequence, DropSchema
+from sqlalchemy.dialects.postgresql import DropEnumType
 from sqlalchemy.ext.compiler import compiles
 
 from lamb.db.session import metadata
@@ -16,14 +17,19 @@ from lamb.utils import compact
 logger = logging.getLogger(__name__)
 
 
-@compiles(DropTable, "postgresql")
+@compiles(DropTable, 'postgresql')
 def _compile_drop_table(element, compiler, **_):
     return compiler.visit_drop_table(element) + " CASCADE"
 
 
-@compiles(DropSequence, "postgresql")
+@compiles(DropSequence, 'postgresql')
 def _compile_drop_table(element, compiler, **_):
     return compiler.visit_drop_sequence(element) + ' CASCADE'
+
+
+@compiles(DropEnumType, 'postgresql')
+def _compile_drop_type(element, compiler, **_):
+    return compiler.visit_drop_enum_type(element) + ' CASCADE'
 
 
 class Command(LambLoglevelMixin, LabelCommand):
