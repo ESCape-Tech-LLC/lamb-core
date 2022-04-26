@@ -7,8 +7,9 @@ from django.conf import settings
 import sqlalchemy as sa
 import logging
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
+# from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 from furl import furl
 
@@ -104,7 +105,9 @@ def lamb_db_session_maker(pooled: bool = True) -> sa.orm.session.Session:
 
 # async support
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-# ASYNC_ASYNC_CONNECTION_STRING =
+# TODO: refactor - mode to ext module
+# TODO: fix - in sync event loop mode force use NullPull
+# TODO: fix - make async engine dynamic and valid only for postgresql backend
 ASYNC_CONNECTION_STRING = furl()
 ASYNC_CONNECTION_STRING.scheme = 'postgresql+asyncpg'
 ASYNC_CONNECTION_STRING.username = _USER
@@ -121,7 +124,6 @@ if _OPTS is not None:
     ASYNC_CONNECTION_STRING.args.update(_OPTS)
 ASYNC_CONNECTION_STRING.args['prepared_statement_cache_size'] = 10
 ASYNC_CONNECTION_STRING = ASYNC_CONNECTION_STRING.url
-print(f'ASYNC_CONNECTION_STRING: {ASYNC_CONNECTION_STRING}')
 _ASYNC_ENGINE_OPTS = {
     'pool_recycle': 3600,
     'pool_size': 50,

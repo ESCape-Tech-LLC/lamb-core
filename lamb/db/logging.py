@@ -11,6 +11,9 @@ __all__ = [
 ]
 
 
+# TODO: fix - not work with 1.4-2.0 versions
+
+
 def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
     conn.info.setdefault('query_start_time', []).append(time.time())
 

@@ -20,7 +20,6 @@ from lamb.utils.validators import validate_length
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.ext.geoip import *
 
-
 __all__ = [
     'DeviceInfo', 'DeviceInfoType', 'device_info_factory', 'get_device_info_class'
 ]
@@ -35,9 +34,10 @@ class DeviceInfo(ResponseEncodableMixin, object):
     device_family: Optional[str] = None
     device_platform: Optional[str] = None
     device_os: Optional[str] = None
+    device_locale: Optional[LambLocale] = None
     app_version: Optional[str] = None
     app_build: Optional[int] = None
-    device_locale: Optional[LambLocale] = None
+    app_id: Optional[str] = None
     ip_address: Optional[str] = None
     ip_routable: Optional[bool] = None
     geoip2_info: Optional[Dict[str, Any]] = None
@@ -64,6 +64,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
             app_version = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_VERSION, str,
                                       transform=_transform, default=None)
             app_build = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_BUILD, int, default=None)
+            app_id = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_ID, str, default=None)
 
             # ip/geo fields
             if settings.LAMB_DEVICE_INFO_COLLECT_IP:
@@ -128,6 +129,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
                 device_locale=device_locale,
                 app_version=app_version,
                 app_build=app_build,
+                app_id=app_id,
                 ip_address=ip_address,
                 ip_routable=ip_routable,
                 geoip2_info=geoip2_info
@@ -161,7 +163,6 @@ class DeviceInfo(ResponseEncodableMixin, object):
 # dynamic factory
 DT = TypeVar('DT', bound=DeviceInfo)
 
-
 _cached_device_info_class = None
 
 
@@ -182,6 +183,8 @@ def device_info_factory(request: LambRequest) -> DeviceInfo:
 
 
 # database storage support
+# TODO: reduce JSON key_size
+# TODO: support for protocol versions
 class DeviceInfoType(types.TypeDecorator):
     """ Database storage """
     impl = types.VARCHAR

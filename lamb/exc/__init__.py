@@ -14,7 +14,8 @@ __all__ = [
     'NotAllowedMethodError', 'NotExistError', 'AlreadyExistError',
     'InvalidBodyStructureError', 'InvalidParamValueError', 'InvalidParamTypeError',
     'AuthCredentialsIsNotProvided', 'AuthCredentialsInvalid', 'AuthCredentialsExpired', 'AuthForbidden',
-    'ThrottlingError', 'UpdateRequiredError', 'HumanFriendlyError', 'HumanFriendlyMultipleError'
+    'ThrottlingError', 'UpdateRequiredError', 'HumanFriendlyError', 'HumanFriendlyMultipleError',
+    'UserBlockedError'
 ]
 
 
@@ -46,6 +47,7 @@ class LambExceptionCodes(IntEnum):
     UpdateRequired = 201
     HumanFriendly = 202
     HumanFriendlyMultiple = 203
+    UserBlocked = 211  # new in 3.0.0
 
 
 class ApiError(Exception):
@@ -203,6 +205,13 @@ class ThrottlingError(ClientError):
     def __init__(self, *args, limits: None, **kwargs):
         super(ThrottlingError, self).__init__(*args, **kwargs)
         self.limits = limits or []
+
+
+class UserBlockedError(ClientError):
+    """ Client side error for ser profile blocked kind of errors """
+    _app_error_code = LambExceptionCodes.UserBlocked
+    _status_code = 403
+    _message = 'User profile is blocked'
 
 
 class UpdateRequiredError(ClientError):
