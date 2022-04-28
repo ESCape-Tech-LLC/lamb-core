@@ -33,14 +33,18 @@ class LambGRequestMiddleware(AsyncMiddlewareMixin):
     """
 
     def _call(self, request) -> HttpResponse:
+        logger.debug(f'<{self.__class__.__name__}>: Attaching request to context')
         self.__class__.set_request(request)
         response = self.get_response(request)
+        logger.debug(f'<{self.__class__.__name__}>: Detaching request from context')
         self.__class__.del_request()
         return response
 
     async def _acall(self, request) -> HttpResponse:
+        logger.debug(f'<{self.__class__.__name__}>: Attaching request to context')
         self.__class__.set_request(request)
         response = await self.get_response(request)
+        logger.debug(f'<{self.__class__.__name__}>: Detaching request from context')
         self.__class__.del_request()
         return response
 

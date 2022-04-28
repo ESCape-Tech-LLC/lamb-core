@@ -171,7 +171,7 @@ def get_device_info_class() -> Type[DT]:
 
     if _cached_device_info_class is None:
         _cached_device_info_class = import_by_name(settings.LAMB_DEVICE_INFO_CLASS)
-        logger.info(f'device info class would be used: {_cached_device_info_class}')
+        logger.info(f'Device info class would be used: {_cached_device_info_class}')
 
     return _cached_device_info_class
 

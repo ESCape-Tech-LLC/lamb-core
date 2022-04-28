@@ -51,12 +51,12 @@ class LambXRayMiddleware(AsyncMiddlewareMixin):
 
     def _call(self, request) -> HttpResponse:
         request.xray = LambXRayMiddleware._xray(request)
-        logger.debug(f'request xray attached: {request.xray}')
+        logger.debug(f'<{self.__class__.__name__}> Request xray attached: {request.xray}')
         response = self.get_response(request)
         return response
 
     async def _acall(self, request) -> HttpResponse:
         request.xray = LambXRayMiddleware._xray(request)
-        logger.debug(f'request xray attached: {request.xray}')
+        logger.debug(f'<{self.__class__.__name__}> Request xray attached: {request.xray}')
         response = await self.get_response(request)
         return response
