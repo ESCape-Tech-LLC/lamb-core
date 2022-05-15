@@ -180,7 +180,6 @@ class AbstractSettingsValue(DbEnum):
     __cache_prefix__ = 'lamb_settings'
     _cached_item = AbstractSettingsValueCache()
 
-
     def __new__(cls, code, default, default_description, converter, default_disclaimer, cached=True, *args, **kwargs):
         """
         :param code:

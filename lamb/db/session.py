@@ -55,6 +55,7 @@ try:
     if _OPTS is not None:
         CONNECTION_STRING.args.update(_OPTS)
     CONNECTION_STRING = CONNECTION_STRING.url
+    logger.info(f'{CONNECTION_STRING=}')
 
     # pre-fill default engine opts and modify with server settings
     ENGINE_OPTS_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_POOLED', None)
@@ -130,6 +131,7 @@ _ASYNC_ENGINE_OPTS = {
     'max_overflow': 50,
     'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
 }
+logger.info(f'{ASYNC_CONNECTION_STRING=}')
 _async_engine = create_async_engine(
     ASYNC_CONNECTION_STRING,  **_ASYNC_ENGINE_OPTS
 )

@@ -28,7 +28,7 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping]
         :param dict_object: Document (Dict or _ElementTree or _Element) to find data
         :param key_path: Query string
         :param req_type: Type of argument that expected
-        :param allow_none: Return None withour exception if leaf exist and equal to None
+        :param allow_none: Return None without exception if leaf exist and equal to None
         :param transform: Optional callback (labm.utils.transformers function or other)
             to apply on extracted value before return
 
