@@ -8,8 +8,6 @@ import sqlalchemy as sa
 import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-# from sqlalchemy.ext.declarative import declarative_base
-# from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 from furl import furl
 
@@ -110,7 +108,24 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 # TODO: fix - in sync event loop mode force use NullPull
 # TODO: fix - make async engine dynamic and valid only for postgresql backend
 ASYNC_CONNECTION_STRING = furl()
-ASYNC_CONNECTION_STRING.scheme = 'postgresql+asyncpg'
+if _ENGINE == 'postgresql':
+    ASYNC_CONNECTION_STRING.scheme = 'postgresql+asyncpg'
+    _ASYNC_ENGINE_OPTS = {
+        'pool_recycle': 3600,
+        'pool_size': 50,
+        'max_overflow': 50,
+        'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
+    }
+    _ASYNC_ENGINE_OPTS_NOPOOL = {
+        'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
+    }
+elif _ENGINE == 'sqlite':
+    ASYNC_CONNECTION_STRING.scheme = 'sqlite+aiosqlite'
+    _ASYNC_ENGINE_OPTS = {}
+    _ASYNC_ENGINE_OPTS_NOPOOL = {}
+else:
+    raise ServerError('Could not initialize async session engine')
+
 ASYNC_CONNECTION_STRING.username = _USER
 ASYNC_CONNECTION_STRING.password = _PASS
 if _HOST is not None:
@@ -125,19 +140,12 @@ if _OPTS is not None:
     ASYNC_CONNECTION_STRING.args.update(_OPTS)
 ASYNC_CONNECTION_STRING.args['prepared_statement_cache_size'] = 10
 ASYNC_CONNECTION_STRING = ASYNC_CONNECTION_STRING.url
-_ASYNC_ENGINE_OPTS = {
-    'pool_recycle': 3600,
-    'pool_size': 50,
-    'max_overflow': 50,
-    'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
-}
 logger.info(f'{ASYNC_CONNECTION_STRING=}')
+
 _async_engine = create_async_engine(
     ASYNC_CONNECTION_STRING,  **_ASYNC_ENGINE_OPTS
 )
-_ASYNC_ENGINE_OPTS_NOPOOL = {
-    'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
-}
+
 _async_engine_nopool = create_async_engine(ASYNC_CONNECTION_STRING, poolclass=NullPool, **_ASYNC_ENGINE_OPTS_NOPOOL)
 
 async_session_factory = sessionmaker(bind=_async_engine, class_=AsyncSession)

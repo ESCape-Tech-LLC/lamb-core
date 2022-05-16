@@ -42,7 +42,7 @@ class RestView(object):
 
         # Go through keyword arguments, and either save their values to our
         # instance, or raise an error.
-        for key, value in six.iteritems(kwargs):
+        for key, value in kwargs.items():
             setattr(self, key, value)
 
     @classonlymethod
@@ -80,13 +80,6 @@ class RestView(object):
         content_type = self.request_content_type
         logger.debug(f'Lamb:RestView. Request body encoding discovered: {content_type}')
 
-        # if content_type == CONTENT_ENCODING_XML:
-        #     try:
-        #         result = xmltodict.parse(self.request.body)
-        #         result = result['request']
-        #     except Exception as e:
-        #         logger.error('XML body parsing failed: %s. RAW: %s' % (e, self.request.body))
-        #         raise InvalidBodyStructureError('Could not parse body as XML tree') from e
         if content_type == CONTENT_ENCODING_MULTIPART:
             payload = dpath_value(self.request.POST, 'payload', str)
             try:

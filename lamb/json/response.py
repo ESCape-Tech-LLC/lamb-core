@@ -22,11 +22,11 @@ _encoder_class = None
 
 class JsonResponse(HttpResponse):
 
-    def __init__(self, data=None, status=200, callback=None, request=None):
+    def __init__(self, data=None, status=200, callback=None, request=None, **kwargs):
         # determine content_type
         content_type = 'application/json; charset=utf8'
 
-        super().__init__(content_type=content_type, status=status)
+        super().__init__(content_type=content_type, status=status, **kwargs)
 
         if data is not None:
             # encode response in form of json
