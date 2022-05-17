@@ -66,8 +66,11 @@ try:
         }
     if ENGINE_OPTS_POOLED is None:
         ENGINE_OPTS_POOLED = {}
-    logger.info(f'database engine options would be used for pooled connections: {ENGINE_OPTS_POOLED},'
-                f' session_opts: {_SESSION_OPTS}')
+    # logger.info(f'database engine options would be used for pooled connections: {ENGINE_OPTS_POOLED},'
+    #             f' session_opts: {_SESSION_OPTS}')
+    logger.info(f'database.  SYNC options[pooled =  True]: engine_opts={ENGINE_OPTS_POOLED}'
+                f', session_opts={_SESSION_OPTS}')
+
     _engine = create_engine(CONNECTION_STRING, **ENGINE_OPTS_POOLED)
 
     ENGINE_OPTS_NON_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_NON_POOLED', None)
@@ -79,8 +82,10 @@ try:
         }
     if ENGINE_OPTS_NON_POOLED is None:
         ENGINE_OPTS_NON_POOLED = {}
-    logger.info(f'database engine options would be used for non-pooled connections: {ENGINE_OPTS_NON_POOLED},'
-                f' session_opts: {_SESSION_OPTS}')
+    logger.info(f'database.  SYNC options[pooled = False]: engine_opts={ENGINE_OPTS_NON_POOLED}'
+                f', session_opts={_SESSION_OPTS}')
+    # logger.info(f'database engine options would be used for non-pooled connections: {ENGINE_OPTS_NON_POOLED},'
+    #             f' session_opts: {_SESSION_OPTS}')
     _no_pool_engine = create_engine(CONNECTION_STRING, poolclass=NullPool, **ENGINE_OPTS_NON_POOLED)
 except KeyError as e:
     raise ServerError('Database session constructor failed to get database params')
@@ -108,23 +113,42 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 # TODO: fix - in sync event loop mode force use NullPull
 # TODO: fix - make async engine dynamic and valid only for postgresql backend
 ASYNC_CONNECTION_STRING = furl()
+ASYNC_ENGINE_OPTS_POOLED = settings.DATABASES['default'].get('ASYNC_ENGINE_OPTS_POOLED', None)
+ASYNC_ENGINE_OPTS_NON_POOLED = settings.DATABASES['default'].get('ASYNC_ENGINE_OPTS_NON_POOLED', None)
+
 if _ENGINE == 'postgresql':
     ASYNC_CONNECTION_STRING.scheme = 'postgresql+asyncpg'
-    _ASYNC_ENGINE_OPTS = {
-        'pool_recycle': 3600,
-        'pool_size': 50,
-        'max_overflow': 50,
-        'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
-    }
-    _ASYNC_ENGINE_OPTS_NOPOOL = {
-        'connect_args': {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
-    }
+
+    # engine options
+    if ASYNC_ENGINE_OPTS_POOLED is None:
+        ASYNC_ENGINE_OPTS_POOLED = {
+            'pool_recycle': 3600,
+            'pool_size': 50,
+            'max_overflow': 50
+        }
+    if ASYNC_ENGINE_OPTS_POOLED is None:
+        ASYNC_ENGINE_OPTS_POOLED = {}
+
+    if ASYNC_ENGINE_OPTS_NON_POOLED is None:
+        ASYNC_ENGINE_OPTS_NON_POOLED = {}
+
+    ASYNC_ENGINE_OPTS_POOLED['connect_args'] = {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
+    ASYNC_ENGINE_OPTS_NON_POOLED['connect_args'] = {"server_settings": {"jit": "off"}}  # ОЧЕНЬ ВАЖНО!!!
 elif _ENGINE == 'sqlite':
     ASYNC_CONNECTION_STRING.scheme = 'sqlite+aiosqlite'
-    _ASYNC_ENGINE_OPTS = {}
-    _ASYNC_ENGINE_OPTS_NOPOOL = {}
+    if ASYNC_ENGINE_OPTS_POOLED is None:
+        ASYNC_ENGINE_OPTS_POOLED = {}
+
+    if ASYNC_ENGINE_OPTS_NON_POOLED is None:
+        ASYNC_ENGINE_OPTS_NON_POOLED = {}
 else:
     raise ServerError('Could not initialize async session engine')
+
+logger.info(f'database. ASYNC options[pooled =  True]: engine_opts={ASYNC_ENGINE_OPTS_POOLED}'
+            f', session_opts={_SESSION_OPTS}')
+
+logger.info(f'database. ASYNC options[pooled = False]: engine_opts={ASYNC_ENGINE_OPTS_NON_POOLED}'
+            f', session_opts={_SESSION_OPTS}')
 
 ASYNC_CONNECTION_STRING.username = _USER
 ASYNC_CONNECTION_STRING.password = _PASS
@@ -143,10 +167,10 @@ ASYNC_CONNECTION_STRING = ASYNC_CONNECTION_STRING.url
 logger.info(f'{ASYNC_CONNECTION_STRING=}')
 
 _async_engine = create_async_engine(
-    ASYNC_CONNECTION_STRING,  **_ASYNC_ENGINE_OPTS
+    ASYNC_CONNECTION_STRING,  **ASYNC_ENGINE_OPTS_POOLED
 )
 
-_async_engine_nopool = create_async_engine(ASYNC_CONNECTION_STRING, poolclass=NullPool, **_ASYNC_ENGINE_OPTS_NOPOOL)
+_async_engine_nopool = create_async_engine(ASYNC_CONNECTION_STRING, poolclass=NullPool, **ASYNC_ENGINE_OPTS_NON_POOLED)
 
-async_session_factory = sessionmaker(bind=_async_engine, class_=AsyncSession)
-async_session_factory_noloop = sessionmaker(bind=_async_engine_nopool, class_=AsyncSession)
+async_session_factory = sessionmaker(bind=_async_engine, class_=AsyncSession, **_SESSION_OPTS)
+async_session_factory_noloop = sessionmaker(bind=_async_engine_nopool, class_=AsyncSession, **_SESSION_OPTS)
