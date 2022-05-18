@@ -103,7 +103,7 @@ setup(
         # 'xmltodict',
         'lazy',
         'lxml',
-        'uwsgi',
+        # 'uwsgi',
         'babel',
         # 'django-crequest',
         # 'pymemcache',
