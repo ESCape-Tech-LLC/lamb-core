@@ -193,9 +193,11 @@ class BaseUploader(object):
             try:
                 if not _is_base64(value):
                     continue
+                # TODO: migrate to core utils
                 data = base64.b64decode(value)
                 logger.info(f'{key} -> {value} -> {data}')
 
+                # TODO: migrate to core and rename to  all file kinds
                 mime_type = _get_bytes_image_mime_type(data)
                 if mime_type is None:
                     continue

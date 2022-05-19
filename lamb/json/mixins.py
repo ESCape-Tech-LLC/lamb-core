@@ -5,13 +5,19 @@ import logging
 
 from typing import List
 
-from cassandra.cqlengine.models import Model as CassandraModel
 from sqlalchemy import inspect, Column
 from sqlalchemy.orm import ColumnProperty, RelationshipProperty, SynonymProperty
 from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.ext.hybrid import hybrid_property
 from lamb import exc
+
+try:
+    import cassandra
+    from cassandra.cqlengine.models import Model as CassandraModel
+except ImportError:
+    cassandra = None
+    CassandraModel = object()
 
 
 __all__ = [
@@ -40,7 +46,7 @@ class ResponseEncodableMixin(object):
 
         # Cassandra model is dict compatible,
         # return it as dict
-        if isinstance(self, CassandraModel):
+        if cassandra and isinstance(self, CassandraModel):
             return dict(self)
 
         # cache

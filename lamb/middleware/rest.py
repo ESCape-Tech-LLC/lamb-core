@@ -8,8 +8,7 @@ import re
 
 from collections import OrderedDict
 
-from cassandra import DriverException
-from cassandra.cluster import NoHostAvailable
+
 from django.conf import settings
 from django.http import HttpResponse, StreamingHttpResponse
 from sqlalchemy.exc import SQLAlchemyError, DBAPIError
@@ -20,6 +19,12 @@ from lamb.utils import *
 from lamb.utils.transformers import transform_uuid
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
 
+try:
+    from cassandra import DriverException
+    from cassandra.cluster import NoHostAvailable
+    _DB_EXCEPTIONS = (SQLAlchemyError, DBAPIError, DriverException, NoHostAvailable)
+except ImportError:
+    _DB_EXCEPTIONS = (SQLAlchemyError, DBAPIError)
 
 # parse apps to apply
 _apply_to_apps = settings.LAMB_RESPONSE_APPLY_TO_APPS
@@ -74,7 +79,7 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
         # process exception to response
         logger.exception('Handled exception:')
         if not isinstance(exception, ApiError):
-            if isinstance(exception, (SQLAlchemyError, DBAPIError, NoHostAvailable, DriverException)):
+            if isinstance(exception, _DB_EXCEPTIONS):
                 exception = DatabaseError()
             else:
                 exception = ServerError()

@@ -53,7 +53,7 @@ try:
     if _OPTS is not None:
         CONNECTION_STRING.args.update(_OPTS)
     CONNECTION_STRING = CONNECTION_STRING.url
-    logger.info(f'{CONNECTION_STRING=}')
+    logger.info(f'CONNECTION_STRING{CONNECTION_STRING}')
 
     # pre-fill default engine opts and modify with server settings
     ENGINE_OPTS_POOLED = settings.DATABASES['default'].get('ENGINE_OPTS_POOLED', None)
@@ -144,12 +144,6 @@ elif _ENGINE == 'sqlite':
 else:
     raise ServerError('Could not initialize async session engine')
 
-logger.info(f'database. ASYNC options[pooled =  True]: engine_opts={ASYNC_ENGINE_OPTS_POOLED}'
-            f', session_opts={_SESSION_OPTS}')
-
-logger.info(f'database. ASYNC options[pooled = False]: engine_opts={ASYNC_ENGINE_OPTS_NON_POOLED}'
-            f', session_opts={_SESSION_OPTS}')
-
 ASYNC_CONNECTION_STRING.username = _USER
 ASYNC_CONNECTION_STRING.password = _PASS
 if _HOST is not None:
@@ -162,9 +156,15 @@ if _PORT is not None:
     ASYNC_CONNECTION_STRING.port = int(_PORT)
 if _OPTS is not None:
     ASYNC_CONNECTION_STRING.args.update(_OPTS)
-ASYNC_CONNECTION_STRING.args['prepared_statement_cache_size'] = 10
+# TODO: check on asyncpg and place properly
+# ASYNC_CONNECTION_STRING.args['prepared_statement_cache_size'] = 10
 ASYNC_CONNECTION_STRING = ASYNC_CONNECTION_STRING.url
-logger.info(f'{ASYNC_CONNECTION_STRING=}')
+logger.info(f'ASYNC_CONNECTION_STRING{ASYNC_CONNECTION_STRING}')
+logger.info(f'database. ASYNC options[pooled =  True]: engine_opts={ASYNC_ENGINE_OPTS_POOLED}'
+            f', session_opts={_SESSION_OPTS}')
+
+logger.info(f'database. ASYNC options[pooled = False]: engine_opts={ASYNC_ENGINE_OPTS_NON_POOLED}'
+            f', session_opts={_SESSION_OPTS}')
 
 _async_engine = create_async_engine(
     ASYNC_CONNECTION_STRING,  **ASYNC_ENGINE_OPTS_POOLED
@@ -172,5 +172,5 @@ _async_engine = create_async_engine(
 
 _async_engine_nopool = create_async_engine(ASYNC_CONNECTION_STRING, poolclass=NullPool, **ASYNC_ENGINE_OPTS_NON_POOLED)
 
-async_session_factory = sessionmaker(bind=_async_engine, class_=AsyncSession, **_SESSION_OPTS)
-async_session_factory_noloop = sessionmaker(bind=_async_engine_nopool, class_=AsyncSession, **_SESSION_OPTS)
+async_session_factory = sessionmaker(bind=_async_engine, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS)
+async_session_factory_noloop = sessionmaker(bind=_async_engine_nopool, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS)

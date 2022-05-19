@@ -18,6 +18,7 @@ import requests
 import enum
 import sys
 import sqlalchemy
+import base64
 
 from datetime import datetime, date, timedelta
 from typing import List, Union, TypeVar, Optional, Dict, Tuple, Any, Callable, BinaryIO
@@ -25,7 +26,7 @@ from inspect import isclass
 from urllib.parse import urlsplit, urlunsplit, unquote
 from collections import OrderedDict
 from asgiref.sync import sync_to_async
-from cassandra.cqlengine.query import ModelQuerySet
+# from cassandra.cqlengine.query import ModelQuerySet
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -39,7 +40,13 @@ from django.http import HttpRequest
 from django.conf import settings
 from PIL import Image as PILImage
 from xml.etree import cElementTree
-# from crequest.middleware import CrequestMiddleware
+
+try:
+    import cassandra
+    from cassandra.cqlengine.query import ModelQuerySet
+except ImportError:
+    cassandra = None
+    ModelQuerySet = None
 
 from lamb.middleware.grequest import LambGRequestMiddleware
 
@@ -69,7 +76,8 @@ __all__ = [
     'DeprecationClassHelper', 'masked_dict', 'timed_lru_cache', 'timed_lru_cache_clear',
     'async_download_resources', 'async_download_images', 'async_request_urls',
 
-    'image_convert_to_rgb', 'file_is_svg', 'str_coercible',
+    'image_convert_to_rgb', 'file_is_svg', 'image_decode_base64',
+    'str_coercible',
     'get_columns', 'get_primary_keys',
 ]
 
@@ -121,6 +129,7 @@ def parse_body_as_json(request: HttpRequest) -> dict:
 
 
 # response utilities
+# PV = TypeVar('PV', *compact(list, Query, ModelQuerySet))
 PV = TypeVar('PV', list, Query, ModelQuerySet)
 
 
@@ -209,7 +218,7 @@ def response_paginated(data: PV, request: LambRequest = None, params: Dict = Non
                 result[settings.LAMB_PAGINATION_KEY_ITEMS_EXTENDED] = data.offset(extended_offset)\
                     .limit(extended_limit)\
                     .all()
-    elif isinstance(data, ModelQuerySet):
+    elif cassandra is not None and isinstance(data, ModelQuerySet):
         # Cassandra
 
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count() if not total_omit else None
@@ -857,26 +866,6 @@ def async_download_images(urls: List[Optional[str]],
     return buffer
 
 
-def image_convert_to_rgb(image: PILImage.Image) -> PILImage.Image:
-    if image.mode == 'RGBA':
-        image.load()
-        background = PILImage.new('RGB', image.size, (255, 255, 255))
-        background.paste(image, mask=image.split()[3])
-        return background
-    else:
-        return image.convert('RGB')
-
-
-def file_is_svg(file: Union[str, BinaryIO]) -> bool:
-
-    try:
-        tag = next(cElementTree.iterparse(file, ('start',)))[1].tag
-    except cElementTree.ParseError:
-        return False
-
-    return tag == '{http://www.w3.org/2000/svg}svg'
-
-
 def str_coercible(cls):
     def __str__(self):
         return self.__unicode__()
@@ -931,3 +920,35 @@ def get_primary_keys(mixed):
             if column.primary_key
         )
     )
+
+
+# image utils
+def image_convert_to_rgb(image: PILImage.Image) -> PILImage.Image:
+    if image.mode == 'RGBA':
+        image.load()
+        background = PILImage.new('RGB', image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[3])
+        return background
+    else:
+        return image.convert('RGB')
+
+
+def file_is_svg(file: Union[str, BinaryIO]) -> bool:
+
+    try:
+        tag = next(cElementTree.iterparse(file, ('start',)))[1].tag
+    except cElementTree.ParseError:
+        return False
+
+    return tag == '{http://www.w3.org/2000/svg}svg'
+
+
+def image_decode_base64(b64image: str, verify: bool = False) -> PILImage:
+    img_bytes = base64.b64decode(b64image)
+
+    buffer = io.BytesIO(img_bytes)
+    image = PILImage.open(buffer)
+    if verify:
+        image.verify()
+        image = PILImage.open(buffer)  # verify requires to re
+    return image
