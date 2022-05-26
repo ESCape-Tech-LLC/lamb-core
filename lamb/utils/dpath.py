@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['dpath_value']
 
 
+# TODO: modify - split logic of default for presented and not exist key_path
 def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping] = None,
                 key_path: Union[str, List[str]] = None,
                 req_type: Optional[Callable] = None,

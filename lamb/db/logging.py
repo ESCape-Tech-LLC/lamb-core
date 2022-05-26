@@ -41,7 +41,6 @@ def _after_cursor_execute(conn, cursor, statement, parameters, context, executem
                 # print(f'[mode=single] -> {statement % parameters}\n{total} sec.')
 
 
-
 def sql_logging_disable():
     if event.contains(Engine, 'before_cursor_execute', _before_cursor_execute):
         event.remove(Engine, 'before_cursor_execute', _before_cursor_execute)
