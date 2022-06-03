@@ -81,8 +81,11 @@ def validate_length(
         value = ' '.join(value.split())
         if len(value) == 0 and empty_as_none:
             value = None
-        if value is None and allow_none:
-            return None
+        if value is None:
+            if allow_none:
+                return value
+            else:
+                InvalidParamValueError(f'Field {key} have invalid length. Could not be empty', error_details=key)
 
     # check data type
     try:

@@ -149,8 +149,11 @@ def transform_string_enum(value: str, enum_class: Type[ET]) -> ET:
 
 
 @singledispatch
-def transform_typed_list(value: Union[ET, List[ET]], cls: Type[ET], convert: bool = False, key: Optional[str] = None,
-                         **kwargs
+def transform_typed_list(value: Union[object, ET, List[ET]],
+                         cls: Type[ET],
+                         convert: bool = False,
+                         key: Optional[str] = None,
+                         **_
                          ) -> List[ET]:
     if isinstance(value, cls):
         value = [value]
@@ -171,7 +174,10 @@ def transform_typed_list(value: Union[ET, List[ET]], cls: Type[ET], convert: boo
 
 
 @transform_typed_list.register(str)
-def _transform_typed_list(value: str, cls: Type[ET], skip_empty: bool = True, **kwargs) -> ET:
+def _transform_typed_list(value: str,
+                          cls: Type[ET],
+                          skip_empty: bool = True,
+                          **kwargs) -> ET:
     value = value.split(',')
     if skip_empty:
         value = [v for v in value if len(v) > 0]
