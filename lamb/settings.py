@@ -90,7 +90,7 @@ DB_SESSION_OPTS = None
 # CORS support for local tests
 LAMB_ADD_CORS_ENABLED = False
 LAMB_ADD_CORS_ORIGIN = '*'
-LAMB_ADD_CORS_METHODS = 'GET,POST,OPTIONS,DELETE,PATCH'
+LAMB_ADD_CORS_METHODS = 'GET,POST,OPTIONS,DELETE,PATCH,COPY'
 LAMB_ADD_CORS_CREDENTIALS = 'true'
 LAMB_ADD_CORS_HEADERS = [
     'User-Agent', 'Keep-Alive', 'Content-Type', 'Origin', 'Referer', 'Content-Length', 'Connection',
