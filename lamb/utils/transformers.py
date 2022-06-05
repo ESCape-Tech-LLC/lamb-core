@@ -19,7 +19,8 @@ from lamb.exc import InvalidParamValueError, InvalidParamTypeError, ServerError,
 __all__ = [
     'transform_boolean', 'transform_date', 'transform_string_enum', 'transform_uuid', 'transform_prefixed_tsquery',
     'transform_datetime_seconds_int', 'transform_datetime_milliseconds_int', 'transform_datetime_milliseconds_float',
-    'transform_typed_list'
+    'transform_datetime_microseconds_int',
+    'transform_typed_list',
 ]
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,11 @@ def transform_date(value: Union[datetime, date, str], format = None) -> datetime
         # try to convert as timestamp
         try:
             float_value = float(value)
+            if len(str(round(float_value))) >= 16:
+                # int microseconds format
+                float_value = float_value / 1000000
             if len(str(round(float_value))) >= 11:
+                # inf/float milliseconds format
                 float_value = float_value / 1000
             result = datetime.fromtimestamp(float_value)
             return result
@@ -115,6 +120,10 @@ def transform_datetime_milliseconds_int(value: datetime) -> int:
 
 def transform_datetime_milliseconds_float(value: datetime) -> float:
     return value.timestamp()
+
+
+def transform_datetime_microseconds_int(value: datetime) -> int:
+    return int(value.timestamp() * 1000000)
 
 
 # dynamic typed
