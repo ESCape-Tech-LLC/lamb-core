@@ -14,7 +14,8 @@ from furl import furl
 from lamb.exc import ServerError
 
 __all__ = [
-    'DeclarativeBase', 'metadata', 'lamb_db_session_maker', 'declarative_base', '_engine'
+    'DeclarativeBase', 'metadata', 'lamb_db_session_maker', 'declarative_base', '_engine',
+    'async_session_factory', 'async_session_factory_noloop', 'create_engine', 'create_async_engine'
 ]
 
 logger = logging.getLogger(__name__)
