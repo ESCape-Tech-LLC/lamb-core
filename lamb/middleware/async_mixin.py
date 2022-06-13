@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
 import asyncio
 import logging
 
 from django.http import HttpResponse
 
-__all__ = ['AsyncMiddlewareMixin']
+__all__ = ["AsyncMiddlewareMixin"]
 
 
 logger = logging.getLogger(__name__)
 
 
-from django.utils.deprecation import MiddlewareMixin
 class AsyncMiddlewareMixin:
     """
     Syntax sugar for class based sync/async compatible middleware:
@@ -21,22 +17,23 @@ class AsyncMiddlewareMixin:
         - provides flexible way to override sync/async processing
         - for trivial scenarios support process_response(response) signature for final processing
     """
+
     sync_capable = True
     async_capable = True
 
     def __init__(self, get_response):
         if get_response is None:
-            raise ValueError('get_response must be provided.')
+            raise ValueError("get_response must be provided.")
         self.get_response = get_response
         self._async_check()
         super().__init__()
 
     def __repr__(self):
-        return '<%s get_response=%s>' % (
+        return "<%s get_response=%s>" % (
             self.__class__.__qualname__,
             getattr(
                 self.get_response,
-                '__qualname__',
+                "__qualname__",
                 self.get_response.__class__.__name__,
             ),
         )
@@ -50,9 +47,9 @@ class AsyncMiddlewareMixin:
             # Mark the class as async-capable, but do the actual switch
             # inside __call__ to avoid swapping out dunder methods
             self._is_coroutine = asyncio.coroutines._is_coroutine
-            logger.info(f'{self}. _async_check -> async -> _is_coroutine={self._is_coroutine}')
+            logger.info(f"{self}. _async_check -> async -> _is_coroutine={self._is_coroutine}")
         else:
-            logger.info(f'{self}. _async_check -> sync')
+            logger.info(f"{self}. _async_check -> sync")
 
     def __call__(self, request):
         # Exit out to async mode, if needed
@@ -65,18 +62,18 @@ class AsyncMiddlewareMixin:
 
     def _call(self, request) -> HttpResponse:
         response = None
-        if hasattr(self, 'process_request'):
+        if hasattr(self, "process_request"):
             response = self.process_request(request)
         response = response or self.get_response(request)
-        if hasattr(self, 'process_response'):
+        if hasattr(self, "process_response"):
             response = self.process_response(request, response)
         return response
 
     async def _acall(self, request) -> HttpResponse:
         response = None
-        if hasattr(self, 'process_request'):
+        if hasattr(self, "process_request"):
             response = self.process_request(request)
         response = response or await self.get_response(request)
-        if hasattr(self, 'process_response'):
+        if hasattr(self, "process_response"):
             response = self.process_response(request, response)
         return response

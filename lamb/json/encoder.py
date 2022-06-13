@@ -1,30 +1,24 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
-
 import json
-import datetime
-import time
 import uuid
 import logging
+import datetime
+from decimal import Decimal
 
 from django.conf import settings
-from decimal import Decimal
+
+# SQLAlchemy
 from sqlalchemy_utils import PhoneNumber
-from lazy import lazy
 
-from lamb.json.mixins import ResponseEncodableMixin
+# Lamb Framework
 from lamb.utils import import_by_name
-from lamb.exc import ServerError
+from lamb.json.mixins import ResponseEncodableMixin
 
-
-__all__ = ['JsonEncoder']
+__all__ = ["JsonEncoder"]
 
 logger = logging.getLogger(__name__)
 
 
 class JsonEncoder(json.JSONEncoder):
-
     def __init__(self, callback=None, request=None, **kwargs):
         super().__init__(**kwargs)
         self.callback = callback

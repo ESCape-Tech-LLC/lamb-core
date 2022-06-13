@@ -1,43 +1,47 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import logging
-import dpath.util
-
-from typing import Callable, Optional, Union, List, Any, Mapping
+from typing import Any, List, Union, Mapping, Callable, Optional
 from functools import singledispatch
-from lxml.etree import _Element as EtreeElement, _ElementTree as Etree
+
 from django.conf import Settings
 
+# Lamb Framework
 from lamb import exc
-
 from lamb.ext.lxml import __lxml_hints_reverse_map__
+
+import dpath.util
+from lxml.etree import _Element as EtreeElement
+from lxml.etree import _ElementTree as Etree
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['dpath_value']
+__all__ = ["dpath_value"]
 
 
 # TODO: modify - split logic of default for presented and not exist key_path
-def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping] = None,
-                key_path: Union[str, List[str]] = None,
-                req_type: Optional[Callable] = None,
-                allow_none: bool = False,
-                transform: Optional[Callable] = None,
-                **kwargs):
-    """ Search for object in Dict or XML document
+def dpath_value(
+    dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping] = None,
+    key_path: Union[str, List[str]] = None,
+    req_type: Optional[Callable] = None,
+    allow_none: bool = False,
+    transform: Optional[Callable] = None,
+    **kwargs,
+):
+    """Search for object in Dict or XML document
 
-        :param dict_object: Document (Dict or _ElementTree or _Element) to find data
-        :param key_path: Query string
-        :param req_type: Type of argument that expected
-        :param allow_none: Return None without exception if leaf exist and equal to None
-        :param transform: Optional callback (labm.utils.transformers function or other)
-            to apply on extracted value before return
+    :param dict_object: Document (Dict or _ElementTree or _Element) to find data
+    :param key_path: Query string
+    :param req_type: Type of argument that expected
+    :param allow_none: Return None without exception if leaf exist and equal to None
+    :param transform: Optional callback (labm.utils.transformers function or other)
+        to apply on extracted value before return
 
-        :param kwargs: Optional parameters:
-            - `default` - default value is passed to extractor function
-            - others - passed to the transformer (if set).
+    :param kwargs: Optional parameters:
+        - `default` - default value is passed to extractor function
+        - others - passed to the transformer (if set).
 
-        :return: Extracted value
+    :return: Extracted value
 
     """
     # utils
@@ -51,8 +55,9 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping]
             _result = req_type(_result)
             return _result
         except (ValueError, TypeError) as _e:
-            raise exc.InvalidParamTypeError('Invalid data type for param %s' % key_path,
-                                            error_details={'key_path': key_path}) from _e
+            raise exc.InvalidParamTypeError(
+                "Invalid data type for param %s" % key_path, error_details={"key_path": key_path}
+            ) from _e
 
     # query
     try:
@@ -64,8 +69,9 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping]
             if allow_none:
                 return None
             else:
-                raise exc.InvalidParamTypeError('Invalid data type for param %s' % key_path,
-                                                error_details={'key_path': key_path})
+                raise exc.InvalidParamTypeError(
+                    "Invalid data type for param %s" % key_path, error_details={"key_path": key_path}
+                )
 
         # apply type convert
         result = _type_convert(result)
@@ -76,18 +82,16 @@ def dpath_value(dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping]
 
         return result
     except Exception as e:
-        if 'default' in kwargs.keys():
-            return kwargs['default']
+        if "default" in kwargs.keys():
+            return kwargs["default"]
         elif isinstance(e, exc.ApiError):
             raise
         else:
-            raise exc.ServerError('Failed to parse params due unknown error') from e
+            raise exc.ServerError("Failed to parse params due unknown error") from e
 
 
 @singledispatch
-def _dpath_find_impl(dict_object: Optional[dict] = None,
-                     key_path: Union[str, List[str]] = None,
-                     **_) -> Any:
+def _dpath_find_impl(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
     """
     Implementation for dict
     :param dict_object: Dict to find data
@@ -101,19 +105,16 @@ def _dpath_find_impl(dict_object: Optional[dict] = None,
         return result
     except IndexError as e:
         raise exc.InvalidBodyStructureError(
-            'Could not locate field for key_path %s from provided dict data' % key_path,
-            error_details={'key_path': key_path}) from e
+            "Could not locate field for key_path %s from provided dict data" % key_path,
+            error_details={"key_path": key_path},
+        ) from e
     except AttributeError as e:
-        raise exc.ServerError('Invalid key_path type for querying in dict',
-                              error_details={'key_path': key_path}) from e
+        raise exc.ServerError("Invalid key_path type for querying in dict", error_details={"key_path": key_path}) from e
 
 
 @_dpath_find_impl.register(EtreeElement)
 @_dpath_find_impl.register(Etree)
-def _etree_find_impl(element: Union[EtreeElement, Etree],
-                     key_path: str,
-                     namespaces: Optional[dict] = None,
-                     **_) -> Any:
+def _etree_find_impl(element: Union[EtreeElement, Etree], key_path: str, namespaces: Optional[dict] = None, **_) -> Any:
     """
     :param element: Element object to extract value
     :param key_path: Subtag name
@@ -121,25 +122,26 @@ def _etree_find_impl(element: Union[EtreeElement, Etree],
     :return: Extracted value
     """
     if not isinstance(element, (EtreeElement, Etree)):
-        logger.warning('Improperly configured element param data type: %s' % element)
-        raise exc.InvalidParamTypeError('ArgParsing. Improperly configured param source')
+        logger.warning("Improperly configured element param data type: %s" % element)
+        raise exc.InvalidParamTypeError("ArgParsing. Improperly configured param source")
     if not isinstance(key_path, str):
-        logger.warning('Improperly configured key_path param data type: %s' % key_path)
-        raise exc.InvalidParamTypeError('ArgParsing. Improperly configured param search key_path')
+        logger.warning("Improperly configured key_path param data type: %s" % key_path)
+        raise exc.InvalidParamTypeError("ArgParsing. Improperly configured param search key_path")
 
     try:
         # extract child and text
         child = element.find(key_path, namespaces=namespaces)
         if child is None:
             raise exc.InvalidBodyStructureError(
-                'Could not extract param for key_path %s from provided XML data' % key_path,
-                error_details={'key_path': key_path})
+                "Could not extract param for key_path %s from provided XML data" % key_path,
+                error_details={"key_path": key_path},
+            )
         result = child.text
 
         # try auto-discover data type
         if result is not None:
             # validate result type through typeHint detecting in key_path and converting to ot
-            hinted_type = child.get('typeHint')
+            hinted_type = child.get("typeHint")
             if hinted_type is not None and hinted_type in __lxml_hints_reverse_map__.keys():
                 try:
                     result = __lxml_hints_reverse_map__[hinted_type](result)
@@ -151,11 +153,13 @@ def _etree_find_impl(element: Union[EtreeElement, Etree],
         raise
     except Etree.ParseError as e:
         raise exc.InvalidBodyStructureError(
-            'Could not extract param for key_path %s from provided XML data' % key_path,
-            error_details={'key_path': key_path}) from e
+            "Could not extract param for key_path %s from provided XML data" % key_path,
+            error_details={"key_path": key_path},
+        ) from e
     except Exception as e:
         raise exc.ServerError(
-            'Etree subtag query. Could not locate extract value with some unhandled exception.') from e
+            "Etree subtag query. Could not locate extract value with some unhandled exception."
+        ) from e
 
 
 @_dpath_find_impl.register(Settings)
@@ -170,5 +174,7 @@ def _django_conf_impl(settings: Settings, key_path: str) -> Any:
         result = getattr(settings, key_path)  # type: Any
         return result
     except Exception as e:
-        raise exc.InvalidBodyStructureError(f'Could not locate field for key_path = {key_path} from settings object',
-                                            error_details={'key_path': key_path}) from e
+        raise exc.InvalidBodyStructureError(
+            f"Could not locate field for key_path = {key_path} from settings object",
+            error_details={"key_path": key_path},
+        ) from e

@@ -1,27 +1,22 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
+from __future__ import annotations
 
-import logging
-import sqlalchemy as sa
 import enum
+import logging
+from typing import Any, Type, TypeVar, Optional
 
-from typing import Optional, TypeVar, Type, Any
-from sqlalchemy.dialects.postgresql import SMALLINT
-
-from lamb import exc
-# from lamb.types.scalar_coercible import ScalarCoercible
+# SQLAlchemy
+import sqlalchemy as sa
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
-# from sqlalchemy_utils import ScalarCoercible
 
+# Lamb Framework
+from lamb import exc
 
-__all__ = [
-    'IntEnumType'
-]
+__all__ = ["IntEnumType"]
 
 logger = logging.getLogger(__name__)
 
 
-ET = TypeVar('ET', enum.Enum, enum.IntEnum)
+ET = TypeVar("ET", enum.Enum, enum.IntEnum)
 
 
 # database storage support
@@ -60,12 +55,12 @@ class IntEnumType(sa.types.TypeDecorator, ScalarCoercible):
         try:
             return self._enum_type(value)
         except ValueError as e:
-            raise exc.InvalidParamValueError(f'Unknown enum value: {value}') from e
+            raise exc.InvalidParamValueError(f"Unknown enum value: {value}") from e
 
     def _coerce(self, value: Optional[Any]) -> Optional[ET]:
         if value is not None and not isinstance(value, enum.Enum):
             try:
                 return self._enum_type(value)
             except ValueError as e:
-                raise exc.InvalidParamValueError(f'Unknown enum value: {value}') from e
+                raise exc.InvalidParamValueError(f"Unknown enum value: {value}") from e
         return value

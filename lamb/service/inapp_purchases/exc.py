@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 import enum
 
+# Lamb Framework
 from lamb.exc import ClientError
 
 
@@ -10,7 +10,8 @@ class InAppErrorCodes(enum.IntEnum):
 
 
 class InAppAppleSandboxError(ClientError):
-    """ Error for a situation when received receipt is for a test environment """
+    """Error for a situation when received receipt is for a test environment"""
+
     _app_error_code = InAppErrorCodes.InAppAppleSandbox
     _status_code = 403
-    _message = 'Received receipt is for a test environment'
+    _message = "Received receipt is for a test environment"

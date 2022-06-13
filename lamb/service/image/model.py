@@ -1,18 +1,19 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import logging
-
 from typing import List
-from sqlalchemy import Column
-from sqlalchemy.dialects.postgresql import VARCHAR, BIGINT
-from sqlalchemy.ext.declarative import AbstractConcreteBase
 
+# SQLAlchemy
+from sqlalchemy import Column
+from sqlalchemy.ext.declarative import AbstractConcreteBase
+from sqlalchemy.dialects.postgresql import BIGINT, VARCHAR
+
+# Lamb Framework
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.types.image import SliceRule, Mode, ImageSlicesType
+from lamb.types.image import Mode, SliceRule, ImageSlicesType
 
-
-__all__ = ['AbstractImage', 'ImageMixin']
+__all__ = ["AbstractImage", "ImageMixin"]
 
 
 logger = logging.getLogger(__name__)
@@ -20,8 +21,9 @@ logger = logging.getLogger(__name__)
 
 # declarative base and mixins
 class ImageMixin(object):
-    """ Abstract mixin for image subclasses. """
-    __slicing__: List[SliceRule] = [SliceRule('origin', -1, Mode.NoAction, '')]
+    """Abstract mixin for image subclasses."""
+
+    __slicing__: List[SliceRule] = [SliceRule("origin", -1, Mode.NoAction, "")]
     slices_info = Column(ImageSlicesType, nullable=False)
 
 
@@ -40,7 +42,8 @@ class AbstractImage(ImageMixin, ResponseEncodableMixin, AbstractConcreteBase, De
     Uploaded slices info json is stored in `slices_info` by `uploaders.utlis.upload_image`.
     Polymorphic identity value is stored in `image_type`, do not set directly.
     """
-    ABSTRACT_IMAGE_TYPE: str = 'ABSTRACT'
+
+    ABSTRACT_IMAGE_TYPE: str = "ABSTRACT"
 
     # columns
     image_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
@@ -49,7 +52,4 @@ class AbstractImage(ImageMixin, ResponseEncodableMixin, AbstractConcreteBase, De
     # meta
     __abstract__ = True
 
-    __mapper_args__ = {
-        'polymorphic_on': image_type,
-        'polymorphic_identity': ABSTRACT_IMAGE_TYPE
-    }
+    __mapper_args__ = {"polymorphic_on": image_type, "polymorphic_identity": ABSTRACT_IMAGE_TYPE}

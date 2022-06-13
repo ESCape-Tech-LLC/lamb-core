@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
+from __future__ import annotations
 
-import time
 import logging
-
 from typing import Optional
-from lamb.execution_time.meter import ExecutionTimeMeter
+
+# Lamb Framework
 from lamb.utils import LambRequest, get_current_request
+from lamb.execution_time.meter import ExecutionTimeMeter
 
 logger = logging.getLogger(__name__)
 
 
-__all__ = ['get_global_etm']
+__all__ = ["get_global_etm"]
 
 
 def get_global_etm(request: Optional[LambRequest] = None) -> ExecutionTimeMeter:

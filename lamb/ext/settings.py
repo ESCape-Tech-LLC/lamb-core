@@ -1,26 +1,32 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
+from __future__ import annotations
 
 import abc
+import enum
 import json
 import logging
-import enum
 from typing import Type
 
 from django.core.cache import cache
-from sqlalchemy import Column, VARCHAR, TEXT
+
+# SQLAlchemy
+from sqlalchemy import TEXT, VARCHAR, Column
+
+# Lamb Framework
 from lamb import exc
-from lamb.db.patterns import DbEnum
 from lamb.db.context import lamb_db_context
 from lamb.db.session import DeclarativeBase
+from lamb.db.patterns import DbEnum
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.utils.transformers import transform_boolean
 
-
 __all__ = [
-    'AbstractSettingsStorage', 'AbstractSettingsValue',
-    'BaseConverter', 'SimpleTypeConverter', 'JsonConverter', 'IntBooleanConverter', 'BooleanConverter'
-
+    "AbstractSettingsStorage",
+    "AbstractSettingsValue",
+    "BaseConverter",
+    "SimpleTypeConverter",
+    "JsonConverter",
+    "IntBooleanConverter",
+    "BooleanConverter",
 ]
 
 
@@ -31,14 +37,17 @@ logger = logging.getLogger(__name__)
 class BaseConverter(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def process_bind_param(self, value):
-        logger.warning(f'Call to abstract method process_bind_param'
-                       f' on class = {self.__class__.__name__} with value = {value}')
-        raise exc.ServerError('Invalid server configs')
+        logger.warning(
+            f"Call to abstract method process_bind_param" f" on class = {self.__class__.__name__} with value = {value}"
+        )
+        raise exc.ServerError("Invalid server configs")
 
     @abc.abstractmethod
     def process_result_value(self, value):
-        logger.warning(f'Call to abstract method process_result_value'
-                       f' on class = {self.__class__.__name__} with value = {value}')
+        logger.warning(
+            f"Call to abstract method process_result_value"
+            f" on class = {self.__class__.__name__} with value = {value}"
+        )
 
 
 class SimpleTypeConverter(BaseConverter):
@@ -68,7 +77,9 @@ class JsonConverter(BaseConverter):
             if isinstance(value, str):
                 value = json.loads(value)
             result = json.dumps(value)
-            logger.debug(f'JsonConverter.process_result_value.RESULT: {value, value.__class__} as {result, result.__class__}')
+            logger.debug(
+                f"JsonConverter.process_result_value.RESULT: {value, value.__class__} as {result, result.__class__}"
+            )
             return result
         return None
 
@@ -80,22 +91,21 @@ class IntBooleanConverter(BaseConverter):
         try:
             value = int(value)
             return value > 0
-        except:
+        except Exception:
             return None
 
     def process_result_value(self, value):
         if value is None:
             return None
         if not isinstance(value, bool):
-            raise exc.ServerError('Invalid data type for IntBooleanConverter flush to db process: %s' % value)
+            raise exc.ServerError("Invalid data type for IntBooleanConverter flush to db process: %s" % value)
         if value:
-            return '1'
+            return "1"
         else:
-            return '0'
+            return "0"
 
 
 class BooleanConverter(BaseConverter):
-
     def process_bind_param(self, value):
         if value is None:
             return None
@@ -110,35 +120,32 @@ class BooleanConverter(BaseConverter):
 
 
 class AbstractSettingsValueCache:
-    """Descriptor that cache `AbstractSettingsValue` values.
-    """
+    """Descriptor that cache `AbstractSettingsValue` values."""
 
     @staticmethod
-    def key_func(settings_cls: Type['AbstractSettingsValue'], key: str):
+    def key_func(settings_cls: Type["AbstractSettingsValue"], key: str):
         return f"{settings_cls.__cache_prefix__}_{key}"
 
     @classmethod
-    def clear(cls, settings_cls: Type['AbstractSettingsValue']):
+    def clear(cls, settings_cls: Type["AbstractSettingsValue"]):
         """Delete values of all settings members from a cache."""
         cache.delete_many([cls.key_func(settings_cls, key) for key in settings_cls.__members__])
 
-    def __get__(self, obj: 'AbstractSettingsValue', objtype: Type['AbstractSettingsValue']) -> 'AbstractSettingsStorage':
+    def __get__(
+        self, obj: "AbstractSettingsValue", objtype: Type["AbstractSettingsValue"]
+    ) -> "AbstractSettingsStorage":
         value = None
         if obj._cached and obj.__cache_timeout__ not in (0, None):
             value = cache.get(self.key_func(obj, obj.value))
         return value
 
-    def __set__(self, obj: 'AbstractSettingsValue', value: 'AbstractSettingsStorage'):
+    def __set__(self, obj: "AbstractSettingsValue", value: "AbstractSettingsStorage"):
         timeout = obj.__cache_timeout__
         values_dict = {k: getattr(value, k) for k in obj.__class__.__attrib_mapping__.values()}
         if obj._cached and timeout != 0:
-            cache.set(
-                key=self.key_func(obj, obj.value),
-                value=value.__class__(**values_dict),
-                timeout=timeout
-            )
+            cache.set(key=self.key_func(obj, obj.value), value=value.__class__(**values_dict), timeout=timeout)
 
-    def __delete__(self, obj: 'AbstractSettingsValue'):
+    def __delete__(self, obj: "AbstractSettingsValue"):
         if obj._cached and obj.__cache_timeout__ not in (0, None):
             cache.delete(self.key_func(obj, obj.value))
 
@@ -170,14 +177,10 @@ class AbstractSettingsValue(DbEnum):
     """
 
     __table_class__ = None
-    __attrib_mapping__ = {
-        'val': 'value',
-        'description': 'description',
-        'disclaimer': 'disclaimer'
-    }
+    __attrib_mapping__ = {"val": "value", "description": "description", "disclaimer": "disclaimer"}
 
     __cache_timeout__ = None
-    __cache_prefix__ = 'lamb_settings'
+    __cache_prefix__ = "lamb_settings"
     _cached_item = AbstractSettingsValueCache()
 
     def __new__(cls, code, default, default_description, converter, default_disclaimer, cached=True, *args, **kwargs):
@@ -211,7 +214,7 @@ class AbstractSettingsValue(DbEnum):
         AbstractSettingsValueCache.clear(cls)
 
     def __getattribute__(self, key):
-        if key[:2] != '__':
+        if key[:2] != "__":
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
@@ -224,28 +227,28 @@ class AbstractSettingsValue(DbEnum):
                         self._cached_item = db_item = self._db_item(session)
                         result = getattr(db_item, mapped_key)
                 try:
-                    if result is not None and key=='val':
+                    if result is not None and key == "val":
                         result = self._converter.process_bind_param(result)
                 except Exception as e:
-                    logger.error('Settings convert failed: %s' % e)
-                    raise exc.ServerError('Improperly configured settings values') from e
+                    logger.error("Settings convert failed: %s" % e)
+                    raise exc.ServerError("Improperly configured settings values") from e
                 return result
         return super().__getattribute__(key)
 
     def __setattr__(self, key, value):
-        if key[:2] != '__':
+        if key[:2] != "__":
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
                 with lamb_db_context() as session:
                     db_item = self._db_item(session)
                     try:
-                        if value is not None and key=='val':
+                        if value is not None and key == "val":
                             value = self._converter.process_result_value(value)
                         db_item.__setattr__(mapped_key, value)
                     except Exception as e:
-                        logger.error('Settings convert failed: %s' % e)
-                        raise exc.ServerError('Improperly configured settings values') from e
+                        logger.error("Settings convert failed: %s" % e)
+                        raise exc.ServerError("Improperly configured settings values") from e
                     session.commit()
                     self._cached_item = db_item
         super().__setattr__(key, value)

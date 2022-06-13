@@ -1,15 +1,16 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
+from __future__ import annotations
 
 import logging
-
 from typing import List
 
-from sqlalchemy import inspect, Column
-from sqlalchemy.orm import ColumnProperty, RelationshipProperty, SynonymProperty
-from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
-from sqlalchemy.ext.declarative import DeclarativeMeta
+# SQLAlchemy
+from sqlalchemy import Column, inspect
+from sqlalchemy.orm import ColumnProperty, SynonymProperty, RelationshipProperty
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm.attributes import QueryableAttribute
+from sqlalchemy.ext.declarative import DeclarativeMeta
+
+# Lamb Framework
 from lamb import exc
 
 try:
@@ -20,9 +21,7 @@ except ImportError:
     CassandraModel = object()
 
 
-__all__ = [
-    'ResponseEncodableMixin'
-]
+__all__ = ["ResponseEncodableMixin"]
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +30,12 @@ _DEFAULT_ATTRIBUTE_NAMES_REGISTRY = {}
 
 
 class ResponseEncodableMixin(object):
-
     @classmethod
     def response_attributes(cls) -> List:
         return None
 
     def response_encode(self, request=None) -> dict:
-        """ Mixin to mark object support JSON serialization with JsonEncoder class
+        """Mixin to mark object support JSON serialization with JsonEncoder class
 
         :type request: lamb.utils.LambRequest
         :return: Encoded representation of object
@@ -55,10 +53,12 @@ class ResponseEncodableMixin(object):
             _declarative = isinstance(self.__class__, DeclarativeMeta)
             _attributes_provided = self.response_attributes() is not None
             if not _declarative and not _attributes_provided:
-                raise NotImplementedError('ResponseEncodableMixin subclass should implement non empty: '
-                                          'classmethod:response_attributes() or to be subclass of DeclarativeMeta to '
-                                          'use default encoder. In other case implement custom method '
-                                          'response_encode()')
+                raise NotImplementedError(
+                    "ResponseEncodableMixin subclass should implement non empty: "
+                    "classmethod:response_attributes() or to be subclass of DeclarativeMeta to "
+                    "use default encoder. In other case implement custom method "
+                    "response_encode()"
+                )
 
             # extract attribute names
             response_attributes = self.response_attributes()
@@ -74,9 +74,7 @@ class ResponseEncodableMixin(object):
                 response_attributes.extend(ins.mapper.synonyms.values())
 
                 # append hybrid properties
-                response_attributes.extend([
-                    ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property
-                ])
+                response_attributes.extend([ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property])
 
             # parse names
             response_attribute_names = []
@@ -85,17 +83,19 @@ class ResponseEncodableMixin(object):
                     orm_attr_name = orm_descriptor
                 elif isinstance(orm_descriptor, Column):
                     orm_attr_name = orm_descriptor.name
-                elif isinstance(orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute, SynonymProperty)):
+                elif isinstance(
+                    orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute, SynonymProperty)
+                ):
                     orm_attr_name = orm_descriptor.key
                 elif isinstance(orm_descriptor, hybrid_property):
                     orm_attr_name = orm_descriptor.__name__
                 elif isinstance(orm_descriptor, property):
                     orm_attr_name = orm_descriptor.fget.__name__
                 else:
-                    logger.warning(f'Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}')
-                    raise exc.ServerError('Could not serialize data')
+                    logger.warning(f"Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}")
+                    raise exc.ServerError("Could not serialize data")
                 response_attribute_names.append(orm_attr_name)
-            logger.debug(f'caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}')
+            logger.debug(f"caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}")
             _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__] = response_attribute_names
 
         # encode data

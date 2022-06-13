@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
 import json
 
-from django.http import HttpResponse
 from django.conf import settings
+from django.http import HttpResponse
 
-from lamb.json.encoder import JsonEncoder
+# Lamb Framework
 from lamb.utils import import_by_name
+from lamb.json.encoder import JsonEncoder
 
 try:
     import orjson
@@ -15,16 +13,15 @@ except ImportError:
     orjson = None
 
 
-__all__ = ['JsonResponse']
+__all__ = ["JsonResponse"]
 
 _encoder_class = None
 
 
 class JsonResponse(HttpResponse):
-
     def __init__(self, data=None, status=200, callback=None, request=None, **kwargs):
         # determine content_type
-        content_type = 'application/json; charset=utf8'
+        content_type = "application/json; charset=utf8"
 
         super().__init__(content_type=content_type, status=status, **kwargs)
 
@@ -45,8 +42,9 @@ class JsonResponse(HttpResponse):
                 content = orjson.dumps(data, default=encoder.default, option=options)
             else:
                 if _response_indent is not None:
-                    content = json.dumps(data, indent=_response_indent, ensure_ascii=False, default=encoder.default,
-                                         sort_keys=False)
+                    content = json.dumps(
+                        data, indent=_response_indent, ensure_ascii=False, default=encoder.default, sort_keys=False
+                    )
                 else:
                     content = json.dumps(data, ensure_ascii=False, default=encoder.default, sort_keys=False)
 
@@ -54,7 +52,7 @@ class JsonResponse(HttpResponse):
             self.content = content
 
     @staticmethod
-    def encode_object(object):
+    def encode_object(obj):
         encoder = JsonEncoder()
-        result = json.dumps(object, indent=2, ensure_ascii=False, default=encoder.default, sort_keys=False)
+        result = json.dumps(obj, indent=2, ensure_ascii=False, default=encoder.default, sort_keys=False)
         return result

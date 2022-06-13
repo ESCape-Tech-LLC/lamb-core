@@ -1,27 +1,30 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import os
 import logging
-
-from typing import Type, List, Optional, Tuple
+from typing import List, Type, Tuple, Optional
 from urllib.parse import urljoin
 
 from django.conf import settings
 
+# Lamb Framework
 from lamb.exc import ServerError
-from lamb.service.aws.s3 import S3Uploader
-from .uploaders import BaseUploader
-from .model import AbstractImage
 from lamb.types import IT, SliceRule
-from lamb.utils import import_by_name, LambRequest
+from lamb.utils import LambRequest, import_by_name
+from lamb.service.aws.s3 import S3Uploader
 
+from .model import AbstractImage
+from .uploaders import BaseUploader
 
 logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    'get_default_uploader_class', 'create_image_slices', 'upload_images', 'parse_static_url',
-    'remove_image_from_storage'
+    "get_default_uploader_class",
+    "create_image_slices",
+    "upload_images",
+    "parse_static_url",
+    "remove_image_from_storage",
 ]
 
 
@@ -31,20 +34,20 @@ def get_default_uploader_class() -> Type[BaseUploader]:
 
     :return: Imported uploader class.
     """
-    logger.info('Image uploader created: %s' % settings.LAMB_IMAGE_UPLOAD_ENGINE)
+    logger.info("Image uploader created: %s" % settings.LAMB_IMAGE_UPLOAD_ENGINE)
     result = import_by_name(settings.LAMB_IMAGE_UPLOAD_ENGINE)
     if not issubclass(result, BaseUploader):
-        raise ServerError('Improperly configured image uploader')
+        raise ServerError("Improperly configured image uploader")
     return result
 
 
 def create_image_slices(
-        request: LambRequest,
-        slicing: List[SliceRule],
-        envelope_folder: Optional[str] = None,
-        limit: Optional[int] = None,
-        uploader_class: Optional[Type[BaseUploader]] = None,
-        allow_svg: Optional[bool] = False
+    request: LambRequest,
+    slicing: List[SliceRule],
+    envelope_folder: Optional[str] = None,
+    limit: Optional[int] = None,
+    uploader_class: Optional[Type[BaseUploader]] = None,
+    allow_svg: Optional[bool] = False,
 ) -> List[List[IT]]:
     """
     Uploads images from request and generates slices.
@@ -64,22 +67,19 @@ def create_image_slices(
 
     uploader = uploader_class(envelope_folder=envelope_folder)
     stored_slices = uploader.process_request(
-        request=request,
-        slicing=slicing,
-        required_count=limit,
-        allow_svg=allow_svg
+        request=request, slicing=slicing, required_count=limit, allow_svg=allow_svg
     )
     return stored_slices
 
 
 def upload_images(
-        request: LambRequest,
-        slicing: List[SliceRule],
-        image_class: Type[AbstractImage],
-        envelope_folder: Optional[str] = None,
-        limit: Optional[int] = None,
-        uploader_class: Optional[Type[BaseUploader]] = None,
-        allow_svg: Optional[bool] = False
+    request: LambRequest,
+    slicing: List[SliceRule],
+    image_class: Type[AbstractImage],
+    envelope_folder: Optional[str] = None,
+    limit: Optional[int] = None,
+    uploader_class: Optional[Type[BaseUploader]] = None,
+    allow_svg: Optional[bool] = False,
 ) -> List[AbstractImage]:
     """
     Uploads image from request to project storage.
@@ -100,7 +100,7 @@ def upload_images(
         envelope_folder=envelope_folder,
         limit=limit,
         uploader_class=uploader_class,
-        allow_svg=allow_svg
+        allow_svg=allow_svg,
     )
     # Create images of specified class
     result = list()
@@ -122,21 +122,21 @@ def parse_static_url(url: str) -> Tuple[str, str]:
     except AttributeError:
         host = settings.HOST
         if settings.PORT not in [80, 443]:
-            host = f'{host}:{settings.PORT}'
-        static_url = urljoin(f'{settings.SCHEME}://{host}', 'static')
+            host = f"{host}:{settings.PORT}"
+        static_url = urljoin(f"{settings.SCHEME}://{host}", "static")
 
     try:
         static_folder = settings.LAMB_STATIC_FOLDER
     except AttributeError:
-        static_folder = os.path.join(settings.BASE_DIR, 'static')
+        static_folder = os.path.join(settings.BASE_DIR, "static")
 
     # Check for match
     if not url.startswith(static_url):
-        raise ValueError('No static url match found')
+        raise ValueError("No static url match found")
 
     # Parse relative path
     static_url_len = len(static_url)
-    if not static_url.endswith('/'):
+    if not static_url.endswith("/"):
         static_url_len += 1
     relative_path = url[static_url_len:]
 
@@ -151,14 +151,14 @@ def remove_image_from_storage(image: AbstractImage, fail_silently: Optional[bool
     :param image: Image object
     :param fail_silently: If set to False, raises an exception on any error
     """
-    logger.debug(f'Removing image file from storage: image_id={image.image_id}')
+    logger.debug(f"Removing image file from storage: image_id={image.image_id}")
     for slice_info in image.slices_info:
         # Try to find and remove local file
         file_path = None
         try:
             file_path = parse_static_url(slice_info.url)[1]
         except ValueError:
-            logger.debug(f'No static path found for url: {slice_info.url}')
+            logger.debug(f"No static path found for url: {slice_info.url}")
         if file_path:
             try:
                 os.remove(file_path)
@@ -174,4 +174,4 @@ def remove_image_from_storage(image: AbstractImage, fail_silently: Optional[bool
             if not fail_silently:
                 raise
 
-    logger.debug('Successfully finished removing image file from storage')
+    logger.debug("Successfully finished removing image file from storage")

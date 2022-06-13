@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
+from __future__ import annotations
 
 import time
 import logging
-
 from typing import List, Tuple
-
 
 logger = logging.getLogger(__name__)
 
 
-__all__ = [ 'ExecutionTimeMeter' ]
+__all__ = ["ExecutionTimeMeter"]
 
 
 class ExecutionTimeMeter(object):
@@ -24,7 +21,8 @@ class ExecutionTimeMeter(object):
         :type message: str
         :type timestamp: float
         """
-        def __init__(self, message = None):
+
+        def __init__(self, message=None):
             self.message = message
             self.timestamp = time.time()
 
@@ -33,15 +31,15 @@ class ExecutionTimeMeter(object):
         self.start_time = time.time()
 
     def append_marker(self, message: str = None):
-        """ Appends new marker to measures series """
+        """Appends new marker to measures series"""
         self._markers.append(ExecutionTimeMeter.Marker(message))
 
     def get_total_time(self) -> float:
-        """ Total elapsed time interval """
+        """Total elapsed time interval"""
         return self._markers[len(self._markers) - 1].timestamp - self.start_time
 
     def get_measurements(self) -> List[Tuple[str, float, float, float]]:
-        """ List of measured values - tuple (message, absolute, relative, percentage) """
+        """List of measured values - tuple (message, absolute, relative, percentage)"""
 
         total_elapsed = self.get_total_time()
 
@@ -63,23 +61,23 @@ class ExecutionTimeMeter(object):
 
         message_elements = list()
         if isinstance(header, str):
-            final_header = header + ' measures: '
+            final_header = header + " measures: "
         else:
-            final_header = 'Time measures: '
+            final_header = "Time measures: "
         message_elements.append(final_header)
-        message_elements.append(f'Total time: {total_elapsed:.6f} sec.')
+        message_elements.append(f"Total time: {total_elapsed:.6f} sec.")
 
         # print values
         for m in measurements:
-            message_elements.append(f'\t{m[0]}: {m[2]:.6f} sec. [{m[3]:.2f} %%] ({m[1]:.6f} sec.)')
+            message_elements.append(f"\t{m[0]}: {m[2]:.6f} sec. [{m[3]:.2f} %%] ({m[1]:.6f} sec.)")
 
         return message_elements
 
     def log_marks(self, header: str = None):
-        """ Log collected markers using standard logging module """
+        """Log collected markers using standard logging module"""
         try:
             message_elements = self.get_log_messages(header)
-            message = '\n'.join(message_elements)
+            message = "\n".join(message_elements)
             logger.info(message)
-        except:
+        except Exception:
             pass

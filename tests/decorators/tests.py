@@ -1,30 +1,31 @@
 from unittest import mock
 
+# Lamb Framework
 from lamb.exc import NotAllowedMethodError
-from lamb.rest.decorators import rest_allowed_http_methods
 from lamb.rest.rest_view import RestView
+from lamb.rest.decorators import rest_allowed_http_methods
+
 from tests.testcases import LambTestCase
 
 
-@rest_allowed_http_methods(['GET'])
+@rest_allowed_http_methods(["GET"])
 class View(RestView):
     """Let's preserve class docstring!"""
 
     def get(*args, **kwargs):
         """Let's preserve method docstring!"""
-        return 'OK'
+        return "OK"
 
 
 class TastRestAllowedHttpMethods(LambTestCase):
-
     def test_method_called(self):
         request = mock.Mock()
-        request.method = 'GET'
-        assert View(request) == 'OK'
+        request.method = "GET"
+        assert View(request) == "OK"
 
     def test_method_not_allowed(self):
         request = mock.Mock()
-        request.method = 'POST'
+        request.method = "POST"
         with self.assertRaises(NotAllowedMethodError):
             assert View(request)
 

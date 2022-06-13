@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
-from datetime import datetime
 from enum import Enum
 from typing import Optional
-
+from datetime import datetime
 from dataclasses import dataclass
 
 
 class SubscriptionStatus(Enum):
-    PAYMENT_PENDING = 'PAYMENT_PENDING'
-    ACTIVE = 'ACTIVE'
-    CANCELLED = 'CANCELLED'
-    EXPIRED = 'EXPIRED'
-    UNKNOWN = 'UNKNOWN'
+    PAYMENT_PENDING = "PAYMENT_PENDING"
+    ACTIVE = "ACTIVE"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclass
@@ -25,7 +24,6 @@ class PurchaseData:
 
 
 class InAppAbstract:
-
     @staticmethod
     def _parse_data(data, key, sort_by=None):
         try:
@@ -39,7 +37,7 @@ class InAppAbstract:
     @staticmethod
     def _get_expiry_date(data, key):
         try:
-            return datetime.fromtimestamp(int(InAppAbstract._parse_data(data, key)) / 1000.)
+            return datetime.fromtimestamp(int(InAppAbstract._parse_data(data, key)) / 1000.0)
         except TypeError:
             return None
 
@@ -51,4 +49,3 @@ class InAppAbstract:
 
     def get_purchase_data_raw(self) -> dict:
         raise NotImplementedError
-

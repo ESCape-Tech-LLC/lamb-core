@@ -1,32 +1,31 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
+from __future__ import annotations
 
 import logging
-import openpyxl
+from typing import Dict, List, Union, Callable, Optional, Generator
 
-
-from typing import Optional, List, Generator, Tuple, Dict, Union, Callable
-from openpyxl.cell.cell import Cell as OpenpyxlCell
-from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet
-from openpyxl.workbook import Workbook as OpenpyxlWorkbook
-from lazy import lazy
-
-from lamb.exc import InvalidParamTypeError, InvalidParamValueError, ApiError, InvalidBodyStructureError
+# Lamb Framework
+from lamb.exc import (
+    ApiError,
+    InvalidParamTypeError,
+    InvalidParamValueError,
+    InvalidBodyStructureError,
+)
 from lamb.utils import compact
 
+import openpyxl
+from lazy import lazy
+from openpyxl.workbook import Workbook as OpenpyxlWorkbook
+from openpyxl.cell.cell import Cell as OpenpyxlCell
+from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet
 
-__all__ = ['Worksheet', 'Workbook', 'Cell', 'Row', 'Column']
+__all__ = ["Worksheet", "Workbook", "Cell", "Row", "Column"]
 
 
-from collections import OrderedDict
 logger = logging.getLogger(__name__)
 
 
-""" 
-Column names based wrapper around Excel worksheet
-
-- use zero-based indexes instead of default openpyxl mode
-"""
+# Column names based wrapper around Excel worksheet
+# - use zero-based indexes instead of default openpyxl mode
 
 
 class Workbook(object):
@@ -39,29 +38,23 @@ class Workbook(object):
         self._filename = filename
 
     @property
-    def worksheets(self) -> List['Worksheet']:
-        return [
-            Worksheet(wrapped_worskheet=w, create_columns=self._create_columns)
-            for w in self._workbook.worksheets
-        ]
+    def worksheets(self) -> List["Worksheet"]:
+        return [Worksheet(wrapped_worskheet=w, create_columns=self._create_columns) for w in self._workbook.worksheets]
 
     @property
-    def worksheets_dict(self) -> Dict[str, 'Worksheet']:
+    def worksheets_dict(self) -> Dict[str, "Worksheet"]:
         return {
             w.title: Worksheet(wrapped_worskheet=w, create_columns=self._create_columns)
             for w in self._workbook.worksheets
         }
 
-    def remove_sheet(self, sheet: Union[str, 'Worksheet']):
+    def remove_sheet(self, sheet: Union[str, "Worksheet"]):
         if isinstance(sheet, str):
             sheet = self.worksheets_dict[sheet]
         self._workbook.remove(sheet.openpyxl_worksheet)
 
-    def create_sheet(self, title: str = None, index: int = None) -> 'Worksheet':
-        return Worksheet(
-            self._workbook.create_sheet(title=title, index=index),
-            create_columns=self._create_columns
-        )
+    def create_sheet(self, title: str = None, index: int = None) -> "Worksheet":
+        return Worksheet(self._workbook.create_sheet(title=title, index=index), create_columns=self._create_columns)
 
     # excel general
     @property
@@ -73,7 +66,7 @@ class Workbook(object):
         return self._workbook
 
     # iterators
-    def iter_rows(self) -> Generator[Generator['Cell', None, None], None, None]:
+    def iter_rows(self) -> Generator[Generator["Cell", None, None], None, None]:
         max_row = self._worksheet.max_row - 1
         for row in range(0, max_row):
             yield self.cells(row=row)
@@ -86,7 +79,7 @@ class Workbook(object):
     def clean_sheet_empty_columns(self, sheet_name: str):
         # check and extract info
         if sheet_name not in self.worksheets_dict:
-            raise InvalidParamValueError(f'Did not found sheet {sheet_name} in excel file')
+            raise InvalidParamValueError(f"Did not found sheet {sheet_name} in excel file")
         index = list(self.worksheets_dict.keys()).index(sheet_name)
 
         # clean
@@ -108,12 +101,12 @@ class Workbook(object):
             for row_index, value in enumerate(column):
                 ws.cell(row_index, column_index).value = value
 
-        logger.info(f'columns cleaning: {sheet_name} -> removed columns count {removed_count}')
+        logger.info(f"columns cleaning: {sheet_name} -> removed columns count {removed_count}")
 
     def clean_sheet_empty_rows(self, sheet_name: str):
         # check and extract info
         if sheet_name not in self.worksheets_dict:
-            raise InvalidParamValueError(f'Did not found sheet {sheet_name} in excel file')
+            raise InvalidParamValueError(f"Did not found sheet {sheet_name} in excel file")
         index = list(self.worksheets_dict.keys()).index(sheet_name)
 
         # clean
@@ -135,7 +128,7 @@ class Workbook(object):
             for column_index, value in enumerate(row):
                 ws.cell(row_index, column_index).value = value
 
-        logger.info(f'rows cleaning: {sheet_name} -> removed rows count {removed_count}')
+        logger.info(f"rows cleaning: {sheet_name} -> removed rows count {removed_count}")
 
 
 class Worksheet(object):
@@ -155,25 +148,25 @@ class Worksheet(object):
         return [cell.typed_value(req_type=str, default=None) for cell in self.cells(0)]
 
     @property
-    def rows(self) -> Generator['Row', None, None]:
+    def rows(self) -> Generator["Row", None, None]:
         max_row = self._wrapped_worksheet.max_row
         for row_index in range(0, max_row):
             yield Row(worksheet=self, row_index=row_index)
 
     @property
-    def columns(self) -> Generator['Column', None, None]:
+    def columns(self) -> Generator["Column", None, None]:
         max_column = self._wrapped_worksheet.max_column
         for column_index in range(0, max_column):
             yield Column(worksheet=self, column_index=column_index)
 
     # cell access
-    def cells(self, row: int) -> Generator['Cell', None, None]:
+    def cells(self, row: int) -> Generator["Cell", None, None]:
         max_column = self._wrapped_worksheet.max_column
         for column in range(1, max_column + 1):
             result_cell = Cell(self._wrapped_worksheet.cell(row=row + 1, column=column))
             yield result_cell
 
-    def cell(self, row: int, column: Union[int, str]) -> 'Cell':
+    def cell(self, row: int, column: Union[int, str]) -> "Cell":
         # check params
         if isinstance(column, str):
             column_index = self.column_index(column)
@@ -182,16 +175,16 @@ class Worksheet(object):
                     max_column = self._wrapped_worksheet.max_column
                     self._wrapped_worksheet.cell(row=1, column=max_column + 1).value = column
                     column_index = max_column
-                    lazy.invalidate(self, 'headers')
+                    lazy.invalidate(self, "headers")
                 else:
-                    raise InvalidParamValueError(f'Column with name={column} not exist')
+                    raise InvalidParamValueError(f"Column with name={column} not exist")
         elif isinstance(column, int):
             column_index = column
         else:
-            raise InvalidParamTypeError('Invalid value of column param')
+            raise InvalidParamTypeError("Invalid value of column param")
 
         if not isinstance(row, int):
-            raise InvalidParamTypeError('Invalid value of row param')
+            raise InvalidParamTypeError("Invalid value of row param")
         else:
             row_index = row
 
@@ -216,25 +209,26 @@ class Worksheet(object):
 
 
 class Row(object):
-
     def __init__(self, worksheet: Worksheet, row_index: int):
         self._worksheet = worksheet
         self._row_index = row_index
 
-    def __getitem__(self, column_name) -> 'Cell':
+    def __getitem__(self, column_name) -> "Cell":
         return self._worksheet.cell(row=self._row_index, column=column_name)
 
     def __setitem__(self, column_name, value):
         self._worksheet.cell(row=self._row_index, column=column_name).value = value
 
     @property
-    def cells(self) -> Generator['Cell', None, None]:
-        _row = next(self._worksheet.openpyxl_worksheet.iter_rows(
-            min_row=self._row_index + 1,
-            max_row=self._row_index + 1,
-            min_col=1,
-            max_col=self._worksheet.openpyxl_worksheet.max_column
-        ))
+    def cells(self) -> Generator["Cell", None, None]:
+        _row = next(
+            self._worksheet.openpyxl_worksheet.iter_rows(
+                min_row=self._row_index + 1,
+                max_row=self._row_index + 1,
+                min_col=1,
+                max_col=self._worksheet.openpyxl_worksheet.max_column,
+            )
+        )
         for _cell in _row:
             yield Cell(_cell)
 
@@ -245,14 +239,13 @@ class Column(object):
         self._column_index = column_index
 
     @property
-    def cells(self) -> Generator['Cell', None, None]:
+    def cells(self) -> Generator["Cell", None, None]:
         max_row = self._worksheet.openpyxl_worksheet.max_row
         for row_index in range(0, max_row):
             yield self._worksheet.cell(row=row_index, column=self._column_index)
 
 
 class Cell(object):
-
     def __init__(self, cell: OpenpyxlCell):
         self._cell = cell
 
@@ -266,7 +259,7 @@ class Cell(object):
                 _result = req_type(_result)
                 return _result
             except (ValueError, TypeError) as _e:
-                raise InvalidParamTypeError('Invalid data type for value in cell') from _e
+                raise InvalidParamTypeError("Invalid data type for value in cell") from _e
 
         try:
             # get and normalize value
@@ -279,7 +272,7 @@ class Cell(object):
                 if allow_none:
                     return None
                 else:
-                    raise InvalidParamTypeError('Invalid data type for value in cell')
+                    raise InvalidParamTypeError("Invalid data type for value in cell")
 
             # apply type convert
             result = _type_convert(result)
@@ -290,12 +283,12 @@ class Cell(object):
 
             return result
         except Exception as e:
-            if 'default' in kwargs.keys():
-                return kwargs['default']
+            if "default" in kwargs.keys():
+                return kwargs["default"]
             elif isinstance(e, ApiError):
                 raise
             else:
-                raise InvalidBodyStructureError('Failed to parse cell value') from e
+                raise InvalidBodyStructureError("Failed to parse cell value") from e
 
     @property
     def openpyxl_cell(self) -> OpenpyxlCell:

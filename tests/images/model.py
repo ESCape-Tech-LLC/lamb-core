@@ -1,45 +1,42 @@
 import enum
 
-from sqlalchemy import Column, BIGINT, ForeignKey
+# SQLAlchemy
+from sqlalchemy import BIGINT, Column, ForeignKey
 
+# Lamb Framework
 from lamb.service.image.model import AbstractImage
-from lamb.service.image.uploaders import ImageUploadSlice, ImageUploadMode
+from lamb.service.image.uploaders import ImageUploadMode, ImageUploadSlice
 
 
 @enum.unique
 class ImageType(str, enum.Enum):
     ABSTRACT = AbstractImage.ABSTRACT_IMAGE_TYPE
-    SIMPLE = 'simple'
+    SIMPLE = "simple"
 
 
 class Image(AbstractImage):
     # meta
-    __tablename__ = 'tests_image'
+    __tablename__ = "tests_image"
 
 
 class SimpleImage(Image):
     # columns
     image_id = Column(
-        BIGINT,
-        ForeignKey(Image.image_id, onupdate='CASCADE', ondelete='CASCADE'),
-        nullable=False,
-        primary_key=True
+        BIGINT, ForeignKey(Image.image_id, onupdate="CASCADE", ondelete="CASCADE"), nullable=False, primary_key=True
     )
 
     __slicing__ = [
-        ImageUploadSlice('origin', -1, ImageUploadMode.NoAction, ''),
-        ImageUploadSlice('small', 100, ImageUploadMode.Resize, 'small'),
-        ImageUploadSlice('thumb', 50, ImageUploadMode.Crop, 'thumb')
+        ImageUploadSlice("origin", -1, ImageUploadMode.NoAction, ""),
+        ImageUploadSlice("small", 100, ImageUploadMode.Resize, "small"),
+        ImageUploadSlice("thumb", 50, ImageUploadMode.Crop, "thumb"),
     ]
 
     # meta
-    __tablename__ = 'tests_simple_image'
+    __tablename__ = "tests_simple_image"
 
     __mapper_args__ = {
-        'polymorphic_identity': ImageType.SIMPLE.value,
-        'polymorphic_on': 'image_type',
+        "polymorphic_identity": ImageType.SIMPLE.value,
+        "polymorphic_on": "image_type",
     }
 
-    __table_args__ = {
-        'comment': 'Simple images storage table'
-    }
+    __table_args__ = {"comment": "Simple images storage table"}

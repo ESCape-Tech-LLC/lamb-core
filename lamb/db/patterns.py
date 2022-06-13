@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
+# TODO: fix docstrings to pass flake8 with reStructuredText format
 import enum
-from lamb.db.session import DeclarativeBase
-from lamb.db.context import lamb_db_context
-from lamb.exc import *
-from lamb.utils import get_primary_keys
 
-__all__ = [
-    'DbEnum', 'ConfigEnum'
-]
+# Lamb Framework
+from lamb.exc import ServerError
+from lamb.utils import get_primary_keys
+from lamb.db.context import lamb_db_context
+from lamb.db.session import DeclarativeBase
+
+__all__ = ["DbEnum", "ConfigEnum"]
 
 
 def get_class_by_name(base, classname):
@@ -19,11 +17,11 @@ def get_class_by_name(base, classname):
     :return: Declarative class or None.
     """
 
-    if not hasattr(base, 'TABLES_BY_CLASS'):
+    if not hasattr(base, "TABLES_BY_CLASS"):
         base.CLASSES_BY_NAME = {}
         for mapper in base.registry.mappers:
             cls = mapper.class_
-            if not cls.__name__.startswith('_'):
+            if not cls.__name__.startswith("_"):
                 base.CLASSES_BY_NAME[cls.__name__] = cls
 
     return base.CLASSES_BY_NAME.get(classname, None)
@@ -79,13 +77,14 @@ class DbEnum(enum.Enum):
             return self.__class__.__table_class__
         else:
             raise ServerError(
-                'Improperly configured class %s. Could not locate table class name' % self.__class__.__name__)
+                "Improperly configured class %s. Could not locate table class name" % self.__class__.__name__
+            )
 
     def _setup_db_item(self, item):
-        """ Designed item initializer
+        """Designed item initializer
 
         This method should be overridden in subclass if they have custom fields on database level.
-        By default method only assign primary key of underline table to value of self instance.
+        By default, method only assign primary key of underline table to value of self instance.
 
         :param item: Database table record instance
         :type item: lamb.db.session.DeclarativeBase
@@ -126,7 +125,7 @@ class DbEnum(enum.Enum):
             _ = self._db_item(session)
 
     def __getattribute__(self, key):
-        if key[:2] != '__':
+        if key[:2] != "__":
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
@@ -136,7 +135,7 @@ class DbEnum(enum.Enum):
         return super().__getattribute__(key)
 
     def __setattr__(self, key, value):
-        if key[:2] != '__':
+        if key[:2] != "__":
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
@@ -214,6 +213,7 @@ class ConfigEnum(DbEnum):
 
         TestCode.Code1.val = 100
         TestSettings.settings1.val = 10
+
     """
 
     def __new__(cls, code, default, header, *args, **kwargs):

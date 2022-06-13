@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
 import contextvars
 
-_request = contextvars.ContextVar('request', default=None)
+_request = contextvars.ContextVar("request", default=None)
 
-# import threading
 
 import logging
-# import uuid
 
-
-# from django.conf import settings
 from django.http import HttpResponse
 
-# from lamb.utils import dpath_value, LambRequest
-# from lamb.utils.transformers import transform_uuid
+# Lamb Framework
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
 
-__all__ = ['LambGRequestMiddleware']
+__all__ = ["LambGRequestMiddleware"]
 
 
 logger = logging.getLogger(__name__)
@@ -33,18 +26,18 @@ class LambGRequestMiddleware(AsyncMiddlewareMixin):
     """
 
     def _call(self, request) -> HttpResponse:
-        logger.debug(f'<{self.__class__.__name__}>: Attaching request to context')
+        logger.debug(f"<{self.__class__.__name__}>: Attaching request to context")
         self.__class__.set_request(request)
         response = self.get_response(request)
-        logger.debug(f'<{self.__class__.__name__}>: Detaching request from context')
+        logger.debug(f"<{self.__class__.__name__}>: Detaching request from context")
         self.__class__.del_request()
         return response
 
     async def _acall(self, request) -> HttpResponse:
-        logger.debug(f'<{self.__class__.__name__}>: Attaching request to context')
+        logger.debug(f"<{self.__class__.__name__}>: Attaching request to context")
         self.__class__.set_request(request)
         response = await self.get_response(request)
-        logger.debug(f'<{self.__class__.__name__}>: Detaching request from context')
+        logger.debug(f"<{self.__class__.__name__}>: Detaching request from context")
         self.__class__.del_request()
         return response
 

@@ -1,26 +1,30 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import os
-
-from typing import Optional, Union, BinaryIO
+from typing import Union, BinaryIO, Optional
 from urllib.parse import urljoin
+
 from django.conf import settings
 
-from lamb.utils import LambRequest
+# Lamb Framework
 from lamb import exc
+from lamb.utils import LambRequest
 
-from .base import BaseUploader, PILImage
+from .base import PILImage, BaseUploader
 
-__all__ = ['ImageUploadServiceDisk']
+__all__ = ["ImageUploadServiceDisk"]
 
 
 class ImageUploadServiceDisk(BaseUploader):
-    """ Local folder uploader """
+    """Local folder uploader"""
 
-    def store_image(self, image: Union[PILImage.Image, BinaryIO],
-                    proposed_file_name: str,
-                    request: LambRequest,
-                    image_format: Optional[str] = None) -> str:
+    def store_image(
+        self,
+        image: Union[PILImage.Image, BinaryIO],
+        proposed_file_name: str,
+        request: LambRequest,
+        image_format: Optional[str] = None,
+    ) -> str:
         """
         Implements specific storage logic
 
@@ -29,22 +33,15 @@ class ImageUploadServiceDisk(BaseUploader):
         try:
             # prepare file path and check envelope folder exist
             static_relative_path = self.construct_relative_path(proposed_file_name)
-            output_file_path = os.path.join(
-                settings.LAMB_STATIC_FOLDER,
-                static_relative_path
-            )
+            output_file_path = os.path.join(settings.LAMB_STATIC_FOLDER, static_relative_path)
             os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 
             # store file on disk
             if isinstance(image, PILImage.Image):
-                image.save(
-                    output_file_path,
-                    image_format or image.format,
-                    quality=settings.LAMB_IMAGE_UPLOAD_QUALITY
-                )
+                image.save(output_file_path, image_format or image.format, quality=settings.LAMB_IMAGE_UPLOAD_QUALITY)
             else:
                 image.seek(0)
-                with open(output_file_path, 'wb') as f:
+                with open(output_file_path, "wb") as f:
                     f.write(image.read())
 
             # get result url
@@ -52,4 +49,4 @@ class ImageUploadServiceDisk(BaseUploader):
             result = request.build_absolute_uri(result)
             return result
         except Exception as e:
-            raise exc.ServerError('Failed to save image') from e
+            raise exc.ServerError("Failed to save image") from e

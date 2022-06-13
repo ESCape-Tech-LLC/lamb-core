@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
 from functools import wraps
 
 from django.http import HttpResponse
 
-from lamb.rest.rest_view import RestView
+# Lamb Framework
 from lamb.exc import NotAllowedMethodError
+from lamb.rest.rest_view import RestView
 
-__all__ = [ 'rest_allowed_http_methods' ]
+__all__ = ["rest_allowed_http_methods"]
 
 
 def rest_allowed_http_methods(method_list):
@@ -19,17 +17,18 @@ def rest_allowed_http_methods(method_list):
             m_list = [m.upper() for m in method_list]
 
             # for OPTIONS method return only list of allowed methods
-            if request.method == 'OPTIONS':
+            if request.method == "OPTIONS":
                 response = HttpResponse()
-                response['Allow'] = ', '.join(m_list)
-                response['Content-Length'] = 0
+                response["Allow"] = ", ".join(m_list)
+                response["Content-Length"] = 0
                 return response
 
             # check allowed HTTP methods
             if request.method not in m_list:
-                message = 'HTTP method %s is not allowed for path=%s. Allowed methods (%s)' % (
+                message = "HTTP method %s is not allowed for path=%s. Allowed methods (%s)" % (
                     request.method,
-                    request.path_info, ','.join(m_list)
+                    request.path_info,
+                    ",".join(m_list),
                 )
                 raise NotAllowedMethodError(message)
 
@@ -38,5 +37,7 @@ def rest_allowed_http_methods(method_list):
                 return wrapped_object.as_request_callable()(request, *args, **kwargs)
             else:
                 return wrapped_object(request, *args, **kwargs)
+
         return inner
+
     return wrapper

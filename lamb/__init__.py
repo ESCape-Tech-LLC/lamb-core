@@ -1,28 +1,24 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
-__version__ = '3.0.0'
+__version__ = "3.0.0"
 
 
 import logging
 
 from django.apps import AppConfig
 
+# Lamb Framework
 from lamb.utils import inject_app_defaults
-from lamb.utils.logging import inject_logging_factory
-
 
 logger = logging.getLogger(__name__)
 
 
 class LambAppConfig(AppConfig):
-    name = 'lamb'
-    verbose_name = 'Lamb REST framework'
+    name = "lamb"
+    verbose_name = "Lamb REST framework"
 
     def ready(self):
-        logger.debug('Lamb framework initialized')
+        logger.debug("Lamb framework initialized")
         inject_app_defaults(__name__)
-        logger.debug('Lamb default settings injected')
+        logger.debug("Lamb default settings injected")
 
 
-default_app_config = 'lamb.LambAppConfig'
+default_app_config = "lamb.LambAppConfig"

@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
+# Lamb Framework
 from lamb.types import DeviceInfo
 
-__all__ = ['DeviceInfo']
+__all__ = ["DeviceInfo"]

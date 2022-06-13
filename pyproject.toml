@@ -1,3 +1,16 @@
 [tool.black]
 line-length = 120
 target-version = ['py39']
+
+[tool.isort]
+py_version = 39
+profile = 'black'
+src_paths = ['lamb']
+length_sort = true
+known_django = 'django'
+known_lamb = 'lamb'
+known_sqlalchemy = 'sqlalchemy,sqlalchemy_utils'
+import_heading_lamb = 'Lamb Framework'
+import_heading_sqlalchemy = 'SQLAlchemy'
+import_heading_firstparty = 'Project'
+sections = 'FUTURE,STDLIB,DJANGO,SQLALCHEMY,LAMB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER'

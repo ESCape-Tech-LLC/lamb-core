@@ -1,48 +1,48 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
+from __future__ import annotations
 
-
-import datetime
 import logging
+import datetime
+from typing import Optional
 
-from django.urls import resolve
 from django.conf import settings
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpResponse
+from django.urls import resolve
 from django.utils.deprecation import MiddlewareMixin
 
-from lamb.execution_time.meter import ExecutionTimeMeter
-from lamb.execution_time.model import LambExecutionTimeMetric, LambExecutionTimeMarker
-from lamb.utils import *
+# Lamb Framework
+from lamb.utils import LambRequest
 from lamb.db.context import lamb_db_context
+from lamb.execution_time.meter import ExecutionTimeMeter
+from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["ExecutionTimeMiddleware"]
 
-__all__ = [ 'ExecutionTimeMiddleware' ]
 
-
+# TODO: migrate to common middlewares folder
 class ExecutionTimeMiddleware(MiddlewareMixin):
-
     @classmethod
     def append_mark(cls, request: LambRequest, message: str):
-        """ Appends new marker to request """
+        """Appends new marker to request"""
         try:
             request.lamb_execution_meter.append_marker(message)
-        except: pass
+        except Exception:
+            pass
 
     def _start(self, request):
-        """ Appends metric object to request """
+        """Appends metric object to request"""
         request.lamb_execution_meter = ExecutionTimeMeter()
 
-    def _finish(self, request: LambRequest, response: HttpResponse, exception: Exception):
-        """ Stores collected data in database """
+    def _finish(self, request: LambRequest, response: Optional[HttpResponse], exception: Optional[Exception]):
+        """Stores collected data in database"""
         metric = LambExecutionTimeMetric()
         metric.http_method = request.method
 
         # get execution time
         try:
             time_measure = request.lamb_execution_meter
-            time_measure.append_marker('finish')
+            time_measure.append_marker("finish")
             metric.start_time = datetime.datetime.fromtimestamp(time_measure.start_time)
             metric.elapsed_time = time_measure.get_total_time()
             if settings.LAMB_EXECUTION_TIME_COLLECT_MARKERS:
@@ -54,14 +54,16 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
                     marker.relative_interval = m[2]
                     marker.percentage = m[3]
                     metric.markers.append(marker)
-        except: pass
+        except Exception:
+            pass
 
         # get app name and url name
         try:
             resolved = resolve(request.path)
             metric.app_name = resolved.app_name
             metric.url_name = resolved.url_name
-        except: pass
+        except Exception:
+            pass
 
         # store
         try:
@@ -71,21 +73,23 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
                 db_session.add(metric)
                 db_session.commit()
         except Exception as e:
-            logger.error('ExecutionMetrics store error: %s' % e)
+            logger.error("ExecutionMetrics store error: %s" % e)
             pass
 
         # log total
         level = settings.LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL
         if level:
             if isinstance(level, str):
-                logging.getLogger
-                level = logging.mlevel(level)
-            msg = f'"{request.method} {request.get_full_path()}" {request.lamb_execution_meter.get_total_time():.6f} sec.'
+                # TODO: fix and migrate to mapping - can produce wrong levels if not found
+                level = logging.getLevelName(level.upper())
+            msg = (
+                f'"{request.method} {request.get_full_path()}" {request.lamb_execution_meter.get_total_time():.6f} sec.'
+            )
             if response is not None:
-                length = len(response.content) if not response.streaming else '<stream>'
-                msg = f'{msg} {response.status_code} {length}'
+                length = len(response.content) if not response.streaming else "<stream>"
+                msg = f"{msg} {response.status_code} {length}"
             elif exception is not None:
-                msg = f'{msg} {exception.__class__.__name__}'
+                msg = f"{msg} {exception.__class__.__name__}"
             logger.log(level, msg)
 
     def process_request(self, request: LambRequest):

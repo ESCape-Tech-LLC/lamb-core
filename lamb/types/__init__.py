@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
-# from .phone_number import *
-from .locale import *
-from .device_info import *
-from .intenum import *
-from .image import *
-# from .logging import *
+from .image import *  # noqa: F403,F401
+from .locale import *  # noqa: F403,F401
+from .intenum import *  # noqa: F403,F401
+from .device_info import *  # noqa: F403,F401

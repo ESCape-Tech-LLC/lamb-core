@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
-__author__ = 'KoNEW'
-
 import logging
+
+# SQLAlchemy
 from sqlalchemy.orm.session import Session as SASession
 
+# Lamb Framework
 from lamb.exc import ServerError
 
 logger = logging.getLogger(__name__)
 
 
-__all__ = ['AbstractPaymentEngine']
+__all__ = ["AbstractPaymentEngine"]
 
 
 class AbstractPaymentEngine(object):
@@ -19,8 +19,8 @@ class AbstractPaymentEngine(object):
     def __init__(self, db_session: SASession, **kwargs):
         self.db_session = db_session
         if not isinstance(self.db_session, SASession):
-            logger.warning('Improperly configured AbstractPaymentEngine - invalid db_session param type')
-            raise ServerError('Improperly configured server side call')
+            logger.warning("Improperly configured AbstractPaymentEngine - invalid db_session param type")
+            raise ServerError("Improperly configured server side call")
 
     # no-hold payments
     # def register_payment(self, payment, session_timeout):
