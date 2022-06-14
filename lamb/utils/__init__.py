@@ -19,7 +19,7 @@ from inspect import isclass
 from datetime import date, datetime, timedelta
 from xml.etree import cElementTree
 from collections import OrderedDict
-from urllib.parse import unquote, urlsplit, urlunsplit
+from urllib.parse import unquote
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -33,12 +33,10 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
+import furl
 import requests
 from PIL import Image as PILImage
 from asgiref.sync import sync_to_async
-
-# import lamb.utils.filters
-
 
 try:
     import cassandra
@@ -65,8 +63,6 @@ __all__ = [
     "parse_body_as_json",
     "dpath_value",
     "random_string",
-    "url_append_components",
-    "clear_white_space",
     "compact",
     "response_paginated",
     "response_sorted",
@@ -98,6 +94,7 @@ __all__ = [
     "str_coercible",
     "get_columns",
     "get_primary_keys",
+    "get_redis_url",
 ]
 
 
@@ -149,7 +146,6 @@ def parse_body_as_json(request: HttpRequest) -> dict:
 
 
 # response utilities
-# PV = TypeVar('PV', *compact(list, Query, ModelQuerySet))
 PV = TypeVar("PV", list, Query, ModelQuerySet)
 
 
@@ -498,8 +494,7 @@ CONTENT_ENCODING_MULTIPART = "multipart/form-data"
 
 
 def _get_encoding_for_header(request: HttpRequest, header: str) -> str:
-    """ " Extract header value from request and interpret it as encoding value
-
+    """Extract header value from request and interpret it as encoding value
     :raises InvalidParamTypeError: In case header value is not of type string
     """
     # check param types
@@ -649,30 +644,6 @@ def inject_app_defaults(application: str):
         pass
 
 
-def url_append_components(baseurl: str = "", components: List[str] = None) -> str:
-    """Append path components to url"""
-    components = [str(c) for c in components] if components else []
-    split = urlsplit(baseurl)
-    scheme, netloc, path, query, fragment = split[:]
-    if len(path) > 0:
-        components.insert(0, path)
-    path = "/".join(c.strip("/") for c in components)
-    result = urlunsplit((scheme, netloc, path, query, fragment))
-    return result
-
-
-def clear_white_space(value: Optional[str]) -> Optional[str]:
-    """Clear whitespaces from string: from begining, from ending and repeat in body
-
-    :raises InvalidParamTypeError: In case of value is not string
-    """
-    if value is None:
-        return value
-    if not isinstance(value, str):
-        raise InvalidParamTypeError("Invalid param type, string expected")
-    return " ".join(value.split())
-
-
 def random_string(length: int = 10, char_set: str = string.ascii_letters + string.digits) -> str:
     """Generate random string
 
@@ -750,6 +721,17 @@ def list_chunks(lst: list, n: int):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
+
+
+def get_redis_url(host: str = "localhost", port: int = 6379, password: str = None, db: int = 0) -> str:
+    result = furl.furl()
+    result.scheme = "redis"
+    result.host = host
+    result.port = port
+    if password is not None and len(password) > 0:
+        result.password = password
+    result.path.add(str(db))
+    return result.url
 
 
 # time cached

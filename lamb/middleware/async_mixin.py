@@ -47,9 +47,9 @@ class AsyncMiddlewareMixin:
             # Mark the class as async-capable, but do the actual switch
             # inside __call__ to avoid swapping out dunder methods
             self._is_coroutine = asyncio.coroutines._is_coroutine
-            logger.info(f"{self}. _async_check -> async -> _is_coroutine={self._is_coroutine}")
+            logger.debug(f"{self}. _async_check -> async -> _is_coroutine={self._is_coroutine}")
         else:
-            logger.info(f"{self}. _async_check -> sync")
+            logger.debug(f"{self}. _async_check -> sync")
 
     def __call__(self, request):
         # Exit out to async mode, if needed
