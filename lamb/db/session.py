@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import logging
+from typing import Type
+from functools import partial
 
 from django.conf import settings
 
 # SQLAlchemy
 import sqlalchemy as sa
+import sqlalchemy.pool
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import NullPool
@@ -12,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 # Lamb Framework
 from lamb.exc import ServerError
 
+import lazy_object_proxy
 from furl import furl
 
 __all__ = [
@@ -179,11 +185,38 @@ logger.info(
     f", session_opts={_SESSION_OPTS}"
 )
 
-_async_engine = create_async_engine(ASYNC_CONNECTION_STRING, **ASYNC_ENGINE_OPTS_POOLED)
 
-_async_engine_nopool = create_async_engine(ASYNC_CONNECTION_STRING, poolclass=NullPool, **ASYNC_ENGINE_OPTS_NON_POOLED)
+def get_async_engine(poolclass: Type[sqlalchemy.pool.Pool] = None, **opts):
+    # engine_options = engine_options or {}
+    # kwargs = engine_options
+    if poolclass is not None:
+        opts["poolclass"] = poolclass
+    return create_async_engine(ASYNC_CONNECTION_STRING, **opts)
+    # return create_async_engine(ASYNC_CONNECTION_STRING, poolclass)
+    # return create_async_engine(ASYNC_CONNECTION_STRING, **ASYNC_ENGINE_OPTS_POOLED)
 
-async_session_factory = sessionmaker(bind=_async_engine, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS)
-async_session_factory_noloop = sessionmaker(
-    bind=_async_engine_nopool, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS
+
+_async_engine = lazy_object_proxy.Proxy(partial(get_async_engine, **ASYNC_ENGINE_OPTS_POOLED))
+# _async_engine = create_async_engine(ASYNC_CONNECTION_STRING, **ASYNC_ENGINE_OPTS_POOLED)
+
+# _async_engine_nopool = create_async_engine(ASYNC_CONNECTION_STRING,
+#                                            poolclass=NullPool, **ASYNC_ENGINE_OPTS_NON_POOLED)
+_async_engine_nopool = lazy_object_proxy.Proxy(
+    partial(get_async_engine, poolclass=NullPool, **ASYNC_ENGINE_OPTS_POOLED)
 )
+
+
+def get_async_factory(bind, **opts):
+    return sessionmaker(bind=bind, **opts)
+
+
+# async_session_factory = sessionmaker(bind=_async_engine, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS)
+async_session_factory = lazy_object_proxy.Proxy(
+    partial(get_async_factory, bind=_async_engine, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS)
+)
+async_session_factory_noloop = lazy_object_proxy.Proxy(
+    partial(get_async_factory, bind=_async_engine_nopool, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS)
+)
+# async_session_factory_noloop = sessionmaker(
+#     bind=_async_engine_nopool, expire_on_commit=False, class_=AsyncSession, **_SESSION_OPTS
+# )
