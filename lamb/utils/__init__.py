@@ -672,7 +672,9 @@ class DeprecationClassHelper(object):
         return getattr(self.new_target, attr)
 
 
-def check_device_info_versions_above(source: Any, versions: List[Tuple[str, int]], default: bool) -> bool:
+def check_device_info_versions_above(
+    source: Any, versions: List[Tuple[str, int]], default: bool, skip_options: bool = True
+) -> bool:
     """Application versions check function
 
     If request/device_info object have info about platform and app build will check compatibility of versions:
@@ -684,6 +686,8 @@ def check_device_info_versions_above(source: Any, versions: List[Tuple[str, int]
 
     # prepare params
     if isinstance(source, HttpRequest):
+        if skip_options and source.method == "OPTIONS":
+            return True
         _source = getattr(source, "lamb_device_info", None)
     else:
         _source = source
