@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import TypeVar, Optional
+from typing import List, Union, AnyStr, TypeVar, Optional
 
-from django.core.validators import EmailValidator, ValidationError
+from django.core.validators import URLValidator, EmailValidator, ValidationError
 
 # SQLAlchemy
 from sqlalchemy_utils import PhoneNumber
@@ -18,14 +18,24 @@ from lamb.exc import (
 
 logger = logging.getLogger(__name__)
 
-
-__all__ = ["validate_range", "validate_length", "validate_phone_number", "validate_email"]
+__all__ = [
+    "validate_range",
+    "validate_length",
+    "validate_phone_number",
+    "validate_email",
+    "validate_url",
+    "validate_port",
+]
 
 VT = TypeVar("VT")
 
 
 def validate_range(
-    value: Optional[VT], min_value: VT, max_value: VT, key: str = None, allow_none: bool = False
+    value: Optional[VT],
+    min_value: Optional[VT] = None,
+    max_value: Optional[VT] = None,
+    key: str = None,
+    allow_none: bool = False,
 ) -> Optional[VT]:
     """Value within interval validator
     :param value: Value to be checked
@@ -40,10 +50,14 @@ def validate_range(
         return value
 
     try:
-        if value < min_value or value > max_value:
+        if (min_value is not None and min_value > value) or (max_value is not None and max_value < value):
             raise InvalidParamValueError(
                 f"Invalid param {key} value or type, should be between {min_value} and {max_value}", error_details=key
             )
+        # if value < min_value or value > max_value:
+        #     raise InvalidParamValueError(
+        #         f"Invalid param {key} value or type, should be between {min_value} and {max_value}", error_details=key
+        #     )
         return value
     except InvalidParamValueError:
         raise
@@ -144,3 +158,31 @@ def validate_email(value: Optional[str], allow_none: bool = False) -> Optional[s
         return value
     except ValidationError as e:
         raise InvalidParamValueError("Invalid email format") from e
+
+
+def validate_url(value: Optional[str], allow_none: bool = False, schemes: List[str] = None) -> Optional[str]:
+    # early return
+    if value is None and allow_none:
+        return value
+
+    # parse value
+    schemes = schemes or ["https", "http"]
+    try:
+        URLValidator(schemes=schemes)(value)
+        return value
+    except ValidationError as e:
+        raise InvalidParamValueError("Invalid URL format") from e
+
+
+def validate_port(value: Optional[Union[int, AnyStr]], allow_none: bool = False) -> Optional[int]:
+    # early return
+    if value is None and allow_none:
+        return value
+
+    # convert
+    try:
+        value = int(value)
+    except Exception as e:
+        raise InvalidParamTypeError("Invalid port number") from e
+
+    return validate_range(value, min_value=0, max_value=65535)
