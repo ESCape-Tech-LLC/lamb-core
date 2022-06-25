@@ -15,5 +15,5 @@ run/*
 
 celerybeat.pid
 celerybeat-schedule.db
-config.py
+./config.py
 /*.egg-info
