@@ -163,7 +163,7 @@ def _etree_find_impl(element: Union[EtreeElement, Etree], key_path: str, namespa
 
 
 @_dpath_find_impl.register(Settings)
-def _django_conf_impl(settings: Settings, key_path: str) -> Any:
+def _django_conf_impl(settings: Settings, key_path: str, **_r) -> Any:
     """
     Implementation to query and parse djnago configs
     :param settings: Initialized Settings object
