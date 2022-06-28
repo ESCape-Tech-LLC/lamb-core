@@ -163,6 +163,7 @@ def parse_django_config() -> Dict[str, Config]:
             user=dct["USER"],
             password=dct["PASSWORD"],
             host=dct["HOST"],
+            port=dct["PORT"],
             connect_options=dct.get("CONNECT_OPTS", None),
             session_options=dct.get("SESSION_OPTS", None),
             engine_options=None,
