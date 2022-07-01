@@ -477,14 +477,42 @@ def response_filtered(query: Query, filters: List[object], request: LambRequest 
 
 
 # compacting
-def compact(obj: Union[list, dict]) -> Union[list, dict]:
-    """Compact version of container"""
-    if isinstance(obj, list):
-        return [o for o in obj if o is not None]
-    elif isinstance(obj, dict):
-        return {k: v for k, v in obj.items() if v is not None}
+def compact(*args, traverse: bool = False, collapse: bool = False) -> Union[list, dict, tuple]:
+    """Compact version of container
+    :param traverse: Boolean flag for recursive container lookup
+    :param collapse: Boolean flag for remove child containers in traverse mode if length is 0
+    """
+    # check variadic
+    if len(args) == 1:
+        obj = args[0]
     else:
-        return obj
+        obj = tuple(args)
+
+    # recursive traverse
+    def _traverse(_o):
+        if not traverse or not isinstance(_o, (list, tuple, dict)):
+            return _o
+        else:
+            _o = compact(_o, traverse=traverse, collapse=collapse)
+            if len(_o) == 0 and collapse:
+                return None
+            return _o
+
+    # compacting
+    if isinstance(obj, list):
+        result = [_traverse(o) for o in obj if o is not None]
+    elif isinstance(obj, tuple):
+        result = tuple([_traverse(o) for o in obj if o is not None])
+    elif isinstance(obj, dict):
+        result = {k: _traverse(v) for k, v in obj.items() if v is not None}
+    else:
+        result = obj
+
+    # collapse - apply only after main compacting to omit double processing and leave top level object stable
+    if collapse:
+        result = compact(result)
+
+    return result
 
 
 # content/response encoding
