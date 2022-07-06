@@ -186,7 +186,7 @@ def transform_typed_list(
         except Exception as e:
             raise InvalidParamTypeError(f"Invalid type for {cls.__name__}-list: {value}", error_details=key) from e
     else:
-        if any(not isinstance(i, int) for i in value):
+        if any(not isinstance(i, cls) for i in value):
             raise InvalidParamTypeError(f"Invalid type for {cls.__name__}-list: {value}", error_details=key)
 
     return value
