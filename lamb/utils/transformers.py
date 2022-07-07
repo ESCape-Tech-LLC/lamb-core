@@ -28,7 +28,8 @@ __all__ = [
     "transform_datetime_milliseconds_float",
     "transform_datetime_microseconds_int",
     "transform_typed_list",
-    'tf_list_int', 'tf_list_string'
+    "tf_list_int",
+    "tf_list_string",
 ]
 
 logger = logging.getLogger(__name__)
@@ -194,7 +195,7 @@ def transform_typed_list(
 
 
 @transform_typed_list.register(str)
-def _transform_typed_list(value: str, cls: Type[ET], skip_empty: bool = True, separator: str = ',', **kwargs) -> ET:
+def _transform_typed_list(value: str, cls: Type[ET], skip_empty: bool = True, separator: str = ",", **kwargs) -> ET:
     value = value.split(separator)
     if skip_empty:
         value = [v for v in value if len(v) > 0]
@@ -202,12 +203,12 @@ def _transform_typed_list(value: str, cls: Type[ET], skip_empty: bool = True, se
 
 
 def tf_list_string(value, **kwargs) -> List[str]:
-    kwargs['cls'] = str
-    if 'separator' not in kwargs:
-        kwargs['separator'] = ','
+    kwargs["cls"] = str
+    if "separator" not in kwargs:
+        kwargs["separator"] = ","
     return transform_typed_list(value, **kwargs)
 
 
 def tf_list_int(value, **kwargs) -> List[int]:
-    kwargs['cls'] = int
+    kwargs["cls"] = int
     return transform_typed_list(value, **kwargs)
