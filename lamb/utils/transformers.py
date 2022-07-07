@@ -20,6 +20,7 @@ from lamb.exc import (
 __all__ = [
     "transform_boolean",
     "transform_date",
+    "transform_datetime",
     "transform_string_enum",
     "transform_uuid",
     "transform_prefixed_tsquery",
@@ -61,8 +62,15 @@ def transform_boolean(value) -> bool:
         raise InvalidParamTypeError("Invalid data type for boolean convert")
 
 
-def transform_date(value: Union[datetime, date, str], __format=None, **kwargs) -> datetime.date:
+def transform_date(value: Union[datetime, date, str], **kwargs) -> datetime.date:
+    return transform_datetime(value, **kwargs).date()
+
+
+def transform_datetime(value: Union[datetime, date, str], __format=None, **kwargs) -> datetime:
     from django.conf import settings
+
+    # Lamb Framework
+    from lamb.utils import datetime_begin
 
     if __format is None and "format" in kwargs:
         warnings.warn("transform_date: format keyword is deperectaed, use __format instead", DeprecationWarning)
@@ -72,9 +80,9 @@ def transform_date(value: Union[datetime, date, str], __format=None, **kwargs) -
         __format = settings.LAMB_RESPONSE_DATE_FORMAT
 
     if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
         return value
+    if isinstance(value, date):
+        return datetime_begin(value)
     elif isinstance(value, (str, int)):
         # try to convert as timestamp
         try:
@@ -92,11 +100,13 @@ def transform_date(value: Union[datetime, date, str], __format=None, **kwargs) -
 
         # try to convert according to format
         try:
-            if value.lower() == "today":
+            if value.lower() == "now":
                 result = datetime.now()
+            elif value.lower() == "today":
+                result = datetime_begin(datetime.now())
             else:
                 result = datetime.strptime(value, __format)
-            return result.date()
+            return result
         except Exception as e:
             raise InvalidParamValueError(
                 "Invalid to convert date from string=%s according to format=%s" % (value, __format)
