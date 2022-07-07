@@ -31,6 +31,7 @@ __all__ = [
     "transform_typed_list",
     "tf_list_int",
     "tf_list_string",
+    "tf_list_uuid",
 ]
 
 logger = logging.getLogger(__name__)
@@ -221,4 +222,11 @@ def tf_list_string(value, **kwargs) -> List[str]:
 
 def tf_list_int(value, **kwargs) -> List[int]:
     kwargs["cls"] = int
+    return transform_typed_list(value, **kwargs)
+
+
+def tf_list_uuid(value, **kwargs) -> List[uuid.UUID]:
+    kwargs["cls"] = uuid.UUID
+    if "convert" not in kwargs:
+        kwargs["convert"] = True
     return transform_typed_list(value, **kwargs)
