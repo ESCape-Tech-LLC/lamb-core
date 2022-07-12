@@ -3,12 +3,19 @@ from collections import OrderedDict
 
 from django.conf import settings
 from django.http import HttpResponse, StreamingHttpResponse
+from django.core.exceptions import RequestDataTooBig
 
 # SQLAlchemy
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
 # Lamb Framework
-from lamb.exc import ApiError, ServerError, DatabaseError, ImproperlyConfiguredError
+from lamb.exc import (
+    ApiError,
+    ServerError,
+    DatabaseError,
+    RequestBodyTooBigError,
+    ImproperlyConfiguredError,
+)
 from lamb.json import JsonResponse
 from lamb.utils import LambRequest, import_by_name
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
@@ -74,6 +81,8 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
         if not isinstance(exception, ApiError):
             if isinstance(exception, _DB_EXCEPTIONS):
                 exception = DatabaseError()
+            elif isinstance(exception, RequestDataTooBig):
+                exception = RequestBodyTooBigError()
             else:
                 exception = ServerError()
             logger.error(f"exception wrapped into: {exception!r}")

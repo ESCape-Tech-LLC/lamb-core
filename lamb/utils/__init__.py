@@ -24,6 +24,7 @@ from urllib.parse import unquote
 
 from django.conf import settings
 from django.http import HttpRequest
+from django.core.exceptions import RequestDataTooBig
 from django.core.files.uploadedfile import UploadedFile
 
 # SQLAlchemy
@@ -55,6 +56,7 @@ from lamb.exc import (
     ExternalServiceError,
     InvalidParamTypeError,
     InvalidParamValueError,
+    RequestBodyTooBigError,
     ImproperlyConfiguredError,
     InvalidBodyStructureError,
 )
@@ -138,6 +140,8 @@ def parse_body_as_json(request: HttpRequest) -> dict:
     """
     try:
         body = request.body
+    except RequestDataTooBig as e:
+        raise RequestBodyTooBigError() from e
     except Exception as e:
         raise ServerError("Invalid request object") from e
 

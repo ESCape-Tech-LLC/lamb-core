@@ -28,6 +28,7 @@ __all__ = [
     "HumanFriendlyError",
     "HumanFriendlyMultipleError",
     "UserBlockedError",
+    "RequestBodyTooBigError",
 ]
 
 
@@ -51,6 +52,7 @@ class LambExceptionCodes(IntEnum):
     ExternalService = 11
     Database = 12
     AlreadyExist = 13
+    RequestBodyTooBig = 14
 
     # throttling and rate limiters
     Throttling = 101
@@ -288,3 +290,9 @@ class HumanFriendlyMultipleError(HumanFriendlyError):
             "wrapped_messages": [str(e) if e.message is not None else None for e in self.wrapped_errors],
             "wrapped_details": [e.error_details for e in self.wrapped_errors],
         }
+
+
+class RequestBodyTooBigError(ClientError):
+    _app_error_code = LambExceptionCodes.RequestBodyTooBig
+    _status_code = 400
+    _message = "Request data too big"
