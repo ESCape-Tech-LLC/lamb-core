@@ -11,6 +11,7 @@ import random
 import string
 import asyncio
 import logging
+import tempfile
 import warnings
 import functools
 import importlib
@@ -23,6 +24,7 @@ from urllib.parse import unquote
 
 from django.conf import settings
 from django.http import HttpRequest
+from django.core.files.uploadedfile import UploadedFile
 
 # SQLAlchemy
 import sqlalchemy
@@ -34,6 +36,7 @@ from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
 import furl
+import magic
 import requests
 from PIL import Image as PILImage
 from asgiref.sync import sync_to_async
@@ -47,6 +50,7 @@ except ImportError:
 
 # Lamb Framework
 from lamb.exc import (
+    ApiError,
     ServerError,
     ExternalServiceError,
     InvalidParamTypeError,
@@ -95,6 +99,7 @@ __all__ = [
     "get_columns",
     "get_primary_keys",
     "get_redis_url",
+    "get_file_mime_type",
 ]
 
 
@@ -980,3 +985,36 @@ def image_decode_base64(b64image: str, verify: bool = False) -> PILImage:
         image.verify()
         image = PILImage.open(buffer)  # verify requires to re
     return image
+
+
+def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
+    try:
+        if isinstance(src_file, UploadedFile):
+            with tempfile.NamedTemporaryFile() as dst:
+                for chunk in src_file.chunks():
+                    dst.write(chunk)
+                dst.seek(0)
+                buffer = dst.read()
+        elif isinstance(src_file, str):
+            with open(src_file, "rb") as src:
+                buffer = src.read()
+        elif isinstance(src_file, PILImage.Image):
+            buffer = io.BytesIO()
+            src_file.save(buffer, format=src_file.format)
+            buffer = buffer.getvalue()
+        elif isinstance(src_file, bytes):
+            buffer = src_file
+        else:
+            logger.warning(
+                f"Could not determine mime-type cause of invalid object: {src_file} of class {src_file.__class__}"
+            )
+            raise ServerError("Could not determine mime-type cause of invalid object")
+
+        # determine mime-type
+        mime_type = magic.Magic(mime=True).from_buffer(buffer)
+        mime_type = mime_type.lower()
+        return mime_type
+    except ApiError:
+        raise
+    except Exception as e:
+        raise InvalidParamTypeError("Could not detect mime-type of uploaded file") from e
