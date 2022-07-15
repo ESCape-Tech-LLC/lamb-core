@@ -37,7 +37,6 @@ from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
 import furl
-import magic
 import requests
 from PIL import Image as PILImage
 from asgiref.sync import sync_to_async
@@ -992,6 +991,8 @@ def image_decode_base64(b64image: str, verify: bool = False) -> PILImage:
 
 
 def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
+    import magic
+
     try:
         if isinstance(src_file, UploadedFile):
             with tempfile.NamedTemporaryFile() as dst:
