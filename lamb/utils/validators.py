@@ -194,8 +194,8 @@ def validate_ip_address(value: str, version: Optional[int] = None):
     try:
         ip = ipaddress.ip_address(value)
     except ValueError as e:
-        raise InvalidParamTypeError("Invalid ip address") from e
+        raise InvalidParamValueError("Invalid ip address") from e
     if version is not None and ip.version != version:
-        raise InvalidParamTypeError(f"Invalid ip address. Version check failed. "
-                                    f"Actual: {ip.version}, requested: {version}.")
+        raise InvalidParamValueError(f"Invalid ip address. Version check failed. "
+                                     f"Actual: {ip.version}, requested: {version}.")
     return value
