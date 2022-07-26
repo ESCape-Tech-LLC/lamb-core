@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import List, Union, AnyStr, TypeVar, Optional
 
@@ -25,6 +26,7 @@ __all__ = [
     "validate_email",
     "validate_url",
     "validate_port",
+    "validate_ip_address",
 ]
 
 VT = TypeVar("VT")
@@ -186,3 +188,15 @@ def validate_port(value: Optional[Union[int, AnyStr]], allow_none: bool = False)
         raise InvalidParamTypeError("Invalid port number") from e
 
     return validate_range(value, min_value=0, max_value=65535)
+
+
+def validate_ip_address(value: str, version: Optional[int] = None):
+    try:
+        ip = ipaddress.ip_address(value)
+    except ValueError as e:
+        raise InvalidParamTypeError("Invalid ip address") from e
+    if version is not None:
+        if ip.version != version:
+            raise InvalidParamTypeError(f"Invalid ip address. Version check failed. "
+                                        f"Actual: {ip.version}, requested: {version}.")
+    return value
