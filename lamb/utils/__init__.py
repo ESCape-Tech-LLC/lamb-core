@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 import sys
+import copy
 import enum
 import json
 import types
@@ -15,6 +16,7 @@ import tempfile
 import warnings
 import functools
 import importlib
+import urllib.parse
 from typing import Any, Dict, List, Tuple, Union, TypeVar, BinaryIO, Callable, Optional
 from inspect import isclass
 from datetime import date, datetime, timedelta
@@ -88,6 +90,7 @@ __all__ = [
     "list_chunks",
     "DeprecationClassHelper",
     "masked_dict",
+    "masked_url",
     "timed_lru_cache",
     "timed_lru_cache_clear",
     "async_download_resources",
@@ -755,6 +758,14 @@ def check_device_info_versions_above(
 
 def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
     return {k: v if k not in masking_keys else "*****" for k, v in dct.items()}
+
+
+def masked_url(u: Union[furl.furl, str]) -> str:
+    if isinstance(u, str):
+        u = furl.furl(u)
+    _u = copy.deepcopy(u)
+    _u.password = "*****"
+    return urllib.parse.unquote(_u.url)
 
 
 def list_chunks(lst: list, n: int):
