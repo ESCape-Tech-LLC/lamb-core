@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 import logging
+import warnings
+import dataclasses
 from typing import IO, Tuple, Union, BinaryIO, Optional
 
 from django.conf import settings
@@ -17,10 +19,24 @@ from .base import AWSBase
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["S3Uploader"]
+__all__ = ["S3Uploader", "S3BucketConfig"]
+
+
+@dataclasses.dataclass
+class S3BucketConfig:
+    bucket_name: Optional[str] = None
+    region_name: Optional[str] = None
+    access_key: Optional[str] = None
+    secret_key: Optional[str] = None
+    endpoint_url: Optional[str] = None
+    bucket_url: Optional[str] = None
+    check_buckets_list: bool = True
 
 
 class S3Uploader(AWSBase):
+
+    _conn_cfg: S3BucketConfig
+
     def __init__(
         self,
         aws_access_key_id: Optional[str] = None,
@@ -29,34 +45,68 @@ class S3Uploader(AWSBase):
         region_name: Optional[str] = None,
         endpoint_url: Optional[str] = None,
         bucket_url: Optional[str] = None,
+        conn_cfg: Optional[S3BucketConfig] = None,
         *args,
         **kwargs,
     ):
         # inject defaults
-        aws_access_key_id = aws_access_key_id or settings.LAMB_AWS_ACCESS_KEY
-        aws_secret_access_key = aws_secret_access_key or settings.LAMB_AWS_SECRET_KEY
-        bucket_name = bucket_name or settings.LAMB_AWS_BUCKET_NAME
-        region_name = region_name or settings.LAMB_AWS_REGION_NAME
-        endpoint_url = endpoint_url or settings.LAMB_AWS_ENDPOINT_URL
-        bucket_url = bucket_url or settings.LAMB_AWS_BUCKET_URL
+        if conn_cfg is not None:
+            self._conn_cfg = conn_cfg
+        else:
+            warnings.warn("Use of deprecated S3Uploader args, use S3BucketConfig instead", DeprecationWarning)
+            self._conn_cfg = S3BucketConfig(
+                bucket_name=bucket_name or settings.LAMB_AWS_BUCKET_NAME,
+                region_name=region_name or settings.LAMB_AWS_REGION_NAME,
+                access_key=aws_access_key_id or settings.LAMB_AWS_ACCESS_KEY,
+                secret_key=aws_secret_access_key or settings.LAMB_AWS_SECRET_KEY,
+                endpoint_url=endpoint_url or settings.LAMB_AWS_ENDPOINT_URL,
+                bucket_url=bucket_url or settings.LAMB_AWS_BUCKET_URL,
+            )
 
         # process
-        super(S3Uploader, self).__init__(aws_access_key_id, aws_secret_access_key, *args, **kwargs)
+        super(S3Uploader, self).__init__(
+            aws_access_key_id=self._conn_cfg.access_key,
+            aws_secret_access_key=self._conn_cfg.secret_key,
+            *args,
+            **kwargs,
+        )
 
         config = Config(signature_version="s3v4")
-        self._client = self._aws_session.client("s3", region_name=region_name, endpoint_url=endpoint_url, config=config)
+        self._client = self._aws_session.client(
+            service_name="s3",
+            region_name=self._conn_cfg.region_name,
+            endpoint_url=self._conn_cfg.endpoint_url,
+            config=config,
+        )
 
         # Check if bucket exists
-        exist_buckets = [bucket["Name"] for bucket in self._client.list_buckets()["Buckets"]]
-        if bucket_name not in exist_buckets:
-            logger.warning("Have not found S3 %s bucket" % bucket_name)
-            raise exc.ServerError("AWS bucket %s does not exist" % bucket_name)
+        if self._conn_cfg.check_buckets_list:
+            exist_buckets = [bucket["Name"] for bucket in self._client.list_buckets()["Buckets"]]
+            if self._conn_cfg.bucket_name not in exist_buckets:
+                logger.warning(f"Have not found S3 {bucket_name} bucket")
+                raise exc.ServerError("Requested S3 bucket not exist")
 
-        # Fill instance variables
-        self.bucket_name = bucket_name
-        self.region_name = region_name
-        self.bucket_url = bucket_url
+    # properties wrappers
+    @property
+    def bucket_name(self) -> Optional[str]:
+        return self._conn_cfg.bucket_name
 
+    @property
+    def bucket_url(self) -> Optional[str]:
+        if self._conn_cfg.bucket_url is None:
+            if self._conn_cfg.region_name is not None:
+                result = f"https://s3.{self._conn_cfg.region_name}.amazonaws.com/{self._conn_cfg.bucket_name}/"
+            else:
+                result = f"https://{self._conn_cfg.bucket_name}.s3.amazonaws.com/"
+        else:
+            result = self._conn_cfg.bucket_url
+        return result
+
+    @property
+    def endpoint_url(self) -> Optional[str]:
+        return self._conn_cfg.endpoint_url
+
+    # methods
     def put_object(
         self,
         body: Union[BinaryIO, InMemoryUploadedFile, IO],
@@ -80,14 +130,7 @@ class S3Uploader(AWSBase):
             Key=relative_path,
             ContentType=file_type,
         )
-        if self.bucket_url is None:
-            if self.region_name is not None:
-                bucket_url = f"https://s3.{self.region_name}.amazonaws.com/{self.bucket_name}/"
-            else:
-                bucket_url = f"https://{self.bucket_name}.s3.amazonaws.com/"
-        else:
-            bucket_url = self.bucket_url
-        uploaded_url = furl(bucket_url)
+        uploaded_url = furl(self.bucket_url)
         uploaded_url.path.add(relative_path)
         uploaded_url = uploaded_url.url
         logger.debug(f"Uploaded S3 URL: {uploaded_url}")
@@ -117,10 +160,10 @@ class S3Uploader(AWSBase):
 
     @staticmethod
     def s3_parse_url(url: str) -> Tuple[str, str, str]:
+        # TODO: adapt to non AWS s3 storages
         """
         :return: Tuple of aws region name, bucket name, and file path
         """
-
         patterns = [
             r"^https?://s3.(?P<region>[\w-]+).amazonaws.com/(?P<bucket>[_\.\w-]+)/(?P<path>[/_\.\w-]+)$",
             r"^https?://(?P<bucket>[_\.\w-]+).s3-(?P<region>[\w-]+).amazonaws.com/(?P<path>[/_\.\w-]+)$",
@@ -156,6 +199,7 @@ class S3Uploader(AWSBase):
 
     @classmethod
     def remove_by_url(cls, url):
+        # TODO: adapt to non AWS s3 storages
         region, bucket, path = cls.s3_parse_url(url)
         s3_uploader = cls(region_name=region, bucket_name=bucket)
         s3_uploader.delete_object(path)

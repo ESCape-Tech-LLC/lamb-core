@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 # load database configs
+# TODO: modify to handle config dict version - cause on start LAMB_DB_CONFIG is not exist
 _LAMB_DB_CONFIG = get_settings_value("LAMB_DB_CONFIG", req_type=dict, default=None)
 
 _configs_registry: Dict[str, Config] = {}

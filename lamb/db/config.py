@@ -31,7 +31,7 @@ class Config:
     host: Optional[str] = None
     port: Optional[int] = None
     db_name: Optional[str] = None
-    user: Optional[str] = None
+    username: Optional[str] = None
     password: Optional[str] = None
 
     connect_options: Optional[Union[Callable, Dict[str, Any]]] = None
@@ -53,8 +53,8 @@ class Config:
         result = furl.furl()
         result.scheme = _driver
         result.host = self.host or ""
-        if self.user is not None:
-            result.username = self.user
+        if self.username is not None:
+            result.username = self.username
         if self.password is not None:
             result.password = self.password
         if self.port is not None:
@@ -64,7 +64,7 @@ class Config:
 
         logger.info(f"driver: {_driver}")
         if _driver in ["sqlite+pysqlite", "sqlite+pysqlcipher", "sqlite+aiosqlite"] and (
-            self.user is None or len(self.user) == 0
+            self.username is None or len(self.username) == 0
         ):
             logger.warning("patching invalid username for sqlite")
             result.username = ""
@@ -169,7 +169,7 @@ def parse_django_config() -> Dict[str, Config]:
             driver=_engine,
             async_driver=None,
             db_name=dct["NAME"],
-            user=dct["USER"],
+            username=dct["USER"],
             password=dct["PASSWORD"],
             host=dct["HOST"],
             port=dct["PORT"],
