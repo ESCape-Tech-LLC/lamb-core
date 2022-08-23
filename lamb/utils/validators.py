@@ -25,6 +25,8 @@ __all__ = [
     "validate_email",
     "validate_url",
     "validate_port",
+    "validate_timeout",
+    "validate_not_empty",
 ]
 
 VT = TypeVar("VT")
@@ -186,3 +188,14 @@ def validate_port(value: Optional[Union[int, AnyStr]], allow_none: bool = False)
         raise InvalidParamTypeError("Invalid port number") from e
 
     return validate_range(value, min_value=0, max_value=65535)
+
+
+# sugar
+
+
+def validate_timeout(value: float) -> float:
+    return validate_range(value, min_value=0.0)
+
+
+def validate_not_empty(value: Optional[VT], min_length=1) -> VT:
+    return validate_length(value=value, min_length=min_length)
