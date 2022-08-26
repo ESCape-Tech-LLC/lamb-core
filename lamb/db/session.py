@@ -44,7 +44,6 @@ else:
         else:
             _configs_registry[_db_key] = Config(**raw_config)
 
-
 # engines registry
 _engines_registry: Dict[Tuple[str, bool, bool], Union[Engine, AsyncEngine]] = {}
 
@@ -55,7 +54,7 @@ def get_engine(db_key: str, pooled: bool, sync: bool) -> Union[Engine, AsyncEngi
         return _engines_registry[registry_key]
 
     if db_key not in _configs_registry:
-        logger.critical(f"unknown db key: {db_key}")
+        logger.critical(f"unknown db key: {db_key}. known registry - {_configs_registry}")
         raise ServerError("Database session constructor failed to get database params")
 
     db_config: Config = _configs_registry[db_key]
