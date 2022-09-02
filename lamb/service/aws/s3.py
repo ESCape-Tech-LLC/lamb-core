@@ -11,6 +11,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 
 # Lamb Framework
 from lamb import exc
+from lamb.json.mixins import ResponseEncodableMixin
 
 from furl import furl
 from botocore.config import Config
@@ -23,7 +24,7 @@ __all__ = ["S3Uploader", "S3BucketConfig"]
 
 
 @dataclasses.dataclass
-class S3BucketConfig:
+class S3BucketConfig(ResponseEncodableMixin):
     bucket_name: Optional[str] = None
     region_name: Optional[str] = None
     access_key: Optional[str] = None
@@ -31,6 +32,9 @@ class S3BucketConfig:
     endpoint_url: Optional[str] = None
     bucket_url: Optional[str] = None
     check_buckets_list: bool = True
+
+    def response_encode(self, request=None) -> dict:
+        return dataclasses.asdict(self)
 
 
 class S3Uploader(AWSBase):
