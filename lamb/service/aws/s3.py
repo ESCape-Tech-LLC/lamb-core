@@ -11,6 +11,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 
 # Lamb Framework
 from lamb import exc
+from lamb.utils import compact
 from lamb.json.mixins import ResponseEncodableMixin
 
 from furl import furl
@@ -32,6 +33,8 @@ class S3BucketConfig(ResponseEncodableMixin):
     endpoint_url: Optional[str] = None
     bucket_url: Optional[str] = None
     check_buckets_list: bool = True
+    connect_timeout: Optional[float] = None
+    read_timeout: Optional[float] = None
 
     def response_encode(self, request=None) -> dict:
         return dataclasses.asdict(self)
@@ -75,7 +78,15 @@ class S3Uploader(AWSBase):
             **kwargs,
         )
 
-        config = Config(signature_version="s3v4")
+        config_kw = compact(
+            {
+                "signature_version": "s3v4",
+                "connect_timeout": self._conn_cfg.connect_timeout,
+                "read_timeout": self._conn_cfg.read_timeout,
+            }
+        )
+        logger.debug(f"boto3 core config would be used: {config_kw}")
+        config = Config(**config_kw)
         self._client = self._aws_session.client(
             service_name="s3",
             region_name=self._conn_cfg.region_name,
