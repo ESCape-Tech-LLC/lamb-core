@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import datetime
-from typing import Optional
+from typing import List, Optional
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -10,10 +10,13 @@ from django.urls import resolve
 from django.utils.deprecation import MiddlewareMixin
 
 # Lamb Framework
-from lamb.utils import LambRequest
+from lamb.utils import LambRequest, dpath_value
 from lamb.db.context import lamb_db_context
+from lamb.utils.transformers import tf_list_string
 from lamb.execution_time.meter import ExecutionTimeMeter
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
+
+from lazy import lazy
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +32,13 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
             request.lamb_execution_meter.append_marker(message)
         except Exception:
             pass
+
+    @lazy
+    def skip_methods(self) -> List[str]:
+        result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_METHODS", str, transform=tf_list_string, default=[])
+        result = [r.upper() for r in result]
+        logger.info(f"{self.__class__.__name__}. skip methods: {result}")
+        return result
 
     def _start(self, request):
         """Appends metric object to request"""
@@ -66,15 +76,16 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
             pass
 
         # store
-        try:
-            # database
-            with lamb_db_context() as db_session:
-                # make in context to omit invalid commits under exceptions
-                db_session.add(metric)
-                db_session.commit()
-        except Exception as e:
-            logger.error("ExecutionMetrics store error: %s" % e)
-            pass
+        if request.method not in self.skip_methods:
+            try:
+                # database
+                with lamb_db_context() as db_session:
+                    # make in context to omit invalid commits under exceptions
+                    db_session.add(metric)
+                    db_session.commit()
+            except Exception as e:
+                logger.error("ExecutionMetrics store error: %s" % e)
+                pass
 
         # log total
         level = settings.LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL
