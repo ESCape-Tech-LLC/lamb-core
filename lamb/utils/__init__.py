@@ -1011,6 +1011,7 @@ def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
                     dst.write(chunk)
                 dst.seek(0)
                 buffer = dst.read()
+                src_file.seek(0)
         elif isinstance(src_file, str):
             with open(src_file, "rb") as src:
                 buffer = src.read()
