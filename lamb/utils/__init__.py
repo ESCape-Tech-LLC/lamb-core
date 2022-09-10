@@ -17,7 +17,18 @@ import warnings
 import functools
 import importlib
 import urllib.parse
-from typing import Any, Dict, List, Tuple, Union, TypeVar, BinaryIO, Callable, Optional
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union,
+    TypeVar,
+    BinaryIO,
+    Callable,
+    Optional,
+    Generator,
+)
 from inspect import isclass
 from datetime import date, datetime, timedelta
 from xml.etree import cElementTree
@@ -768,7 +779,10 @@ def masked_url(u: Union[furl.furl, str]) -> str:
     return urllib.parse.unquote(_u.url)
 
 
-def list_chunks(lst: list, n: int):
+CT = TypeVar("CT")
+
+
+def list_chunks(lst: List[CT], n: int) -> Generator[List[CT], None, None]:
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
