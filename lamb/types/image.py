@@ -46,7 +46,7 @@ class Mode(str, enum.Enum):
 
 @dataclass(frozen=True)
 class SliceRule:
-    """Image slicing descriptor"""
+    """Image slicing descriptor. Previously title ImageUploadSlice"""
 
     title: str
     side: int
@@ -55,19 +55,19 @@ class SliceRule:
 
     def __post_init__(self) -> None:
         if not isinstance(self.title, str):
-            logger.warning("Invalid ImageUploadSlice title data type = %s" % self.title)
+            logger.warning(f"Invalid SliceRule title data type = {self.title}")
             raise exc.ServerError("Improperly configured image uploader")
 
         if not isinstance(self.side, int):
-            logger.warning("Invalid ImageUploadSlice rib data type = %s" % self.side)
+            logger.warning(f"Invalid SliceRule rib data type = {self.side}")
             raise exc.ServerError("Improperly configured image uploader")
 
         if not isinstance(self.mode, Mode):
-            logger.warning("Invalid ImageUploadSlice mode data type = %s" % self.mode)
+            logger.warning(f"Invalid SliceRule mode data type = {self.mode}")
             raise exc.ServerError("Improperly configured image uploader")
 
         if not isinstance(self.suffix, str):
-            logger.warning("Invalid ImageUploadSlice suffix data type = %s" % self.suffix)
+            logger.warning(f"Invalid SliceRule suffix data type = {self.suffix}")
             raise exc.ServerError("Improperly configured image uploader")
 
 
