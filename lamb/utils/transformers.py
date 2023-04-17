@@ -48,9 +48,9 @@ def transform_boolean(value) -> bool:
         return value
     elif isinstance(value, str):
         result = value.lower()
-        if result in ("1", "true", "True", "yes", "y", "t", "on"):
+        if result in ("1", "true", "yes", "y", "t", "on"):
             return True
-        elif result in ("0", "false", "False", "no", "n", "f", "off"):
+        elif result in ("0", "false", "no", "n", "f", "off"):
             return False
         else:
             raise InvalidParamValueError("Invalid value for boolean convert")
