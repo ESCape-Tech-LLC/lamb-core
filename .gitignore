@@ -17,3 +17,6 @@ celerybeat.pid
 celerybeat-schedule.db
 ./config.py
 /*.egg-info
+
+playground.py
+build/
