@@ -192,7 +192,11 @@ def validate_port(value: Optional[Union[int, AnyStr]], allow_none: bool = False)
     return validate_range(value, min_value=0, max_value=65535)
 
 
-def validate_ip_address(value: str, version: Optional[int] = None):
+def validate_ip_address(value: Optional[str], version: Optional[int] = None, allow_none: bool = False) -> Optional[str]:
+    # early return
+    if value is None and allow_none:
+        return value
+
     try:
         ip = ipaddress.ip_address(value)
     except ValueError as e:
