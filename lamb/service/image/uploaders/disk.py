@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from typing import Union, BinaryIO, Optional
-from urllib.parse import urljoin
 
 from django.conf import settings
 
@@ -10,9 +9,15 @@ from django.conf import settings
 from lamb import exc
 from lamb.utils import LambRequest
 
+import furl
+
 from .base import PILImage, BaseUploader
 
 __all__ = ["ImageUploadServiceDisk"]
+
+
+# TODO: add support for folder other then static
+# TODO: LAMB_STATIC_URL is not defined at settings in general - add to settings and make agnostic
 
 
 class ImageUploadServiceDisk(BaseUploader):
@@ -45,7 +50,9 @@ class ImageUploadServiceDisk(BaseUploader):
                     f.write(image.read())
 
             # get result url
-            result = urljoin(settings.LAMB_STATIC_URL, static_relative_path)
+            _url = furl.furl(settings.LAMB_STATIC_URL)
+            _url.path.add(static_relative_path)
+            result = _url.url
             result = request.build_absolute_uri(result)
             return result
         except Exception as e:

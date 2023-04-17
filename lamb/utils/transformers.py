@@ -67,7 +67,7 @@ def transform_date(value: Union[datetime, date, str], **kwargs) -> datetime.date
     return transform_datetime(value, **kwargs).date()
 
 
-def transform_datetime(value: Union[datetime, date, str], __format=None, **kwargs) -> datetime:
+def transform_datetime(value: Union[datetime, date, str, int, float], __format=None, **kwargs) -> datetime:
     from django.conf import settings
 
     # Lamb Framework

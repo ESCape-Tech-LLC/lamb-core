@@ -23,7 +23,7 @@ class LambDeviceInfoMiddleware(AsyncMiddlewareMixin):
     def _attach_info(self, request):
         # attach device info
         request.lamb_device_info = device_info_factory(request)
-        logger.info(f"<{self.__class__.__name__}>: Device info attached: {request.lamb_device_info}")
+        logger.debug(f"<{self.__class__.__name__}>: Device info attached: {request.lamb_device_info}")
 
         # attach device locale
         if request.lamb_device_info.device_locale is not None:

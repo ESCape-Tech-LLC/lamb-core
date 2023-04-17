@@ -10,6 +10,7 @@ from typing import Any, Dict, Union, Callable, Optional
 
 # Lamb Framework
 from lamb.exc import ServerError, ImproperlyConfiguredError
+from lamb.utils import masked_url
 
 import furl
 
@@ -30,7 +31,7 @@ class Config:
     host: Optional[str] = None
     port: Optional[int] = None
     db_name: Optional[str] = None
-    user: Optional[str] = None
+    username: Optional[str] = None
     password: Optional[str] = None
 
     connect_options: Optional[Union[Callable, Dict[str, Any]]] = None
@@ -52,8 +53,8 @@ class Config:
         result = furl.furl()
         result.scheme = _driver
         result.host = self.host or ""
-        if self.user is not None:
-            result.username = self.user
+        if self.username is not None:
+            result.username = self.username
         if self.password is not None:
             result.password = self.password
         if self.port is not None:
@@ -63,7 +64,7 @@ class Config:
 
         logger.info(f"driver: {_driver}")
         if _driver in ["sqlite+pysqlite", "sqlite+pysqlcipher", "sqlite+aiosqlite"] and (
-            self.user is None or len(self.user) == 0
+            self.username is None or len(self.username) == 0
         ):
             logger.warning("patching invalid username for sqlite")
             result.username = ""
@@ -72,7 +73,7 @@ class Config:
         if _connect_options is not None and len(_connect_options) > 0:
             result.args.update(_connect_options)
 
-        logger.info(f"connection string constructed: {sync, pooled=} -> {result.url}")
+        logger.info(f"connection string constructed: {sync, pooled=} -> {masked_url(result)}")
         return result.url
 
     # connect options
@@ -126,12 +127,20 @@ class Config:
                         "executemany_mode": "values",
                         "executemany_values_page_size": 10000,
                         "executemany_batch_page_size": 500,
+                        "connect_args": {"connect_timeout": 5},
                     }
                 )
                 if pooled:
                     result.update({"pool_recycle": 3600, "pool_size": 5, "max_overflow": 10})
             elif _driver == "asyncpg":
-                result.update({"connect_args": {"server_settings": {"jit": "off"}}})
+                result.update(
+                    {
+                        "connect_args": {
+                            "server_settings": {"jit": "off"},
+                            "timeout": 5,
+                        }
+                    }
+                )
                 if pooled:
                     result.update({"pool_size": 50, "max_overflow": 50})
                 pass
@@ -160,10 +169,11 @@ def parse_django_config() -> Dict[str, Config]:
             driver=_engine,
             async_driver=None,
             db_name=dct["NAME"],
-            user=dct["USER"],
+            username=dct["USER"],
             password=dct["PASSWORD"],
             host=dct["HOST"],
-            port=dct["PORT"],
+            # port=dct["PORT"],
+            port=dct.get("PORT", None),
             connect_options=dct.get("CONNECT_OPTS", None),
             session_options=dct.get("SESSION_OPTS", None),
             engine_options=None,

@@ -23,12 +23,14 @@ __all__ = [
     "declarative_base",
     "create_engine",
     "create_async_engine",
+    "get_declarative_base",
 ]
 
 logger = logging.getLogger(__name__)
 
 
 # load database configs
+# TODO: modify to handle config dict version - cause on start LAMB_DB_CONFIG is not exist
 _LAMB_DB_CONFIG = get_settings_value("LAMB_DB_CONFIG", req_type=dict, default=None)
 
 _configs_registry: Dict[str, Config] = {}
@@ -42,7 +44,6 @@ else:
         else:
             _configs_registry[_db_key] = Config(**raw_config)
 
-
 # engines registry
 _engines_registry: Dict[Tuple[str, bool, bool], Union[Engine, AsyncEngine]] = {}
 
@@ -53,7 +54,7 @@ def get_engine(db_key: str, pooled: bool, sync: bool) -> Union[Engine, AsyncEngi
         return _engines_registry[registry_key]
 
     if db_key not in _configs_registry:
-        logger.critical(f"unknown db key: {db_key}")
+        logger.critical(f"unknown db key: {db_key}. known registry - {_configs_registry}")
         raise ServerError("Database session constructor failed to get database params")
 
     db_config: Config = _configs_registry[db_key]
@@ -96,10 +97,19 @@ def get_session_maker(db_key: str = "default", pooled: bool = True, sync: bool =
     return result
 
 
-# defaults
-DeclarativeBase = declarative_base()
+# metadata
+def get_declarative_base(db_key: str, pooled: bool, sync: bool):
+    components = ["_".join(db_key.split()), "PT" if pooled else "PoolF", "ST" if sync else "SF"]
+    cls_name = f'Base{"_".join(components)}'
+    _result = declarative_base(name=cls_name)
+    _metadata = _result.metadata
+    _metadata.bind = get_engine(db_key, pooled=pooled, sync=sync)
+    return _result
+
+
+# defaults - compatibility mode
+DeclarativeBase = get_declarative_base("default", True, True)
 metadata = DeclarativeBase.metadata
-metadata.bind = get_engine("default", True, True)
 
 
 def lamb_db_session_maker(

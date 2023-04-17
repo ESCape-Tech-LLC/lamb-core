@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 import sys
+import copy
 import enum
 import json
 import types
@@ -15,7 +16,19 @@ import tempfile
 import warnings
 import functools
 import importlib
-from typing import Any, Dict, List, Tuple, Union, TypeVar, BinaryIO, Callable, Optional
+import urllib.parse
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union,
+    TypeVar,
+    BinaryIO,
+    Callable,
+    Optional,
+    Generator,
+)
 from inspect import isclass
 from datetime import date, datetime, timedelta
 from xml.etree import cElementTree
@@ -88,6 +101,7 @@ __all__ = [
     "list_chunks",
     "DeprecationClassHelper",
     "masked_dict",
+    "masked_url",
     "timed_lru_cache",
     "timed_lru_cache_clear",
     "async_download_resources",
@@ -757,7 +771,18 @@ def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
     return {k: v if k not in masking_keys else "*****" for k, v in dct.items()}
 
 
-def list_chunks(lst: list, n: int):
+def masked_url(u: Union[furl.furl, str]) -> str:
+    if isinstance(u, str):
+        u = furl.furl(u)
+    _u = copy.deepcopy(u)
+    _u.password = "*****"
+    return urllib.parse.unquote(_u.url)
+
+
+CT = TypeVar("CT")
+
+
+def list_chunks(lst: List[CT], n: int) -> Generator[List[CT], None, None]:
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
@@ -1000,6 +1025,7 @@ def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
                     dst.write(chunk)
                 dst.seek(0)
                 buffer = dst.read()
+                src_file.seek(0)
         elif isinstance(src_file, str):
             with open(src_file, "rb") as src:
                 buffer = src.read()

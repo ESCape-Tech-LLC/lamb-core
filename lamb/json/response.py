@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import json
+from typing import Callable, Optional
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -52,7 +55,8 @@ class JsonResponse(HttpResponse):
             self.content = content
 
     @staticmethod
-    def encode_object(obj):
-        encoder = JsonEncoder()
+    def encode_object(obj, callback: Optional[Callable] = None, request: Optional[object] = None, **kwargs):
+        # TODO: modify to support orjson encoder
+        encoder = JsonEncoder(callback=callback, request=request, **kwargs)
         result = json.dumps(obj, indent=2, ensure_ascii=False, default=encoder.default, sort_keys=False)
         return result

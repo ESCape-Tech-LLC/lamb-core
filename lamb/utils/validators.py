@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import ipaddress
 import logging
+import ipaddress
 from typing import List, Union, AnyStr, TypeVar, Optional
 
 from django.core.validators import URLValidator, EmailValidator, ValidationError
@@ -27,6 +27,8 @@ __all__ = [
     "validate_url",
     "validate_port",
     "validate_ip_address",
+    "validate_timeout",
+    "validate_not_empty",
 ]
 
 VT = TypeVar("VT")
@@ -196,6 +198,16 @@ def validate_ip_address(value: str, version: Optional[int] = None):
     except ValueError as e:
         raise InvalidParamValueError("Invalid ip address") from e
     if version is not None and ip.version != version:
-        raise InvalidParamValueError(f"Invalid ip address. Version check failed. "
-                                     f"Actual: {ip.version}, requested: {version}.")
+        raise InvalidParamValueError(
+            f"Invalid ip address. Version check failed. " f"Actual: {ip.version}, requested: {version}."
+        )
     return value
+
+
+# sugar
+def validate_timeout(value: float) -> float:
+    return validate_range(value, min_value=0.0)
+
+
+def validate_not_empty(value: Optional[VT], min_length=1) -> VT:
+    return validate_length(value=value, min_length=min_length)

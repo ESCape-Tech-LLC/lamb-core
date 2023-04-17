@@ -35,7 +35,9 @@ class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
     elapsed_time = Column(FLOAT(), nullable=False, default=0.0, server_default=text("0"))
 
     # relations
-    markers = relationship("LambExecutionTimeMarker", cascade="all")  # type: List[LambExecutionTimeMarker]
+    markers = relationship(
+        "LambExecutionTimeMarker", cascade="all", back_populates="metric"
+    )  # type: List[LambExecutionTimeMarker]
 
     # methods
     def __init__(self):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import uuid
 import logging
 from typing import Optional
 from datetime import date, datetime
@@ -53,6 +54,10 @@ def __add_none__(_, __):
     pass
 
 
+def __add_uuid__(elem, item):
+    elem.text = str(item)
+
+
 __lxml_mapping__ = {
     int: (__add_numeric__, "integer"),
     float: (__add_numeric__, "float"),
@@ -62,6 +67,7 @@ __lxml_mapping__ = {
     date: (__add_date__, "string"),
     enum.IntEnum: (__add_enum__, "integer"),
     enum.Enum: (__add_enum__, "string"),
+    uuid.UUID: (__add_uuid__, "string"),
     type(None): (__add_none__, "string"),
 }
 
