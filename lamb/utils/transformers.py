@@ -207,7 +207,11 @@ def _transform_typed_list(value: str, cls: Type[ET], skip_empty: bool = True, se
     value = value.split(separator)
     if skip_empty:
         value = [v for v in value if len(v) > 0]
-    return transform_typed_list(value, cls=cls, convert=True, **kwargs)  # forward to main processing
+    if "convert" not in kwargs:
+        kwargs["convert"] = True
+    if "cls" not in kwargs:
+        kwargs["cls"] = cls
+    return transform_typed_list(value, **kwargs)  # forward to main processing
 
 
 def tf_list_string(value, **kwargs) -> List[str]:
