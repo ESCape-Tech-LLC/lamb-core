@@ -17,6 +17,8 @@ from lamb.exc import (
     InvalidParamValueError,
 )
 
+import dateutil
+
 __all__ = [
     "transform_boolean",
     "transform_date",
@@ -102,6 +104,8 @@ def transform_datetime(value: Union[datetime, date, str, int, float], __format=N
                 result = datetime.now()
             elif value.lower() == "today":
                 result = datetime_begin(datetime.now())
+            elif __format == "auto":
+                result = dateutil.parser.parse(value)
             else:
                 result = datetime.strptime(value, __format)
             return result
