@@ -263,13 +263,13 @@ class HumanFriendlyError(ClientError):
 
 
 class HumanFriendlyMultipleError(HumanFriendlyError):
-
     wrapped_errors: List[ApiError]
 
-    def __init__(self, *args, wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None, **kwargs):
+    def __init__(
+        self, *args, wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None, header: str = None, **kwargs
+    ):
         self.wrapped_errors = []
         if wrapped_errors:
-            # _msg_components = []
             for e in wrapped_errors:
                 if isinstance(e, ApiError):
                     _e = e
@@ -281,9 +281,13 @@ class HumanFriendlyMultipleError(HumanFriendlyError):
                 self.wrapped_errors.append(_e)
 
         if len(args) == 0 and "message" not in kwargs:
-            msg = ". ".join([e.message or "" for e in self.wrapped_errors])
+            components = [e.message or "" for e in self.wrapped_errors]
+            if header:
+                components.insert(0, header)
+            msg = ". ".join(components)
             kwargs.update({"message": msg})
             logger.warning(f"overridden: {msg}")
+
         super().__init__(*args, **kwargs)
 
         self.error_details = {

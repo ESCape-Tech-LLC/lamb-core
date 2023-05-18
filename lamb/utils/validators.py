@@ -103,7 +103,9 @@ def validate_length(
             if allow_none:
                 return value
             else:
-                InvalidParamValueError(f"Field {key} have invalid length. Could not be empty", error_details=key)
+                raise InvalidParamValueError(
+                    f"Field {key or ''} have invalid length. Could not be empty", error_details=key
+                )
 
     # check data type
     try:
@@ -130,6 +132,8 @@ def validate_phone_number(
 ) -> Optional[PhoneNumber]:
     """Validate value as valid phone number"""
     # early return
+    if isinstance(phone_number, str):
+        phone_number = validate_length(phone_number, allow_none=allow_none)
     if phone_number is None and allow_none:
         return None
 
@@ -213,5 +217,9 @@ def validate_timeout(value: float) -> float:
     return validate_range(value, min_value=0.0)
 
 
-def validate_not_empty(value: Optional[VT], min_length=1) -> VT:
-    return validate_length(value=value, min_length=min_length)
+def validate_not_empty(value: Optional[VT], min_length=1, **kwargs) -> VT:
+    if "min_length" not in kwargs:
+        kwargs["min_length"] = min_length
+    if "value" not in kwargs:
+        kwargs["value"] = value
+    return validate_length(**kwargs)
