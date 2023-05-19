@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import json
 import logging
+from typing import Union
 from functools import update_wrapper
 
 from django.utils.decorators import classonlymethod
@@ -75,7 +78,7 @@ class RestView(object):
         return get_request_accept_encoding(self.request)
 
     @lazy
-    def parsed_body(self) -> dict:
+    def parsed_body(self) -> Union[dict, list]:
         content_type = self.request_content_type
         logger.debug(f"Lamb:RestView. Request body encoding discovered: {content_type}")
 
@@ -83,9 +86,9 @@ class RestView(object):
             payload = dpath_value(self.request.POST, "payload", str)
             try:
                 result = json.loads(payload)
-                if not isinstance(result, dict):
+                if not isinstance(result, (dict, list)):
                     raise InvalidBodyStructureError(
-                        "JSON payload part of request should be represented in a form of dictionary"
+                        "JSON payload part of request should be represented in a form of dictionary/array"
                     )
             except ValueError as e:
                 raise InvalidBodyStructureError("Could not parse body as JSON object") from e
