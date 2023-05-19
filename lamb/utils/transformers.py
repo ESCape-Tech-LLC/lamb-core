@@ -106,6 +106,10 @@ def transform_datetime(value: Union[datetime, date, str, int, float], __format=N
                 result = datetime_begin(datetime.now())
             elif __format == "auto":
                 result = dateutil.parser.parse(value)
+            elif __format == "iso":
+                # hack for compatibility with not standard serializers
+                _value = value.replace("Z", "+00:00")
+                result = datetime.fromisoformat(_value)
             else:
                 result = datetime.strptime(value, __format)
             return result

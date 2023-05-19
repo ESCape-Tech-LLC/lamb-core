@@ -142,7 +142,7 @@ class LambRequest(HttpRequest):
 
 
 # parsing
-def parse_body_as_json(request: HttpRequest) -> dict:
+def parse_body_as_json(request: HttpRequest) -> Union[dict, list]:
     """Parse request object to dictionary as JSON
 
     :param request: Request object
@@ -160,8 +160,8 @@ def parse_body_as_json(request: HttpRequest) -> dict:
 
     try:
         data = json.loads(body)
-        if not isinstance(data, dict):
-            raise InvalidBodyStructureError("JSON body of request should be represented in a form of dictionary")
+        if not isinstance(data, (dict, list)):
+            raise InvalidBodyStructureError("JSON body of request should be represented in a form of dictionary/array")
         return data
     except ValueError as e:
         raise InvalidBodyStructureError("Could not parse body as JSON object") from e
@@ -391,7 +391,7 @@ def _sorting_apply_sorters(
     sorters: List[Sorter], query: Query, model_class: DeclarativeMeta, check_duplicate: bool = True
 ) -> Query:
     applied_sort_fields: List[str] = list()
-    for (_sorting_field, _sorting_functor) in sorters:
+    for _sorting_field, _sorting_functor in sorters:
         if _sorting_field in applied_sort_fields and check_duplicate:
             logger.debug(f"skip duplicate sorting field: {_sorting_field}")
             continue
@@ -689,6 +689,11 @@ def inject_app_defaults(application: str):
                 # Add the value to the settings, if not already present
                 if not hasattr(_settings, _k):
                     setattr(_settings, _k, getattr(_app_settings, _k))
+
+        # Lamb Framework
+        from lamb.utils.dpath import adapt_dict_impl
+
+        adapt_dict_impl()
     except ImportError:
         # Silently skip failing settings modules
         pass
@@ -995,7 +1000,6 @@ def image_convert_to_rgb(image: PILImage.Image) -> PILImage.Image:
 
 
 def file_is_svg(file: Union[str, BinaryIO]) -> bool:
-
     try:
         tag = next(cElementTree.iterparse(file, ("start",)))[1].tag
     except cElementTree.ParseError:

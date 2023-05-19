@@ -10,13 +10,14 @@ from django.conf import Settings
 from lamb import exc
 from lamb.ext.lxml import __lxml_hints_reverse_map__
 
+import jmespath
 import dpath.util
 from lxml.etree import _Element as EtreeElement
 from lxml.etree import _ElementTree as Etree
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["dpath_value"]
+__all__ = ["dpath_value", "adapt_dict_impl"]
 
 
 # TODO: modify - split logic of default for presented and not exist key_path
@@ -44,6 +45,7 @@ def dpath_value(
     :return: Extracted value
 
     """
+
     # utils
     def _type_convert(_result):
         if req_type is None:
@@ -90,6 +92,42 @@ def dpath_value(
             raise exc.ServerError("Failed to parse params due unknown error") from e
 
 
+# dict engine utils
+def _dict_engine_impl_dpath(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
+    items = dpath.util.values(dict_object, key_path)  # type: # List[Any]
+    result = items[0]
+    return result
+
+
+def _dict_engine_impl_jmespath(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
+    if isinstance(key_path, list):
+        key_path = ".".join(key_path)
+    items = jmespath.search(key_path, dict_object)  # type: Any
+    return items
+
+
+# dpath_value could be used before full django and settings init complete
+# so until init finished use stable dpath version
+_dict_impl = _dict_engine_impl_dpath
+
+
+def adapt_dict_impl():
+    from django.conf import settings
+
+    engine_value = dpath_value(settings, "LAMB_DPATH_DICT_ENGINE", str, default=None)
+
+    global _dict_impl
+    logger.debug(f"dpath_value settings value is: {engine_value}")
+    if engine_value is None or engine_value == "dpath":
+        _dict_impl = _dict_engine_impl_dpath
+        logger.debug("dpath_value: impl adapted - dpath")
+    elif engine_value == "jmespath":
+        _dict_impl = _dict_engine_impl_jmespath
+        logger.debug("dpath_value: impl adapted - jmespath")
+    else:
+        raise exc.ImproperlyConfiguredError(f"Unknown dict dpath implementation: {settings.LAMB_DPATH_DICT_ENGINE}")
+
+
 @singledispatch
 def _dpath_find_impl(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
     """
@@ -100,9 +138,7 @@ def _dpath_find_impl(dict_object: Optional[dict] = None, key_path: Union[str, Li
     """
 
     try:
-        items = dpath.util.values(dict_object, key_path)  # type: List[Any]
-        result = items[0]
-        return result
+        return _dict_impl(dict_object=dict_object, key_path=key_path)
     except IndexError as e:
         raise exc.InvalidBodyStructureError(
             "Could not locate field for key_path %s from provided dict data" % key_path,
