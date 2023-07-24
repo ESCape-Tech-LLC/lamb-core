@@ -231,9 +231,9 @@ class ThrottlingError(ClientError):
     _status_code = 429
     _message = "Too many requests"
 
-    limits: list
+    limits: Optional[list]
 
-    def __init__(self, *args, limits: None, **kwargs):
+    def __init__(self, *args, limits=None, **kwargs):
         super(ThrottlingError, self).__init__(*args, **kwargs)
         self.limits = limits or []
 
