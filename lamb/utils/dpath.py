@@ -21,6 +21,11 @@ __all__ = ["dpath_value", "adapt_dict_impl"]
 
 
 # TODO: modify - split logic of default for presented and not exist key_path
+# TODO: prepare good unit tests to check both dpath/jmespath implementations
+# TODO: adapt implementations to unify syntax between implementations (lists, dot, slash - ['a', 'b'], 'a.b', 'a/b')
+# TODO: check for proper support of implementations specific patterns like @ or list slices
+
+
 def dpath_value(
     dict_object: Union[Optional[dict], EtreeElement, Etree, Mapping] = None,
     key_path: Union[str, List[str]] = None,
@@ -100,9 +105,33 @@ def _dict_engine_impl_dpath(dict_object: Optional[dict] = None, key_path: Union[
 
 
 def _dict_engine_impl_jmespath(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
+    # old version
+    # if isinstance(key_path, list):
+    #     key_path = ".".join(key_path)
+    # items = jmespath.search(key_path, dict_object)  # type: Any
+    # return items
+
+    # new version
     if isinstance(key_path, list):
-        key_path = ".".join(key_path)
-    items = jmespath.search(key_path, dict_object)  # type: Any
+        _expr = ".".join(key_path)
+        _exist_root = ".".join(["@"] + key_path[:-1])
+        _exist_expr = key_path[-1]
+    else:
+        _expr = key_path
+        _exist_root = "@"
+        _exist_expr = key_path
+
+    items = jmespath.search(_expr, dict_object)  # type: Any
+    if items is None:
+        # jmespath produce None in both case:
+        # - field value is None
+        # - field not exist
+        exist = jmespath.search(
+            f"contains(keys({_exist_root}), '{_exist_expr}')",
+            dict_object,
+        )
+        if not exist:
+            raise IndexError("Path not exist")
     return items
 
 
