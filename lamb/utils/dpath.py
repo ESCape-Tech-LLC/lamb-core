@@ -94,7 +94,7 @@ def dpath_value(
 
 # dict engine utils
 def _dict_engine_impl_dpath(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
-    items = dpath.util.values(dict_object, key_path)  # type: # List[Any]
+    items = dpath.values(dict_object, key_path)  # type: # List[Any]
     result = items[0]
     return result
 
