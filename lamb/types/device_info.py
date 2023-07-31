@@ -203,6 +203,7 @@ class DeviceInfoType(types.TypeDecorator):
 
     impl = types.VARCHAR
     python_type = DeviceInfo
+    cache_ok = False
 
     def __init__(self, *args, encoder_class=JsonEncoder, **kwargs):
         self._encoder_class = encoder_class

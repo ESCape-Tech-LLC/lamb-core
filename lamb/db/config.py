@@ -124,9 +124,9 @@ class Config:
             if _driver == "psycopg2":
                 result.update(
                     {
-                        "executemany_mode": "values",
-                        "executemany_values_page_size": 10000,
-                        "executemany_batch_page_size": 500,
+                        "executemany_mode": "values_only",
+                        # "executemany_values_page_size": 10000,
+                        # "executemany_batch_page_size": 500,
                         "connect_args": {"connect_timeout": 5},
                     }
                 )

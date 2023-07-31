@@ -56,11 +56,11 @@ class Command(LambLoglevelMixin, LabelCommand):
                 tables = [v for k, v in metadata.tables.items() if k not in exclude_tables]
             else:
                 tables = None
-            kwargs = {"tables": tables}
-            # kwargs = {
-            #     "tables": tables,
-            #     "bind": metadata.bind
-            # }
+            # kwargs = {"tables": tables}
+            kwargs = {
+                "tables": tables,
+                "bind": metadata.bind
+            }
             kwargs = compact(kwargs)
 
             if options["force"]:
