@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any, List, Union, Mapping, Callable, Optional
-from functools import singledispatch
+from functools import singledispatch, reduce
 
 from django.conf import Settings
 
@@ -94,8 +94,10 @@ def dpath_value(
 
 # dict engine utils
 def _dict_engine_impl_dpath(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
-    items = dpath.values(dict_object, key_path)  # type: # List[Any]
-    result = items[0]
+    key_path = key_path if isinstance(key_path, list) else [key_path]
+    result = reduce(dict.get, key_path, dict_object)
+    # items = dpath.values(dict_object, key_path)  # type: # List[Any]
+    # result = items[0]
     return result
 
 
@@ -139,7 +141,7 @@ def _dpath_find_impl(dict_object: Optional[dict] = None, key_path: Union[str, Li
 
     try:
         return _dict_impl(dict_object=dict_object, key_path=key_path)
-    except IndexError as e:
+    except (IndexError, TypeError) as e:
         raise exc.InvalidBodyStructureError(
             "Could not locate field for key_path %s from provided dict data" % key_path,
             error_details={"key_path": key_path},
