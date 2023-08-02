@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import operator
 from typing import Any, List, Union, Mapping, Callable, Optional
 from functools import singledispatch, reduce
 
@@ -95,7 +96,7 @@ def dpath_value(
 # dict engine utils
 def _dict_engine_impl_dpath(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
     key_path = key_path if isinstance(key_path, list) else [key_path]
-    result = reduce(dict.get, key_path, dict_object)
+    result = reduce(operator.getitem, key_path, dict_object)
     # items = dpath.values(dict_object, key_path)  # type: # List[Any]
     # result = items[0]
     return result
