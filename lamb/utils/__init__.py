@@ -126,7 +126,7 @@ class LambRequest(HttpRequest):
     :type lamb_db_session: sqlalchemy.orm.Session | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     :type lamb_device_info: lamb.types.DeviceInfo | None
-    :type lamb_trace_id: str | None
+    :type xray: UUID | None
     :type lamb_locale: lamb.types.LambLocale | None
     :type lamb_track_id: str | None
     """
@@ -136,7 +136,7 @@ class LambRequest(HttpRequest):
         self.lamb_db_session = None
         self.lamb_execution_meter = None
         self.lamb_device_info = None
-        self.lamb_trace_id = None
+        self.xray = None
         self.lamb_locale = None
         self.lamb_track_id = None
 

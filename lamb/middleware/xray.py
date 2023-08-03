@@ -32,13 +32,13 @@ class LambXRayMiddleware(AsyncMiddlewareMixin):
             raise exc.ImproperlyConfiguredError("X-Ray header config invalid") from e
 
     @classmethod
-    def _xray(self, request) -> str:
-        if self._xray_header in request.META:
+    def _xray(cls, request) -> str:
+        if cls._xray_header in request.META:
             try:
-                xray = dpath_value(request.META, self._xray_header, str, transform=transform_uuid)
-                logger.debug(f"<{self.__class__.__name__}>. xray inherited from request header: {xray}")
+                xray = dpath_value(request.META, cls._xray_header, str, transform=transform_uuid)
+                logger.debug(f"<{cls.__name__}>. xray inherited from request header: {xray}")
             except Exception as e:
-                logger.warning(f"<{self.__class__.__name__}>. xray extract failed: {e}")
+                logger.warning(f"<{cls.__name__}>. xray extract failed: {e}")
                 xray = uuid.uuid4()
         else:
             xray = uuid.uuid4()
