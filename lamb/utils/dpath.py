@@ -142,7 +142,7 @@ def _dpath_find_impl(dict_object: Optional[dict] = None, key_path: Union[str, Li
 
     try:
         return _dict_impl(dict_object=dict_object, key_path=key_path)
-    except (IndexError, TypeError) as e:
+    except (IndexError, TypeError, KeyError) as e:
         raise exc.InvalidBodyStructureError(
             "Could not locate field for key_path %s from provided dict data" % key_path,
             error_details={"key_path": key_path},
