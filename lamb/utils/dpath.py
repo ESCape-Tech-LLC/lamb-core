@@ -14,7 +14,7 @@ from lamb.ext.lxml import __lxml_hints_reverse_map__
 import jmespath
 import dpath.util
 from lxml.etree import _Element as EtreeElement
-from lxml.etree import _ElementTree as Etree
+from lxml.etree import _ElementTree as Etree, ParseError as EtreeParseError
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +190,7 @@ def _etree_find_impl(element: Union[EtreeElement, Etree], key_path: str, namespa
         return result
     except exc.ApiError:
         raise
-    except Etree.ParseError as e:
+    except EtreeParseError as e:
         raise exc.InvalidBodyStructureError(
             "Could not extract param for key_path %s from provided XML data" % key_path,
             error_details={"key_path": key_path},
