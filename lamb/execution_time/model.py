@@ -4,12 +4,27 @@ import logging
 from typing import List  # noqa: F401
 from datetime import datetime
 
+from django.conf import settings
+
 # SQLAlchemy
-from sqlalchemy import FLOAT, BIGINT, VARCHAR, SMALLINT, TIMESTAMP, Index, Column, text
+from sqlalchemy import (
+    FLOAT,
+    BIGINT,
+    VARCHAR,
+    SMALLINT,
+    TIMESTAMP,
+    Index,
+    Table,
+    Column,
+    text,
+    event,
+)
 from sqlalchemy.orm import relationship
+from sqlalchemy.engine import Connection
 from sqlalchemy.dialects.postgresql import JSONB
 
 # Lamb Framework
+from lamb.exc import ImproperlyConfiguredError
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
 
@@ -54,6 +69,26 @@ class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
 
     # meta
     __table_args__ = (Index("lamb_execution_time_metric_start_time_idx", start_time.desc()),)
+
+
+@event.listens_for(LambExecutionTimeMetric.__table__, "after_create")
+def execution_time_create_hypertable(target: Table, connection: Connection, **kwargs):
+    if not settings.LAMB_EXECUTION_TIME_TIMESCALE:
+        return
+    statement = f"""
+        SELECT create_hypertable(
+            '{target.fullname}',
+            'start_time',
+            chunk_time_interval => INTERVAL '{settings.LAMB_EXECUTION_TIME_CHUNK_TIMESCALE_INTERVAL}'
+        );
+    """
+    try:
+        connection.execute(statement)
+    except Exception as e:
+        raise ImproperlyConfiguredError(
+            "Unable to convert execution time metric table to hypertable. "
+            "Make sure that timescaledb extension is installed"
+        ) from e
 
 
 class LambExecutionTimeMarker(ResponseEncodableMixin, DeclarativeBase):
