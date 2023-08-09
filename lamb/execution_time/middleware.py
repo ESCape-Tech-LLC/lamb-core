@@ -48,6 +48,9 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         """Stores collected data in database"""
         metric = LambExecutionTimeMetric()
         metric.http_method = request.method
+        metric.headers = dict(request.headers)
+        metric.args = dict(request.GET) or None
+        metric.status_code = response.status_code if response else None
 
         # get execution time
         try:
