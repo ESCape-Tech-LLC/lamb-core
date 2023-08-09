@@ -10,11 +10,6 @@ from django.http import HttpResponse
 import lazy_object_proxy
 
 try:
-    import orjson
-except ImportError:
-    orjson = None
-
-try:
     import ujson
 except ImportError:
     ujson = None
@@ -73,14 +68,6 @@ def _impl_ujson(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> 
         )
 
 
-def _impl_orjson(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> Any:
-    if indent is not None:
-        options = orjson.OPT_INDENT_2 | orjson.OPT_APPEND_NEWLINE | orjson.OPT_PASSTHROUGH_DATETIME
-    else:
-        options = 0 | orjson.OPT_PASSTHROUGH_DATETIME
-    return orjson.dumps(data, default=encoder.default, option=options)
-
-
 def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, Optional[int]], Any]:
     settings_engine: Optional[str] = dpath_value(
         settings,
@@ -91,10 +78,7 @@ def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, Optional[int]], Any]:
     logger.debug(f"LAMB_RESPONSE_JSON_ENGINE: settings value -> {settings_engine}")
 
     if settings_engine is None:
-        # auto-detect
-        if orjson is not None:
-            result = _impl_orjson
-        elif ujson is not None:
+        if ujson is not None:
             result = _impl_ujson
         else:
             result = _impl_json
@@ -102,10 +86,7 @@ def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, Optional[int]], Any]:
         try:
             # settings enforced
             settings_engine = settings_engine.lower()
-            if settings_engine == "orjson":
-                result = _impl_orjson
-                module = orjson
-            elif settings_engine == "ujson":
+            if settings_engine == "ujson":
                 result = _impl_ujson
                 module = ujson
             elif settings_engine == "json":
@@ -122,13 +103,6 @@ def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, Optional[int]], Any]:
         except exc.ImproperlyConfiguredError as e:
             logger.critical(f"LAMB_RESPONSE_JSON_ENGINE: Fall-down to default encoder: {e}")
             result = _impl_json
-
-    # hack
-    if result == _impl_orjson:
-        logger.critical(
-            "LAMB_RESPONSE_JSON_ENGINE: orjson engine disabled due invalid enum encode -> fall-down to default json "
-        )
-        result = _impl_json
 
     logger.debug(f"LAMB_RESPONSE_JSON_ENGINE: engine would be used -> {result}")
     return result
@@ -166,6 +140,4 @@ class JsonResponse(HttpResponse):
             encoder=encoder,
             indent=settings.LAMB_RESPONSE_JSON_INDENT,
         )
-        # encoder = JsonEncoder(callback=callback, request=request, **kwargs)
-        # result = json.dumps(obj, indent=2, ensure_ascii=False, default=encoder.default, sort_keys=False)
         return result
