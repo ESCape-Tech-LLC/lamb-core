@@ -53,9 +53,15 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         metric.device_info = request.lamb_device_info
         metric.status_code = response.status_code if response else None
 
-        # get execution time
+        # get context and execution time
         try:
             time_measure = request.lamb_execution_meter
+
+            if isinstance(time_measure.context, (list, tuple, set, dict)):
+                metric.context = time_measure.context
+            else:
+                logger.warning("Invalid request.lamb_execution_meter.context value. It will not be saved to DB")
+
             time_measure.append_marker("finish")
             metric.start_time = datetime.datetime.fromtimestamp(time_measure.start_time)
             metric.elapsed_time = time_measure.get_total_time()
