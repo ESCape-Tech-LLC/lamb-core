@@ -57,10 +57,11 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         try:
             time_measure = request.lamb_execution_meter
 
-            if isinstance(time_measure.context, (list, tuple, set, dict)):
-                metric.context = time_measure.context
-            else:
-                logger.warning("Invalid request.lamb_execution_meter.context value. It will not be saved to DB")
+            if time_measure.context:
+                if isinstance(time_measure.context, (list, tuple, set, dict)):
+                    metric.context = time_measure.context
+                else:
+                    logger.warning("Invalid request.lamb_execution_meter.context value. It will not be saved to DB")
 
             time_measure.append_marker("finish")
             metric.start_time = datetime.datetime.fromtimestamp(time_measure.start_time)
