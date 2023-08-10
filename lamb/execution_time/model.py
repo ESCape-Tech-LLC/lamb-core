@@ -85,9 +85,14 @@ def execution_time_create_hypertable(target: Table, connection: Connection, **kw
         SELECT create_hypertable(
             '{target.fullname}',
             'start_time',
-            chunk_time_interval => INTERVAL '{settings.LAMB_EXECUTION_TIME_CHUNK_TIMESCALE_INTERVAL}'
+            chunk_time_interval => INTERVAL '{settings.LAMB_EXECUTION_TIME_TIMESCALE_CHUNK_INTERVAL}'
         );
     """
+    if settings.LAMB_EXECUTION_TIME_TIMESCALE_RETENTION_INTERVAL:
+        statement += (
+            f"SELECT add_retention_policy('{target.fullname}', "
+            f"INTERVAL '{settings.LAMB_EXECUTION_TIME_TIMESCALE_RETENTION_INTERVAL}');"
+        )
     try:
         connection.execute(statement)
     except Exception as e:
