@@ -50,6 +50,7 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         metric.http_method = request.method
         metric.headers = dict(request.headers)
         metric.args = dict(request.GET) or None
+        metric.device_info = request.lamb_device_info
         metric.status_code = response.status_code if response else None
 
         # get execution time

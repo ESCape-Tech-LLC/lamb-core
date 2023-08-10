@@ -30,6 +30,9 @@ from lamb.json.mixins import ResponseEncodableMixin
 
 __all__ = ["LambExecutionTimeMarker", "LambExecutionTimeMetric"]
 
+# Lamb Framework
+from lamb.types import DeviceInfoType
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,8 +47,10 @@ class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
     app_name = Column(VARCHAR(100))
     url_name = Column(VARCHAR(100))
     http_method = Column(VARCHAR(15))
+    # TODO: Migrate headers and args to custom JSONB type
     headers = Column(JSONB)
     args = Column(JSONB)
+    device_info = Column(DeviceInfoType, nullable=True, default=None, server_default=text("NULL"))
     status_code = Column(SMALLINT)
     elapsed_time = Column(FLOAT(), nullable=False, default=0.0, server_default=text("0"))
 
