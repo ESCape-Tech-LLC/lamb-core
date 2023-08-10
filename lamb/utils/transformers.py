@@ -66,6 +66,9 @@ def transform_date(value: Union[datetime, date, str], **kwargs) -> datetime.date
     return transform_datetime(value, **kwargs).date()
 
 
+_ISO_MSEC_REGEX = r"(?P<prefix>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?P<seconds>\.\d{1,3})(?P<suffix>\+\d{2}:\d{2})"
+
+
 def transform_datetime(value: Union[datetime, date, str, int, float], __format=None, **kwargs) -> datetime:
     from django.conf import settings
 
@@ -109,6 +112,15 @@ def transform_datetime(value: Union[datetime, date, str, int, float], __format=N
             elif __format == "iso":
                 # hack for compatibility with not standard serializers
                 _value = value.replace("Z", "+00:00")
+
+                # hack for non-standard milliseconds serializer
+                if m := re.match(_ISO_MSEC_REGEX, value):
+                    prefix_part = m.groupdict()["prefix"]
+                    suffix_part = m.groupdict()["suffix"]
+                    sec_part = m.groupdict()["seconds"]
+                    sec_part_padding = sec_part.ljust(4, "0")
+                    _value = f"{prefix_part}{sec_part_padding}{suffix_part}"
+
                 result = datetime.fromisoformat(_value)
             else:
                 result = datetime.strptime(value, __format)
