@@ -93,6 +93,12 @@ def execution_time_create_hypertable(target: Table, connection: Connection, **kw
             f"SELECT add_retention_policy('{target.fullname}', "
             f"INTERVAL '{settings.LAMB_EXECUTION_TIME_TIMESCALE_RETENTION_INTERVAL}');"
         )
+    if settings.LAMB_EXECUTION_TIME_TIMESCALE_COMPRESS_AFTER:
+        statement += (
+            f"ALTER TABLE {target.fullname} SET (timescaledb.compress); "
+            f"SELECT add_compression_policy('{target.fullname}', "
+            f"INTERVAL '{settings.LAMB_EXECUTION_TIME_TIMESCALE_COMPRESS_AFTER}');"
+        )
     try:
         connection.execute(statement)
     except Exception as e:
