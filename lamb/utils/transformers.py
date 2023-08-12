@@ -114,7 +114,7 @@ def transform_datetime(value: Union[datetime, date, str, int, float], __format=N
                 _value = value.replace("Z", "+00:00")
 
                 # hack for non-standard milliseconds serializer
-                if m := re.match(_ISO_MSEC_REGEX, value):
+                if m := re.match(_ISO_MSEC_REGEX, _value):
                     prefix_part = m.groupdict()["prefix"]
                     suffix_part = m.groupdict()["suffix"]
                     sec_part = m.groupdict()["seconds"]
