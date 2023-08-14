@@ -41,7 +41,6 @@ class S3BucketConfig(ResponseEncodableMixin):
 
 
 class S3Uploader(AWSBase):
-
     _conn_cfg: S3BucketConfig
 
     def __init__(

@@ -12,7 +12,6 @@ __all__ = ["lamb_db_context"]
 
 
 class lamb_db_context:
-
     _pooled: bool
     _db_key: str
 

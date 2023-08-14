@@ -18,7 +18,6 @@ from .base import PurchaseData, InAppAbstract, SubscriptionStatus
 
 
 class InAppGoogle(InAppAbstract):
-
     scopes = ("https://www.googleapis.com/auth/androidpublisher",)
     uri_base = "https://www.googleapis.com/androidpublisher/v3/applications"
     uri_product = "/%packageName%/purchases/products/%productId%/tokens/%token%"
@@ -90,7 +89,6 @@ class InAppGoogle(InAppAbstract):
         return request_uri
 
     def _make_request(self) -> dict:
-
         request_uri = self._create_request_uri()
 
         response = self._get_session().get(request_uri)
@@ -117,7 +115,6 @@ class InAppGoogle(InAppAbstract):
         return data
 
     def _make_request_acknowledge(self, fail_silent: bool):
-
         request_uri = self._create_request_uri()
         request_uri += ":acknowledge"
 

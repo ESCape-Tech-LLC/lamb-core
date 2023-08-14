@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 def inject_logging_factory():
-
     old_factory = logging.getLogRecordFactory()
 
     def _logging_factory(*args, **kwargs):

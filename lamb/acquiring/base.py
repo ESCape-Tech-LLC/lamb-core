@@ -13,7 +13,6 @@ __all__ = ["AbstractPaymentEngine"]
 
 
 class AbstractPaymentEngine(object):
-
     db_session: SASession
 
     def __init__(self, db_session: SASession, **kwargs):
