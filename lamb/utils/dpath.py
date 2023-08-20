@@ -5,6 +5,7 @@ from typing import Any, List, Union, Mapping, Callable, Optional
 from functools import singledispatch
 
 from django.conf import Settings
+from django.http.request import QueryDict
 
 # Lamb Framework
 from lamb import exc
@@ -243,3 +244,9 @@ def _django_conf_impl(settings: Settings, key_path: str, **_r) -> Any:
             f"Could not locate field for key_path = {key_path} from settings object",
             error_details={"key_path": key_path},
         ) from e
+
+
+@_dpath_find_impl.register(QueryDict)
+def _django_query_dict_impl(dict_object: QueryDict, key_path: Union[str, List[str]] = None, **kwargs) -> Any:
+    # TODO: support for multiple values
+    return _dpath_find_impl(dict_object.dict(), key_path, **kwargs)
