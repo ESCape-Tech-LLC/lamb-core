@@ -120,7 +120,6 @@ def _default_currency_multiplier_callback(currency_iso4217: int) -> int:
 
 @dataclasses.dataclass(frozen=True)
 class RBSPaymentEngine(object):
-
     endpoint: str
     merchant_token: Optional[str] = None
     merchant_login: Optional[str] = None
