@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List  # noqa: F401
+from typing import Any, Dict, List, Optional  # noqa: F401
 from datetime import datetime
 
 from django.conf import settings
@@ -19,12 +19,12 @@ from sqlalchemy import (
     text,
     event,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.engine import Connection
 
 # Lamb Framework
 from lamb.exc import ImproperlyConfiguredError
-from lamb.types import JSONType, DeviceInfoType
+from lamb.types import JSONType, DeviceInfo, DeviceInfoType
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
 
@@ -33,29 +33,41 @@ __all__ = ["LambExecutionTimeMarker", "LambExecutionTimeMetric"]
 logger = logging.getLogger(__name__)
 
 
+# TODO: tsdb on markers
+
+
 class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
     __tablename__ = "lamb_execution_time_metric"
 
     # columns
-    metric_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
-    start_time = Column(
-        TIMESTAMP(), nullable=False, primary_key=True, default=datetime.now(), server_default=text("CURRENT_TIMESTAMP")
+    metric_id: Mapped[int] = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
+    start_time: Mapped[datetime] = Column(
+        TIMESTAMP(timezone=False),
+        nullable=False,
+        primary_key=True,
+        default=datetime.now(),
+        server_default=text("CURRENT_TIMESTAMP"),
     )
-    app_name = Column(VARCHAR(100))
-    url_name = Column(VARCHAR(100))
-    http_method = Column(VARCHAR(15))
-    headers = Column(JSONType)
-    args = Column(JSONType)
-    device_info = Column(DeviceInfoType, nullable=True, default=None, server_default=text("NULL"))
-    status_code = Column(SMALLINT)
-    elapsed_time = Column(FLOAT(), nullable=False, default=0.0, server_default=text("0"))
-    context = Column(JSONType)
+    app_name: Mapped[Optional[str]] = Column(VARCHAR(100), nullable=True)
+    url_name: Mapped[Optional[str]] = Column(VARCHAR(100), nullable=True)
+    http_method: Mapped[Optional[str]] = Column(VARCHAR(15), nullable=True)
+    headers: Mapped[Optional[Dict[str, Any]]] = Column(JSONType, nullable=True)
+    args: Mapped[Optional[Dict[str, Any]]] = Column(JSONType, nullable=True)
+    device_info: Mapped[Optional[DeviceInfo]] = Column(
+        DeviceInfoType,
+        nullable=True,
+        default=None,
+        server_default=text("NULL"),
+    )
+    status_code: Mapped[Optional[int]] = Column(SMALLINT, nullable=True)
+    elapsed_time: Mapped[float] = Column(FLOAT, nullable=False, default=0.0, server_default=text("0"))
+    context: Mapped[Optional[Any]] = Column(JSONType, nullable=True)
 
     # relations
     markers = relationship(
         "LambExecutionTimeMarker",
         back_populates="metric",
-        primaryjoin="LambExecutionTimeMetric.metric_id == foreign(LambExecutionTimeMarker.f_metric_id)",
+        primaryjoin="LambExecutionTimeMetric.metric_id == foreign(LambExecutionTimeMarker.metric_id)",
     )  # type: List[LambExecutionTimeMarker]
 
     # methods
@@ -107,20 +119,20 @@ def execution_time_create_hypertable(target: Table, connection: Connection, **kw
 class LambExecutionTimeMarker(ResponseEncodableMixin, DeclarativeBase):
     __tablename__ = "lamb_execution_time_marker"
     # columns
-    f_metric_id = Column(BIGINT, nullable=False, index=True)
-    marker_id = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
-    absolute_interval = Column(FLOAT(), nullable=False)
-    relative_interval = Column(FLOAT(), nullable=False)
-    percentage = Column(FLOAT(), nullable=False)
-    marker = Column(VARCHAR)
+    metric_id: Mapped[int] = Column(BIGINT, nullable=False)
+    marker_id: Mapped[int] = Column(BIGINT, nullable=False, primary_key=True, autoincrement=True)
+    absolute_interval: Mapped[float] = Column(FLOAT, nullable=False)
+    relative_interval: Mapped[float] = Column(FLOAT, nullable=False)
+    percentage: Mapped[float] = Column(FLOAT, nullable=False)
+    marker: Mapped[Optional[str]] = Column(VARCHAR, nullable=True)
 
     # relations
     metric = relationship(
         LambExecutionTimeMetric,
         uselist=False,
         back_populates="markers",
-        primaryjoin="foreign(LambExecutionTimeMarker.f_metric_id) == LambExecutionTimeMetric.metric_id",
+        primaryjoin="foreign(LambExecutionTimeMarker.metric_id) == LambExecutionTimeMetric.metric_id",
     )  # type: LambExecutionTimeMetric
 
     # meta
-    __table_args__ = (Index("lamb_execution_time_metric_f_metric_id_idx", f_metric_id),)
+    __table_args__ = (Index("lamb_execution_time_marker_metric_id_idx", metric_id),)
