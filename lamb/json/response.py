@@ -1,62 +1,143 @@
 from __future__ import annotations
 
 import json
-from typing import Callable, Optional
+import logging
+from typing import Any, Callable, Optional
 
 from django.conf import settings
 from django.http import HttpResponse
 
-# Lamb Framework
-from lamb.utils import import_by_name
-from lamb.json.encoder import JsonEncoder
+import lazy_object_proxy
 
 try:
-    import orjson
+    import ujson
 except ImportError:
-    orjson = None
+    ujson = None
 
+# Lamb Framework
+from lamb import exc
+from lamb.utils import dpath_value, import_by_name
 
 __all__ = ["JsonResponse"]
 
-_encoder_class = None
+logger = logging.getLogger(__name__)
+
+
+# TODO: вполне вероятно в питоне 3.10 это все вот нахер не нужно - он и в стандартном модуле нормально оптимизируется
+# utils and choose engine
+def _get_encoder_class():
+    class_module_path = settings.LAMB_RESPONSE_ENCODER
+    result = import_by_name(class_module_path)
+    logger.debug(f"LAMB_RESPONSE_ENCODER: encoder would be used {class_module_path} -> {result}")
+    return result
+
+
+def _impl_json(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> Any:
+    if indent is not None:
+        return json.dumps(
+            data,
+            indent=indent,
+            ensure_ascii=False,
+            default=encoder.default,
+            sort_keys=False,
+        )
+    else:
+        return json.dumps(
+            data,
+            ensure_ascii=False,
+            default=encoder.default,
+            sort_keys=False,
+        )
+
+
+def _impl_ujson(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> Any:
+    if indent is not None:
+        return json.dumps(
+            data,
+            indent=indent,
+            ensure_ascii=False,
+            default=encoder.default,
+            sort_keys=False,
+        )
+    else:
+        return json.dumps(
+            data,
+            ensure_ascii=False,
+            default=encoder.default,
+            sort_keys=False,
+        )
+
+
+def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, Optional[int]], Any]:
+    settings_engine: Optional[str] = dpath_value(
+        settings,
+        "LAMB_RESPONSE_JSON_ENGINE",
+        str,
+        allow_none=True,
+    )
+    logger.debug(f"LAMB_RESPONSE_JSON_ENGINE: settings value -> {settings_engine}")
+
+    if settings_engine is None:
+        if ujson is not None:
+            result = _impl_ujson
+        else:
+            result = _impl_json
+    else:
+        try:
+            # settings enforced
+            settings_engine = settings_engine.lower()
+            if settings_engine == "ujson":
+                result = _impl_ujson
+                module = ujson
+            elif settings_engine == "json":
+                result = _impl_json
+                module = json
+            else:
+                raise exc.ImproperlyConfiguredError(f"Unknown LAMB_RESPONSE_JSON_ENGINE: {settings_engine}")
+
+            # check module exist
+            if module is None:
+                raise exc.ImproperlyConfiguredError(
+                    f"Could not load LAMB_RESPONSE_JSON_ENGINE module: {settings_engine}"
+                )
+        except exc.ImproperlyConfiguredError as e:
+            logger.critical(f"LAMB_RESPONSE_JSON_ENGINE: Fall-down to default encoder: {e}")
+            result = _impl_json
+
+    logger.debug(f"LAMB_RESPONSE_JSON_ENGINE: engine would be used -> {result}")
+    return result
+
+
+# constants
+_JSON_ENCODER_CLASS = lazy_object_proxy.Proxy(_get_encoder_class)
+_JSON_DUMP_IMPL = lazy_object_proxy.Proxy(_get_dump_engine)
+_JSON_CONTENT_TYPE = "application/json; charset=utf8"
 
 
 class JsonResponse(HttpResponse):
     def __init__(self, data=None, status=200, callback=None, request=None, **kwargs):
         # determine content_type
-        content_type = "application/json; charset=utf8"
-
-        super().__init__(content_type=content_type, status=status, **kwargs)
+        super().__init__(content_type=_JSON_CONTENT_TYPE, status=status, **kwargs)
 
         if data is not None:
             # encode response in form of json
-            global _encoder_class
-            if _encoder_class is None:
-                _encoder_class = import_by_name(settings.LAMB_RESPONSE_ENCODER)
-            encoder = _encoder_class(callback, request)
+            encoder = _JSON_ENCODER_CLASS(callback, request)
 
-            _response_indent = settings.LAMB_RESPONSE_JSON_INDENT
-
-            if orjson is not None:
-                if _response_indent is not None:
-                    options = orjson.OPT_INDENT_2 | orjson.OPT_APPEND_NEWLINE | orjson.orjson.OPT_PASSTHROUGH_DATETIME
-                else:
-                    options = 0 | orjson.OPT_PASSTHROUGH_DATETIME
-                content = orjson.dumps(data, default=encoder.default, option=options)
-            else:
-                if _response_indent is not None:
-                    content = json.dumps(
-                        data, indent=_response_indent, ensure_ascii=False, default=encoder.default, sort_keys=False
-                    )
-                else:
-                    content = json.dumps(data, ensure_ascii=False, default=encoder.default, sort_keys=False)
+            content = _JSON_DUMP_IMPL(
+                data=data,
+                encoder=encoder,
+                indent=settings.LAMB_RESPONSE_JSON_INDENT,
+            )
 
             # return result
             self.content = content
 
     @staticmethod
     def encode_object(obj, callback: Optional[Callable] = None, request: Optional[object] = None, **kwargs):
-        # TODO: modify to support orjson encoder
-        encoder = JsonEncoder(callback=callback, request=request, **kwargs)
-        result = json.dumps(obj, indent=2, ensure_ascii=False, default=encoder.default, sort_keys=False)
+        encoder = _JSON_ENCODER_CLASS(callback, request, **kwargs)
+        result = _JSON_DUMP_IMPL(
+            data=obj,
+            encoder=encoder,
+            indent=settings.LAMB_RESPONSE_JSON_INDENT,
+        )
         return result

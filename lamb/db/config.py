@@ -47,7 +47,7 @@ class Config:
         _driver = self.driver if sync else self.async_driver
 
         if _driver is None:
-            logger.critical(f"Attempt to access connection string without driver info: {sync, pooled=}")
+            logger.critical(f"<{self.__class__.__name__}>. invalid driver info on connection: {sync, pooled=}")
             raise InvalidDatabaseConfigError
 
         result = furl.furl()
@@ -62,18 +62,20 @@ class Config:
         if self.db_name is not None:
             result.path.add(self.db_name)
 
-        logger.info(f"driver: {_driver}")
+        logger.debug(f"<{self.__class__.__name__}>. driver would be used: {_driver}")
         if _driver in ["sqlite+pysqlite", "sqlite+pysqlcipher", "sqlite+aiosqlite"] and (
             self.username is None or len(self.username) == 0
         ):
-            logger.warning("patching invalid username for sqlite")
+            logger.warning(f"<{self.__class__.__name__}>. patching invalid username for sqlite")
             result.username = ""
 
         _connect_options = self.connect_options_(sync=sync, pooled=pooled)
         if _connect_options is not None and len(_connect_options) > 0:
             result.args.update(_connect_options)
 
-        logger.info(f"connection string constructed: {sync, pooled=} -> {masked_url(result)}")
+        logger.debug(
+            f"<{self.__class__.__name__}>. connection string constructed: " f"{sync, pooled=} -> {masked_url(result)}"
+        )
         return result.url
 
     # connect options
@@ -144,7 +146,9 @@ class Config:
                 if pooled:
                     result.update({"pool_size": 50, "max_overflow": 50})
                 pass
-            logger.debug(f"default engine options: {self, sync, pooled, _driver=} -> {result}")
+            logger.debug(
+                f"<{self.__class__.__name__}>. default engine options: {self, sync, pooled, _driver=} -> {result}"
+            )
             return result
         elif isinstance(_options, dict):
             return _options

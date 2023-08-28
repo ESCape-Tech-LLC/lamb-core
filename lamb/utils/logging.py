@@ -18,7 +18,7 @@ def inject_logging_factory():
 
         record = old_factory(*args, **kwargs)
 
-        # attach attributes
+        # attach request attributes
         r = get_current_request()
         _fields = ["app_user_id", "xray"]
 
@@ -28,8 +28,10 @@ def inject_logging_factory():
             except Exception:
                 setattr(record, field, None)
 
+        # attach log prefix number attribute default
+        setattr(record, "prefixno", 1)
+
         # return
-        # print(f'factory invoked: {args, kwargs}')
         return record
 
     logging.setLogRecordFactory(_logging_factory)
@@ -44,19 +46,19 @@ class LambFormatter(Formatter):
         except AttributeError:
             log_lines_format = "DEFAULT"
 
-        if log_lines_format == "PREFIX":
+        if log_lines_format in "PREFIX":
             self.formatMessage = self._prefix_formatting
         elif log_lines_format == "SINGLE_LINE":
             self.formatMessage = self._single_line_formatting
         else:
-            # log_lines_format == 'DEFAULT':
             self.formatMessage = self._default_formatting
 
     def _prefix_formatting(self, record):
         buffer = record.message.split("\n")
         paths = []
-        for message_part in buffer:
+        for index, message_part in enumerate(buffer):
             record.message = message_part
+            record.prefixno = index + 1
             paths.append(self._style.format(record))
         return "\n".join(paths)
 

@@ -13,22 +13,34 @@ from sqlalchemy_utils import PhoneNumber
 from lamb.utils import import_by_name
 from lamb.json.mixins import ResponseEncodableMixin
 
+import lazy_object_proxy
+
 __all__ = ["JsonEncoder"]
 
 logger = logging.getLogger(__name__)
 
 
+# utils
+def _get_transformer():
+    result = import_by_name(settings.LAMB_RESPONSE_DATETIME_TRANSFORMER)
+    logger.debug(f"LAMB_RESPONSE_DATETIME_TRANSFORMER: {result}")
+    return result
+
+
+_JSON_DATETIME_TRANSFORMER = lazy_object_proxy.Proxy(_get_transformer)
+
+
+# main
 class JsonEncoder(json.JSONEncoder):
     def __init__(self, callback=None, request=None, **kwargs):
         super().__init__(**kwargs)
         self.callback = callback
         self.request = request
-        self._datetime_transformer = import_by_name(settings.LAMB_RESPONSE_DATETIME_TRANSFORMER)
 
     def default(self, obj):
         # general encoding
         if isinstance(obj, datetime.datetime):
-            result = self._datetime_transformer(obj)
+            result = _JSON_DATETIME_TRANSFORMER(obj)
         elif isinstance(obj, datetime.date):
             result = obj.strftime(settings.LAMB_RESPONSE_DATE_FORMAT)
         elif isinstance(obj, Decimal):

@@ -21,19 +21,19 @@ class lamb_db_context:
         self._db_key = db_key
 
     def __enter__(self) -> SASession:
-        logger.debug("Enter lamb database context")
+        logger.debug(f"<{self.__class__.__name__}>. enter lamb database context")
         self.db_session = lamb_db_session_maker(pooled=self._pooled, db_key=self._db_key, sync=True)
         return self.db_session
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        logger.debug("Exit lamb database context")
+        logger.debug(f"<{self.__class__.__name__}>. exit lamb database context")
         self.db_session.close()
 
     async def __aenter__(self):
-        logger.debug("Enter lamb database context (async)")
+        logger.debug(f"<{self.__class__.__name__}>. enter lamb database context (async)")
         self.db_session = lamb_db_session_maker(pooled=self._pooled, db_key=self._db_key, sync=False)
         return self.db_session
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        logger.debug("Exit lamb database context (async)")
+        logger.debug(f"<{self.__class__.__name__}>. exit lamb database context (async)")
         await self.db_session.close()

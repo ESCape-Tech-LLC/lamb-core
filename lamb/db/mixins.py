@@ -3,6 +3,7 @@ from datetime import datetime
 
 # SQLAlchemy
 from sqlalchemy import TIMESTAMP, Column, text
+from sqlalchemy.orm import Mapped
 from sqlalchemy.ext.declarative import declared_attr
 
 __all__ = ["TableConfigMixin", "TimeMarksMixin"]
@@ -20,7 +21,16 @@ class TableConfigMixin(object):
 
 class TimeMarksMixin(object):
     # columns
-    time_created = Column(TIMESTAMP, nullable=False, default=datetime.now, server_default=text("CURRENT_TIMESTAMP"))
-    time_updated = Column(
-        TIMESTAMP, nullable=False, default=datetime.now, server_default=text("CURRENT_TIMESTAMP"), onupdate=datetime.now
+    time_created: Mapped[datetime] = Column(
+        TIMESTAMP,
+        nullable=False,
+        default=datetime.now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    time_updated: Mapped[datetime] = Column(
+        TIMESTAMP,
+        nullable=False,
+        default=datetime.now,
+        server_default=text("CURRENT_TIMESTAMP"),
+        onupdate=datetime.now,
     )
