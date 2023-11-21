@@ -25,8 +25,8 @@ from lamb.exc import (
 )
 from lamb.utils import compact, dpath_value, datetime_end, datetime_begin
 from lamb.utils.transformers import (
-    transform_date,
     transform_boolean,
+    transform_datetime,
     transform_string_enum,
 )
 
@@ -268,7 +268,7 @@ class ColumnValueFilter(FieldValueFilter):
 # special syntax sugars
 class DatetimeFilter(ColumnValueFilter):
     def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):
-        super().__init__(*args, req_type=str, req_type_transformer=partial(transform_date, format=fmt), **kwargs)
+        super().__init__(*args, req_type=str, req_type_transformer=partial(transform_datetime, __format=fmt), **kwargs)
 
     def vary_param_value_min(self, value: Union[datetime, date]) -> datetime:
         if isinstance(value, datetime):
