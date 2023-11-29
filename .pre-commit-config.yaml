@@ -8,10 +8,10 @@
 
 repos:
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.11.0
     hooks:
       - id: black
-        language_version: python3.10
+        language_version: python3.11
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
@@ -20,7 +20,7 @@ repos:
         args: [ "--filter-files" ]
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
+    rev: 6.1.0
     hooks:
       - id: flake8
         additional_dependencies:
@@ -28,10 +28,7 @@ repos:
           # isort used instead
           - flake8-builtins
           - flake8-future-annotations
-#          - flake8-docstrings>=1.6.0
           - flake8-rst-docstrings
-#          # flake8-rst-docstrings dependency, leaving it here
-#          # in case it requires a version pin
           - pydocstyle
           - pygments
 
