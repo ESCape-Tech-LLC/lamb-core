@@ -29,7 +29,13 @@ class LambLoglevelMixin:
         # noinspection PyUnresolvedReferences
         super().add_arguments(parser)
         parser.add_argument(
-            "-l", "--log-level", action="store", dest="log_level", default=None, help="Log level", type=str
+            "-l",
+            "--log-level",
+            action="store",
+            dest="log_level",
+            default=None,
+            help="Log level",
+            type=str,
         )
 
     def execute(self, *args, **options):
