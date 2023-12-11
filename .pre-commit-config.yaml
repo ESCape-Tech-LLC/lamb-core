@@ -14,7 +14,7 @@ repos:
         language_version: python3.11
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.0
     hooks:
       - id: isort
         args: [ "--filter-files" ]
@@ -24,22 +24,8 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies:
-          # - flake8-import-order
-          # isort used instead
           - flake8-builtins
           - flake8-future-annotations
           - flake8-rst-docstrings
           - pydocstyle
           - pygments
-
-## TODO: fix logic
-#  - repo: local
-#    hooks:
-#      - id: bump2version
-#        name: Bump2Version
-#        description: Increment build number with bump2version
-#        entry: bump2version
-#        language: python
-#        args: ['build', '--allow-dirty']
-#        exclude: ''
-#        always_run: true

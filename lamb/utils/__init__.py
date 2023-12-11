@@ -310,7 +310,9 @@ def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
     sortable_attributes.update(set(ins.mapper.column_attrs.values()))
 
     # append hybrid attributes
-    sortable_attributes.update(set([ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property]))
+    sortable_attributes.update(
+        set([ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property])  # noqa: E721
+    )
 
     result = []
     for ormd in sortable_attributes:
@@ -793,13 +795,17 @@ def list_chunks(lst: List[CT], n: int) -> Generator[List[CT], None, None]:
         yield lst[i : i + n]
 
 
-def get_redis_url(host: str = "localhost", port: int = 6379, password: str = None, db: int = 0) -> str:
+def get_redis_url(
+    host: str = "localhost", port: int = 6379, password: str = None, db: int = 0, username: Optional[str] = None
+) -> str:
     result = furl.furl()
     result.scheme = "redis"
     result.host = host
     result.port = port
     if password is not None and len(password) > 0:
         result.password = password
+    if username is not None and len(username) > 0:
+        result.username = username
     result.path.add(str(db))
     return result.url
 
