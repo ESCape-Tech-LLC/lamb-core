@@ -3,6 +3,9 @@ from __future__ import annotations
 import logging
 import pathlib
 
+# SQLAlchemy
+from sqlalchemy import text
+
 # Lamb Framework
 from lamb.utils import dpath_value
 from lamb.db.session import lamb_db_session_maker
@@ -60,20 +63,20 @@ class Command(LambCommand):
             raise CommandError(f"File not exist: {migration_file_path}")
         if not migration_file_path.is_file():
             raise CommandError(f"Object at path is not file: {migration_file_path}")
-        # migration_file_path = pathlib.Path(settings.BASE_DIR).joinpath("migrations_sql").joinpath(migration_file)
+
         with open(migration_file_path, "r") as f:
             _STMT = f.read()
 
         if not options["autocommit"]:
-            logger.info("run_migration. mode usual")
-            self.db_session.execute(_STMT)
+            logger.info("apply migration. mode usual")
+            self.db_session.execute(text(_STMT))
             self.db_session.commit()
         else:
             # касательно всей ветки этой
             # - почему и во имя чего, мистер Андерсон - я уже достоверно не помню
             # - вроде как это было нужно для скриптов лютых с подавлением автоматического эмита транзакций
-            logger.info("run_migration. mode autocommit")
-            self.db_session.execute("ROLLBACK")
+            logger.info("apply migration.  mode autocommit")
+            self.db_session.execute(text("ROLLBACK"))
             autocommit_engine = self.db_session.bind.execution_options(isolation_level="AUTOCOMMIT")
             cursor = autocommit_engine.raw_connection().cursor()
             cursor.execute("COMMIT;")
