@@ -13,6 +13,7 @@ from lamb.ext.lxml import __lxml_hints_reverse_map__
 
 import jmespath
 import dpath.util
+import jmespath.exceptions
 from lxml.etree import _Element as EtreeElement
 from lxml.etree import _ElementTree as Etree
 
@@ -127,12 +128,16 @@ def _dict_engine_impl_jmespath(dict_object: Optional[dict] = None, key_path: Uni
         # jmespath produce None in both case:
         # - field value is None
         # - field not exist
-        exist = jmespath.search(
-            f"contains(keys({_exist_root}), '{_exist_expr}')",
-            dict_object,
-        )
-        if not exist:
-            raise IndexError("Path not exist")
+        try:
+            exist = jmespath.search(
+                f"contains(keys({_exist_root}), '{_exist_expr}')",
+                dict_object,
+            )
+            if not exist:
+                raise IndexError("Path not exist")
+        except jmespath.exceptions.JMESPathTypeError as e:
+            raise IndexError("Path not exist") from e
+
     return items
 
 
