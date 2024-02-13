@@ -11,8 +11,9 @@ from django.http.request import QueryDict
 from lamb import exc
 from lamb.ext.lxml import __lxml_hints_reverse_map__
 
+# import dpath.util
+import dpath
 import jmespath
-import dpath.util
 import jmespath.exceptions
 from lxml.etree import _Element as EtreeElement
 from lxml.etree import _ElementTree as Etree
@@ -101,7 +102,8 @@ def dpath_value(
 
 # dict engine utils
 def _dict_engine_impl_dpath(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
-    items = dpath.util.values(dict_object, key_path)  # type: # List[Any]
+    items: List[Any] = dpath.values(dict_object, key_path)
+    # items = dpath.util.values(dict_object, key_path)  # type: # List[Any]
     result = items[0]
     return result
 

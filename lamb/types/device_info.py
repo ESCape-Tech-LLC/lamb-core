@@ -198,11 +198,13 @@ def device_info_factory(request: LambRequest) -> DeviceInfo:
 # database storage support
 # TODO: reduce JSON key_size
 # TODO: support for protocol versions
+# TODO: check for possible cache_ok=True
 class DeviceInfoType(types.TypeDecorator):
     """Database storage"""
 
     impl = types.VARCHAR
     python_type = DeviceInfo
+    cache_ok = False
 
     def __init__(self, *args, encoder_class=JsonEncoder, **kwargs):
         self._encoder_class = encoder_class

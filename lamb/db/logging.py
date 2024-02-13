@@ -17,7 +17,13 @@ def _before_cursor_execute(conn, cursor, statement, parameters, context, execute
 
     if settings.LAMB_VERBOSE_SQL_LOG and settings.LAMB_VERBOSE_SQL_LOG_THRESHOLD is None:
         if executemany:
-            print(f"Start query: [mode=executemany] -> {statement}, {parameters[0]} [total={len(parameters)}]")
+            # TODO: it is depends on driver - so should be adapted to properly calculate total
+            # params = parameters[0] if isinstance(parameters, (list, tuple)) else parameters
+            # print(f'{parameters=}')
+            # print(f'{params=}')
+            # print(f'{context=}')
+
+            print(f"Start query: [mode=executemany] -> {statement}, {parameters} [total=?]")
             # print(f'Start query: [mode=executemany] -> {statement % parameters[0]} [total={len(parameters)}]')
         else:
             print(f"Start query: [mode=single] -> {statement}, {parameters}")
