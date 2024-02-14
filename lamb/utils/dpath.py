@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 from typing import Any, List, Union, Mapping, Callable, Optional
-from functools import singledispatch
+from operator import getitem
+from functools import reduce, singledispatch
 
 from django.conf import Settings
 from django.http.request import QueryDict
@@ -59,6 +60,7 @@ def dpath_value(
         if req_type is None:
             return _result
         # NOTE: disabled for explicit convert - for example in case of bool as int request
+        # TODO: re-enable - faster
         # if isinstance(_result, req_type):
         #     return _result
         try:
@@ -143,6 +145,31 @@ def _dict_engine_impl_jmespath(dict_object: Optional[dict] = None, key_path: Uni
     return items
 
 
+def _dict_engine_impl_traverse(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
+    # dumb - but fast
+    try:
+        if not isinstance(key_path, list):
+            key_path = [key_path]
+
+        result = dict_object
+        while len(key_path) > 0:
+            result = result[key_path.pop(0)]
+
+        return result
+    except Exception:
+        raise IndexError("Path not exist")
+
+
+def _dict_engine_impl_reduce(dict_object: Optional[dict] = None, key_path: Union[str, List[str]] = None, **_) -> Any:
+    # TODO: candidate to remove - traverse speed same
+    try:
+        if isinstance(key_path, str):
+            key_path = [key_path]
+        return reduce(getitem, key_path, dict_object)
+    except Exception:
+        raise IndexError("Path not exist")
+
+
 # dpath_value could be used before full django and settings init complete
 # so until init finished use stable dpath version
 _dict_impl = _dict_engine_impl_dpath
@@ -161,6 +188,12 @@ def adapt_dict_impl():
     elif engine_value == "jmespath":
         _dict_impl = _dict_engine_impl_jmespath
         logger.debug("dpath_value: impl adapted - jmespath")
+    elif engine_value == "traverse":
+        _dict_impl = _dict_engine_impl_traverse
+        logger.debug("dpath_value: impl adapted - traverse")
+    elif engine_value == "reduce":
+        _dict_impl = _dict_engine_impl_reduce
+        logger.debug("dpath_value: impl adapted - reduce")
     else:
         raise exc.ImproperlyConfiguredError(f"Unknown dict dpath implementation: {settings.LAMB_DPATH_DICT_ENGINE}")
 
