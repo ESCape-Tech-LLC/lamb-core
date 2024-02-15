@@ -147,7 +147,6 @@ def validate_phone_number(
         phone_number = PhoneNumber(phone_number, region)
         if check_valid and not phone_number.is_valid_number():
             raise InvalidParamValueError("Phone number is not valid")
-        logger.debug(f"parsed phone number: {phone_number.e164}")
         return phone_number
     except ApiError:
         raise

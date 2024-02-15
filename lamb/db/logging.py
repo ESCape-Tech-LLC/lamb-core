@@ -17,11 +17,10 @@ def _before_cursor_execute(conn, cursor, statement, parameters, context, execute
 
     if settings.LAMB_VERBOSE_SQL_LOG and settings.LAMB_VERBOSE_SQL_LOG_THRESHOLD is None:
         if executemany:
-            print(f"Start query: [mode=executemany] -> {statement}, {parameters[0]} [total={len(parameters)}]")
-            # print(f'Start query: [mode=executemany] -> {statement % parameters[0]} [total={len(parameters)}]')
+            # TODO: it depends on driver and sqlalchemy version - so should be adapted to properly calculate total
+            print(f"Start query: [mode=executemany] {statement} [total=?]")
         else:
             print(f"Start query: [mode=single] -> {statement}, {parameters}")
-            # print(f'Start query: [mode=single] -> {statement % parameters}')
 
 
 def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
@@ -32,11 +31,10 @@ def _after_cursor_execute(conn, cursor, statement, parameters, context, executem
             print(f"Total time: {total} sec.")
         elif total > _threshold:
             if executemany:
-                print(f"[mode=executemany] -> {statement}, {parameters[0]}\n{total} sec.")
-                # print(f'[mode=executemany] -> {statement % parameters[0]}\n{total} sec.')
+                # TODO: it depends on driver and sqlalchemy version - so should be adapted to properly calculate total
+                print(f"Start query: [mode=executemany] {statement} [total=?]")
             else:
-                print(f"[mode=single] -> {statement}, {parameters}\n{total} sec.")
-                # print(f'[mode=single] -> {statement % parameters}\n{total} sec.')
+                print(f"Start query: [mode=single] -> {statement}, {parameters}")
 
 
 def sql_logging_disable():
