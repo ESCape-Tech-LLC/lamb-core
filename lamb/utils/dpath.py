@@ -79,7 +79,6 @@ def dpath_value(
     try:
         # custom dispatch
         try:
-            # logger.warning(f'try: {dict_object, dict_object.__class__.__name__, _key_path}')
             if isinstance(dict_object, dict):
                 result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
             elif isinstance(dict_object, Settings):
@@ -218,7 +217,9 @@ def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
     :return: Extracted value
     """
     try:
-        key_path = ".".join(key_path)
+        if not isinstance(key_path, str):
+            raise exc.ServerError
+        # key_path = ".".join(key_path)
         result = getattr(settings, key_path)  # type: Any
         return result
     except Exception as e:
