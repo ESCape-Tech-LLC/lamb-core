@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import logging
 import pathlib
 
@@ -11,6 +12,8 @@ from lamb.utils import dpath_value
 from lamb.db.session import lamb_db_session_maker
 from lamb.management.base import LambCommand, CommandError
 from lamb.utils.validators import validate_not_empty
+
+import jinja2
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +57,13 @@ class Command(LambCommand):
             type=str,
             default="default",
         )
+        parser.add_argument(
+            "--env-bust",
+            action="store_true",
+            dest="env_bust",
+            help="Flag to bust migration file with environment variables (jinja engine used)",
+            default=False,
+        )
 
     def handle(self, *args, **options):
         db_key = dpath_value(options, "db_key", str, transform=validate_not_empty)
@@ -66,6 +76,11 @@ class Command(LambCommand):
 
         with open(migration_file_path, "r") as f:
             _STMT = f.read()
+            env_bust = dpath_value(options, "env_bust", bool, default=False)
+            if env_bust:
+                template = jinja2.Template(_STMT)
+                _STMT = template.render(os.environ)
+                logger.debug(f"migration after template render: {_STMT}")
 
         if not options["autocommit"]:
             logger.info("apply migration. mode usual")

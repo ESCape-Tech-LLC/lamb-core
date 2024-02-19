@@ -150,6 +150,10 @@ class S3Uploader(AWSBase):
         logger.debug(f"Uploaded S3 URL: {uploaded_url}")
         return uploaded_url
 
+    def get_object(self, relative_path: str, **kwargs):
+        result = self._client.get_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
+        return result
+
     def delete_object(self, relative_path: str):
         """
         Removes file from S3
