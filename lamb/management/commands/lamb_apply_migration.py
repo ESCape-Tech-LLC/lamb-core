@@ -105,7 +105,7 @@ class Command(LambCommand):
                     logger.info(f"try execute: {s}")
                     cursor.execute(s)
             else:
-                logger.info(f"try execute: {_STMT}")
+                logger.debug(f"try execute: {_STMT}")
                 cursor.execute(_STMT)
             cursor.execute("COMMIT;")
         logger.info(f"Did apply migration: {migration_file_path}")
