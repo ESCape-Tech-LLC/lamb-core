@@ -90,6 +90,10 @@ LAMB_CARD_TYPE_PARSER = "lamb.acquiring.rbs._default_card_type_parser"
 DB_PORT = None
 DB_SESSION_OPTS = None
 
+# pools usage on technical services
+LAMB_DB_CONTEXT_POOLED_METRICS = False
+LAMB_DB_CONTEXT_POOLED_SETTINGS = False
+
 
 # CORS support for local tests
 LAMB_ADD_CORS_ENABLED = False

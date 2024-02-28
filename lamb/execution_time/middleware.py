@@ -93,7 +93,7 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         if request.method not in self.skip_methods:
             try:
                 # database
-                with lamb_db_context() as db_session:
+                with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
                     # make in context to omit invalid commits under exceptions
                     db_session.add(metric)
                     db_session.commit()
