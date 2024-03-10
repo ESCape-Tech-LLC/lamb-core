@@ -31,7 +31,6 @@ class LambSQLAlchemyMiddleware(MiddlewareMixin):
 
     def process_exception(self, request: LambRequest, exception: Exception):
         """Rollback and closes database connection session attached from request"""
-        # logger.debug(
         logger.debug(f"<{self.__class__.__name__}>: Rolling back DB session cause cause of error: {exception}")
         try:
             request.lamb_db_session.rollback()

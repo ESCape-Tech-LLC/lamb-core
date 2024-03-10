@@ -122,4 +122,5 @@ LAMB_ADD_CORS_HEADERS = [
     "X-Lamb-App-Build",
     "X-Lamb-XRay",
     "X-Lamb-TrackID",
+    "X-Lamb-Logging-TrackID",
 ]

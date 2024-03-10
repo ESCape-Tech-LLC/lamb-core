@@ -66,15 +66,19 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
 
         return response
 
-    def _process_exception(self, request: LambRequest, exception: Exception):
+    @classmethod
+    def produce_error_response(cls, request: LambRequest, exception: Exception):
         """Internal service for process exception and convert it for proper response info"""
         # touch request body
         _ = request.POST
         _ = request.FILES
 
+        # TODO: check - resolver logic changed
         # early return
-        if request.resolver_match is None or request.resolver_match.app_name not in _apply_to_apps:
+        if (_resolver := request.resolver_match) and _resolver.app_name not in _apply_to_apps:
             return exception
+        # if request.resolver_match is None or request.resolver_match.app_name not in _apply_to_apps:
+        #     return exception
 
         # process exception to response
         logger.exception("Handled exception:")
@@ -109,4 +113,4 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
     def process_exception(self, request: LambRequest, exception: Exception):
         """Process exception handler"""
         logger.debug(f"<{self.__class__.__name__}>: Processing exception: {exception}")
-        return self._process_exception(request=request, exception=exception)
+        return self.produce_error_response(request=request, exception=exception)

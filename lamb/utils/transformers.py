@@ -76,7 +76,7 @@ def transform_datetime(value: Union[datetime, date, str, int, float], __format=N
     from lamb.utils import datetime_begin
 
     if __format is None and "format" in kwargs:
-        warnings.warn("transform_date: format keyword is deperectaed, use __format instead", DeprecationWarning)
+        warnings.warn("transform_date: format keyword is deprecated, use __format instead", DeprecationWarning)
         __format = kwargs["format"]
 
     if __format is None:
