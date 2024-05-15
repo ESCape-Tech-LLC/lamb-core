@@ -6,7 +6,7 @@ __author__ = "KoNEW"
 import json
 import logging
 import dataclasses
-from typing import Any, Dict, Union, Callable, Optional
+from typing import Any, Dict, List, Union, Callable, Optional
 
 # Lamb Framework
 from lamb.exc import ServerError, ImproperlyConfiguredError
@@ -28,8 +28,8 @@ class Config:
     # TODO: check and validate multihost connections
     driver: Optional[str] = None
     async_driver: Optional[str] = None
-    host: Optional[str] = None
-    port: Optional[int] = None
+    host: Optional[str | List[str]] = None
+    port: Optional[int | List[int]] = None
     db_name: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
@@ -42,6 +42,19 @@ class Config:
     asession_options: Optional[Union[Callable, Dict[str, Any]]] = None
     aengine_options: Optional[Union[Callable, Dict[str, Any]]] = None
 
+    def __post_init__(self):
+        # TODO: check only for postrgesql
+        if isinstance(self.host, list) and len(self.host) == 1:
+            object.__setattr__(self, "host", self.host[0])
+
+        if isinstance(self.port, list) and len(self.port) == 1:
+            object.__setattr__(self, "port", self.port[0])
+
+    # properties
+    @property
+    def multi_host(self) -> bool:
+        return isinstance(self.host, list) and len(self.host) > 1
+
     # connection string
     def connection_string_(self, sync: bool, pooled: bool) -> str:
         _driver = self.driver if sync else self.async_driver
@@ -52,13 +65,24 @@ class Config:
 
         result = furl.furl()
         result.scheme = _driver
-        result.host = self.host or ""
+
+        # multi host and port support
+        host = self.host or ""
+        if isinstance(host, list):
+            result.args["host"] = ",".join(host)
+        else:
+            result.host = host
+
+        if isinstance(self.port, list):
+            result.args["port"] = ",".join([str(p) for p in self.port])
+        elif self.port is not None:
+            result.port = self.port
+
+        # other params
         if self.username is not None:
             result.username = self.username
         if self.password is not None:
             result.password = self.password
-        if self.port is not None:
-            result.port = self.port
         if self.db_name is not None:
             result.path.add(self.db_name)
 
@@ -74,7 +98,7 @@ class Config:
             result.args.update(_connect_options)
 
         logger.debug(
-            f"<{self.__class__.__name__}>. connection string constructed: " f"{sync, pooled=} -> {masked_url(result)}"
+            f"<{self.__class__.__name__}>. connection string constructed: {sync, pooled=} -> {masked_url(result)}"
         )
         return result.url
 
@@ -84,13 +108,27 @@ class Config:
 
         if _options is None:
             # default
-            return {}
-        elif callable(_options):
-            return _options(self, sync, pooled)
+            result = {}
+            logger.debug(
+                f"<{self.__class__.__name__}>. connection options constructed from DEFAULT: {sync, pooled=} -> {result}"
+            )
+            # return {}
         elif isinstance(_options, dict):
-            return _options
+            result = _options
+            logger.debug(
+                f"<{self.__class__.__name__}>. connection options constructed from DICT: {sync, pooled=} -> {result}"
+            )
+        elif callable(_options):
+            result = _options(self, sync, pooled)
+            logger.debug(
+                f"<{self.__class__.__name__}>. "
+                f"connection options constructed from CALLABLE: {sync, pooled=} -> {result}"
+            )
+            # return _options(self, sync, pooled)
         else:
             raise InvalidDatabaseConfigError
+
+        return result
 
     # session options
     def session_options_(self, sync: bool, pooled: bool) -> Dict[str, Any]:
@@ -126,9 +164,7 @@ class Config:
             if _driver == "psycopg2":
                 result.update(
                     {
-                        "executemany_mode": "values",
-                        "executemany_values_page_size": 10000,
-                        "executemany_batch_page_size": 500,
+                        "insertmanyvalues_page_size": 10000,
                         "connect_args": {"connect_timeout": 5},
                     }
                 )
@@ -147,15 +183,26 @@ class Config:
                     result.update({"pool_size": 50, "max_overflow": 50})
                 pass
             logger.debug(
-                f"<{self.__class__.__name__}>. default engine options: {self, sync, pooled, _driver=} -> {result}"
+                f"<{self.__class__.__name__}>. "
+                f"engine options constructed from DEFAULT: {sync, pooled, _driver=} -> {result}"
             )
-            return result
+            # return result
         elif isinstance(_options, dict):
-            return _options
+            result = _options
+            logger.debug(
+                f"<{self.__class__.__name__}>. engine options constructed from DICT: {sync, pooled=} -> {result}"
+            )
+            # return _options
         elif callable(_options):
-            return _options(self, sync, pooled)
+            result = _options(self, sync, pooled)
+            logger.debug(
+                f"<{self.__class__.__name__}>. engine options constructed from CALLABLE: {sync, pooled=} -> {result}"
+            )
+            # return _options(self, sync, pooled)
         else:
             raise InvalidDatabaseConfigError
+
+        return result
 
 
 def parse_django_config() -> Dict[str, Config]:
@@ -176,7 +223,6 @@ def parse_django_config() -> Dict[str, Config]:
             username=dct["USER"],
             password=dct["PASSWORD"],
             host=dct["HOST"],
-            # port=dct["PORT"],
             port=dct.get("PORT", None),
             connect_options=dct.get("CONNECT_OPTS", None),
             session_options=dct.get("SESSION_OPTS", None),

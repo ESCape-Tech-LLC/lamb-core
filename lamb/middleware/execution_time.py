@@ -12,19 +12,18 @@ from django.utils.deprecation import MiddlewareMixin
 # Lamb Framework
 from lamb.utils import LambRequest, dpath_value
 from lamb.db.context import lamb_db_context
+from lamb.execution_time import ExecutionTimeMeter
 from lamb.utils.transformers import tf_list_string
-from lamb.execution_time.meter import ExecutionTimeMeter
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
 
 from lazy import lazy
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["ExecutionTimeMiddleware"]
+__all__ = ["LambExecutionTimeMiddleware"]
 
 
-# TODO: migrate to common middlewares folder
-class ExecutionTimeMiddleware(MiddlewareMixin):
+class LambExecutionTimeMiddleware(MiddlewareMixin):
     @classmethod
     def append_mark(cls, request: LambRequest, message: str):
         """Appends new marker to request"""
@@ -93,7 +92,7 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
         if request.method not in self.skip_methods:
             try:
                 # database
-                with lamb_db_context() as db_session:
+                with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
                     # make in context to omit invalid commits under exceptions
                     db_session.add(metric)
                     db_session.commit()
@@ -118,11 +117,14 @@ class ExecutionTimeMiddleware(MiddlewareMixin):
             logger.log(level, msg)
 
     def process_request(self, request: LambRequest):
-        self._start(request)
+        logger.debug(f"<{self.__class__.__name__}>: Start - attaching etm")
+        self._start(request=request)
 
     def process_response(self, request: LambRequest, response: HttpResponse) -> HttpResponse:
+        logger.debug(f"<{self.__class__.__name__}>: Finish on response")
         self._finish(request, response, None)
         return response
 
     def process_exception(self, request: LambRequest, exception: Exception):
+        logger.debug(f"<{self.__class__.__name__}>: Finish on exception")
         self._finish(request, None, exception)
