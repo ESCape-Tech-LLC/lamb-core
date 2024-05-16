@@ -62,7 +62,7 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
             try:
                 response = JsonResponse(response, request=request)
             except Exception as e:
-                response = self._process_exception(request=request, exception=e)
+                response = self.process_exception(request=request, exception=e)
 
         return response
 
