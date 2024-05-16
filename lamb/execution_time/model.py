@@ -119,7 +119,11 @@ class LambExecutionTimeMarker(ResponseEncodableMixin, DeclarativeBase):
     # columns
     metric_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
     marker_id: Mapped[int] = mapped_column(
-        BIGINT, Identity(always=True), nullable=False, primary_key=True, autoincrement=True
+        BIGINT,
+        Identity(always=True),
+        nullable=False,
+        primary_key=True,
+        autoincrement=True,
     )
     absolute_interval: Mapped[float] = mapped_column(FLOAT, nullable=False)
     relative_interval: Mapped[float] = mapped_column(FLOAT, nullable=False)
