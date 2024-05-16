@@ -14,6 +14,7 @@ import asyncio
 import logging
 import tempfile
 import warnings
+import zoneinfo
 import functools
 import importlib
 import urllib.parse
@@ -30,13 +31,14 @@ from typing import (
     Generator,
 )
 from inspect import isclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timezone, timedelta
 from xml.etree import cElementTree
 from collections import OrderedDict
 from urllib.parse import unquote
 
 from django.conf import settings
 from django.http import HttpRequest
+from django.utils import timezone as d_timezone
 from django.core.exceptions import RequestDataTooBig
 from django.core.files.uploadedfile import UploadedFile
 
@@ -115,6 +117,9 @@ __all__ = [
     "get_primary_keys",
     "get_redis_url",
     "get_file_mime_type",
+    "tz_now",
+    "TZ_MSK",
+    "TZ_UTC",
 ]
 
 
@@ -1059,3 +1064,12 @@ def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
         raise
     except Exception as e:
         raise InvalidParamTypeError("Could not detect mime-type of uploaded file") from e
+
+
+# timezones
+TZ_MSK = zoneinfo.ZoneInfo("Europe/Moscow")
+TZ_UTC = timezone.utc
+
+
+def tz_now() -> datetime:
+    return d_timezone.now().astimezone(TZ_UTC)
