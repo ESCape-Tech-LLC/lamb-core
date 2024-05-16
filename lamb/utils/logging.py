@@ -1,7 +1,10 @@
 import logging
+import datetime
 from logging import Formatter, LogRecord
 
 from django.conf import settings
+
+from lazy import lazy
 
 __all__ = ["LambFormatter", "inject_logging_factory"]
 
@@ -91,3 +94,22 @@ class LambFormatter(Formatter):
             record.asctime = self.formatTime(record, self.datefmt)
         record.message = self._collect_message(record)
         return self.formatMessage(record)
+
+    @lazy
+    def format_time_sep(self) -> str:
+        from django.conf import settings
+
+        return settings.LAMB_LOG_FORMAT_TIME_SEP
+
+    @lazy
+    def format_time_spec(self) -> str:
+        from django.conf import settings
+
+        return settings.LAMB_LOG_FORMAT_TIME_SPEC
+
+    def formatTime(self, record: LogRecord, datefmt: str | None = ...) -> str:
+        dt = datetime.datetime.fromtimestamp(record.created)
+        if datefmt:
+            return dt.strftime(datefmt)
+        else:
+            return dt.isoformat(sep=self.format_time_sep, timespec=self.format_time_spec)
