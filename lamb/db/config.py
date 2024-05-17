@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Union, Callable, Optional
 
 # Lamb Framework
 from lamb.exc import ServerError, ImproperlyConfiguredError
-from lamb.utils import compact, masked_url
+from lamb.utils import compact, masked_url, get_settings_value
 
 import furl
 
@@ -51,9 +51,8 @@ class Config:
             object.__setattr__(self, "port", self.port[0])
 
         if self.app_name == auto:
-            from django.conf import settings
-
-            object.__setattr__(self, "app_name", settings.LAMB_APP_NAME)
+            app_name = get_settings_value("LAMB_APP_NAME", default=None)
+            object.__setattr__(self, "app_name", app_name)
 
     # properties
     @property

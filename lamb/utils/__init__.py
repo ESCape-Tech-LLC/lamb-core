@@ -478,6 +478,7 @@ def response_sorted(
 
 def response_filtered(query: Query, filters: List[object], request: LambRequest = None, params: Dict = None) -> Query:
     # TODO: fix typing for filters
+    # TODO: auto discover request params if not provided
     # import lamb.utils.filters
     # from lamb.utils.filters import Filter
     # filters: List[Filter] = filters
