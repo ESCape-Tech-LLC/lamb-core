@@ -2,11 +2,18 @@ import logging
 import datetime
 from logging import Formatter, LogRecord
 
+try:
+    from gunicorn.glogging import SafeAtoms
+except ImportError:
+    SafeAtoms = object()
+
 from django.conf import settings
+from django.urls import resolve
 
 from lazy import lazy
+from json_log_formatter import JSONFormatter, _json_serializable
 
-__all__ = ["LambFormatter", "inject_logging_factory"]
+__all__ = ["LambFormatter", "LambJSONFormatter", "inject_logging_factory"]
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +48,28 @@ def inject_logging_factory():
     logger.warning("Lamb logging factory injected")
 
 
-class LambFormatter(Formatter):
+class TimeFormatMixin:
+    @lazy
+    def format_time_sep(self) -> str:
+        from django.conf import settings
+
+        return settings.LAMB_LOG_FORMAT_TIME_SEP
+
+    @lazy
+    def format_time_spec(self) -> str:
+        from django.conf import settings
+
+        return settings.LAMB_LOG_FORMAT_TIME_SPEC
+
+    def formatTime(self, record: LogRecord, datefmt: str | None = ...) -> str:
+        dt = datetime.datetime.fromtimestamp(record.created)
+        if datefmt:
+            return dt.strftime(datefmt)
+        else:
+            return dt.isoformat(sep=self.format_time_sep, timespec=self.format_time_spec)
+
+
+class LambFormatter(TimeFormatMixin, Formatter):
     def __init__(self, *args, **kwargs):
         super(LambFormatter, self).__init__(*args, **kwargs)
         try:
@@ -95,21 +123,87 @@ class LambFormatter(Formatter):
         record.message = self._collect_message(record)
         return self.formatMessage(record)
 
-    @lazy
-    def format_time_sep(self) -> str:
+
+class LambJSONFormatter(TimeFormatMixin, JSONFormatter):
+    def format(self, record):  # noqa: A003
         from django.conf import settings
 
-        return settings.LAMB_LOG_FORMAT_TIME_SEP
+        # Lamb Framework
+        from lamb.utils import get_current_request
 
-    @lazy
-    def format_time_spec(self) -> str:
-        from django.conf import settings
+        message = record.getMessage()
+        if record.exc_info is not None:
+            message = f"{message}\n{self.formatException(record.exc_info)}"
 
-        return settings.LAMB_LOG_FORMAT_TIME_SPEC
+        data = {
+            "level": record.levelname,
+            "ts": self.formatTime(record, self.datefmt) if self.usesTime() else None,
+            "msg": message,
+            "moduleName": record.module,
+            "fileName": record.filename,
+            "lineNo": record.lineno,
+        }
+        status_code = None
+        try:
+            status_code = record.status_code
+        except AttributeError:
+            if isinstance(record.args, SafeAtoms):
+                try:
+                    status_code = int(record.args["s"])
+                except Exception:
+                    pass
+        if status_code is not None:
+            data["statusCode"] = status_code
+        try:
+            data["context"] = record.context
+        except AttributeError:
+            pass
+        request = get_current_request()
+        if request is not None:
+            # TODO responseBody ???
+            data["httpMethod"] = request.method
+            data["httpUrl"] = request.path
 
-    def formatTime(self, record: LogRecord, datefmt: str | None = ...) -> str:
-        dt = datetime.datetime.fromtimestamp(record.created)
-        if datefmt:
-            return dt.strftime(datefmt)
-        else:
-            return dt.isoformat(sep=self.format_time_sep, timespec=self.format_time_spec)
+            try:
+                etm = request.lamb_execution_meter
+                data["elapsedTimeMs"] = round((record.created - etm.start_time) * 1000, 3)
+            except AttributeError:
+                pass
+
+            try:
+                data["xray"] = request.xray
+            except AttributeError:
+                pass
+
+            try:
+                data["userId"] = request.er_user.user_id
+            except Exception:
+                pass
+
+            try:
+                data["trackId"] = request.lamb_track_id
+            except AttributeError:
+                pass
+
+            try:
+                resolved = resolve(request.path)
+                data["urlName"] = resolved.url_name
+            except Exception:
+                pass
+
+            for hide_key in settings.LAMB_LOG_JSON_HIDE:
+                data.pop(hide_key, None)
+        return self.to_json(data)
+
+    def to_json(self, record):
+        # adapt to ascii
+        try:
+            return self.json_lib.dumps(record, ensure_ascii=False, default=_json_serializable)
+        # ujson doesn't support default argument and raises TypeError.
+        # "ValueError: Circular reference detected" is raised
+        # when there is a reference to object inside the object itself.
+        except (TypeError, ValueError, OverflowError):
+            try:
+                return self.json_lib.dumps(record, ensure_ascii=False)
+            except (TypeError, ValueError, OverflowError):
+                return "{}"
