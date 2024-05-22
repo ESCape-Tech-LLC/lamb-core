@@ -237,7 +237,7 @@ def v_opt_uuid(value: Optional[str], key: Optional[str] = None) -> Optional[uuid
     elif isinstance(value, uuid.UUID):
         return value
     elif isinstance(value, str):
-        value = validate_length(value, trimming=True, empty_as_none=True)
+        value = validate_length(value, trimming=True, empty_as_none=True, allow_none=True)
         if value is None:
             return None
     else:
