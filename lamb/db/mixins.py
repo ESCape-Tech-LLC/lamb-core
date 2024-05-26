@@ -19,23 +19,6 @@ class TableConfigMixin(object):
     __table_args__ = {"mysql_engine": "InnoDB"}
 
 
-# class TimeMarksMixin(object):
-#     # columns
-#     time_created: Mapped[datetime] = Column(
-#         TIMESTAMP,
-#         nullable=False,
-#         default=datetime.now,
-#         server_default=text("CURRENT_TIMESTAMP"),
-#     )
-#     time_updated: Mapped[datetime] = Column(
-#         TIMESTAMP,
-#         nullable=False,
-#         default=datetime.now,
-#         server_default=text("CURRENT_TIMESTAMP"),
-#         onupdate=datetime.now,
-#     )
-
-
 class TimeMarksMixin:
     # columns
     time_created: Mapped[datetime] = mapped_column(
