@@ -31,7 +31,7 @@ class LambXRayMiddleware(AsyncMiddlewareMixin):
                 cls._xray_header = get_settings_value(
                     "LAMB_LOGGING_HEADER_XRAY", "LAMB_EVENT_LOGGING_HEADER_TRACKID", req_type=str, allow_none=False
                 )
-            except exc.ApiError as e:
+            except exc.ApiError:
                 logger.info(
                     f"LAMB_LOGGING_HEADER_XRAY config is required for LambXRayMiddleware using. "
                     f"Will use default HTTP_X_LAMB_XRAY value"
