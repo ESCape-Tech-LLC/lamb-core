@@ -9,8 +9,6 @@ from lamb.utils import dpath_value, get_settings_value
 from lamb.utils.transformers import transform_uuid
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
 
-from lazy import lazy
-
 __all__ = ["LambXRayMiddleware"]
 
 
