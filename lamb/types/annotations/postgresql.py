@@ -1,25 +1,39 @@
 from __future__ import annotations
+
 import uuid
-from typing import List, Dict,Any, Union
-from typing_extensions import Annotated
-from sqlalchemy.orm import mapped_column
-from sqlalchemy import text, func
+from typing import Any, Dict, List, Union
 from datetime import datetime
+
+# SQLAlchemy
+from sqlalchemy import func, text
+from sqlalchemy.orm import mapped_column
 from sqlalchemy.dialects.postgresql import (
     UUID,
     JSONB,
     BIGINT,
+    CITEXT,
     BOOLEAN,
     INTEGER,
     VARCHAR,
     SMALLINT,
+    TSVECTOR,
     TIMESTAMP,
-CITEXT,
-TSVECTOR
 )
 
+from typing_extensions import Annotated
+
 __all__ = [
-    'uuid_pk', 'str_v','str_ci', 'str_ts','int_s', 'int_i', 'int_b', 'bool_f', 'bool_t', 'timestamp_tz', 'jsonb'
+    "uuid_pk",
+    "str_v",
+    "str_ci",
+    "str_ts",
+    "int_s",
+    "int_i",
+    "int_b",
+    "bool_f",
+    "bool_t",
+    "timestamp_tz",
+    "jsonb",
 ]
 
 # annotations

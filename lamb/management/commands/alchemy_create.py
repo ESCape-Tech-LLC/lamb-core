@@ -57,10 +57,7 @@ class Command(LambLoglevelMixin, LabelCommand):
             else:
                 tables = None
             # kwargs = {"tables": tables}
-            kwargs = {
-                "tables": tables,
-                "bind": metadata.bind
-            }
+            kwargs = {"tables": tables, "bind": metadata.bind}
             kwargs = compact(kwargs)
 
             if options["force"]:

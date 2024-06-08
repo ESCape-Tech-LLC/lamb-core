@@ -24,10 +24,10 @@ __all__ = ["BaseUploader"]
 
 def _is_base64(sb) -> bool:
     try:
-        if type(sb) == str:
+        if type(sb) == str:  # noqa: E721
             # If there's any unicode here, an exception will be thrown and the function will return false
             sb_bytes = bytes(sb, "ascii")
-        elif type(sb) == bytes:
+        elif type(sb) == bytes:  # noqa: E721
             sb_bytes = sb
         else:
             raise exc.InvalidParamTypeError("Argument must be string or bytes")

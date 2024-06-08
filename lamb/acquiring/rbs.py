@@ -266,9 +266,9 @@ class RBSPaymentEngine(object):
             "merchantLogin": child_merchant_login,
             "jsonParams": json.dumps(json_params, ensure_ascii=False, indent=None) if json_params is not None else None,
             "sessionTimeoutSecs": session_timeout_secs,
-            "expirationDate": expiration_date.strftime("%Y-%m-%dT%H:%M:%S")
-            if isinstance(expiration_date, datetime)
-            else None,
+            "expirationDate": (
+                expiration_date.strftime("%Y-%m-%dT%H:%M:%S") if isinstance(expiration_date, datetime) else None
+            ),
             "bindingId": str(binding_id) if binding_id is not None else None,
             "features": features,
         }
