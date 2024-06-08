@@ -75,7 +75,8 @@ class ResponseEncodableMixin(object):
 
                 # append hybrid properties
                 response_attributes.extend(
-                    [ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property]  # noqa: E721
+                    # [ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property]  # noqa: E721
+                    [ormd for ormd in ins.all_orm_descriptors if isinstance(ormd, hybrid_property)]
                 )
 
             # parse names

@@ -24,10 +24,10 @@ __all__ = ["BaseUploader"]
 
 def _is_base64(sb) -> bool:
     try:
-        if type(sb) == str:  # noqa: E721
+        if isinstance(sb, str):
             # If there's any unicode here, an exception will be thrown and the function will return false
             sb_bytes = bytes(sb, "ascii")
-        elif type(sb) == bytes:  # noqa: E721
+        elif isinstance(sb, bytes):
             sb_bytes = sb
         else:
             raise exc.InvalidParamTypeError("Argument must be string or bytes")
@@ -120,15 +120,15 @@ class BaseUploader(object):
 
                 # modify according to s config
                 if s.mode == Mode.Resize:
-                    image_copy.thumbnail((s.side, s.side), PILImage.ANTIALIAS)
+                    image_copy.thumbnail((s.side, s.side), PILImage.Resampling.LANCZOS)
                 elif s.mode == Mode.Crop:
                     shortest = min(image_copy.size)
-                    left = (image_copy.size[0] - shortest) / 2
-                    top = (image_copy.size[1] - shortest) / 2
-                    right = image_copy.size[0] - left
-                    bottom = image_copy.size[1] - top
+                    left = int((image_copy.size[0] - shortest) / 2)
+                    top = int((image_copy.size[1] - shortest) / 2)
+                    right = int(image_copy.size[0] - left)
+                    bottom = int(image_copy.size[1] - top)
                     image_copy = image_copy.crop((left, top, right, bottom))
-                    image_copy.thumbnail((s.side, s.side), PILImage.ANTIALIAS)
+                    image_copy.thumbnail((s.side, s.side), PILImage.Resampling.LANCZOS)
 
                 # hack to save image format
                 image_copy.format = src.format
