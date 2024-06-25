@@ -14,6 +14,7 @@ class ExecutionTimeMeter(object):
     """
     :type _markers: list[ExecutionTimeMeter.Marker]
     :type start_time: float
+    :type context: Optional[list|tuple|set|dict]
     """
 
     class Marker(object):
@@ -27,8 +28,15 @@ class ExecutionTimeMeter(object):
             self.timestamp = time.time()
 
     def __init__(self):
-        self._markers = list()
+        # self._markers = list()
+        # self.start_time = time.time()
+        # self.context = None
+        self.invalidate()
+
+    def invalidate(self):
+        self._markers = []
         self.start_time = time.time()
+        self.context = None
 
     def append_marker(self, message: str = None):
         """Appends new marker to measures series"""

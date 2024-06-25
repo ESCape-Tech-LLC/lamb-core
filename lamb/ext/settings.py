@@ -6,6 +6,7 @@ import json
 import logging
 from typing import Type
 
+from django.conf import settings
 from django.core.cache import cache
 
 # SQLAlchemy
@@ -223,7 +224,7 @@ class AbstractSettingsValue(DbEnum):
                     # use cached value
                     result = getattr(db_item, mapped_key)
                 else:
-                    with lamb_db_context() as session:
+                    with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_SETTINGS) as session:
                         self._cached_item = db_item = self._db_item(session)
                         result = getattr(db_item, mapped_key)
                 try:
@@ -240,7 +241,7 @@ class AbstractSettingsValue(DbEnum):
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
-                with lamb_db_context() as session:
+                with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_SETTINGS) as session:
                     db_item = self._db_item(session)
                     try:
                         if value is not None and key == "val":

@@ -1,4 +1,4 @@
-__version__ = "3.0.0"
+__version__ = "3.3.7"
 
 
 import logging
@@ -16,9 +16,9 @@ class LambAppConfig(AppConfig):
     verbose_name = "Lamb REST framework"
 
     def ready(self):
-        logger.debug("Lamb framework initialized")
+        logger.debug(f"<{self.__class__.__name__}>. Lamb framework initialized")
         inject_app_defaults(__name__)
-        logger.debug("Lamb default settings injected")
+        logger.debug(f"<{self.__class__.__name__}>. Lamb default settings injected")
 
 
 default_app_config = "lamb.LambAppConfig"

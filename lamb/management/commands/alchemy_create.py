@@ -10,8 +10,8 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import DropEnumType
 
 # Lamb Framework
-from lamb.utils import compact
 from lamb.db.session import metadata
+from lamb.utils.core import compact
 from lamb.management.base import LambLoglevelMixin
 
 logger = logging.getLogger(__name__)
@@ -56,11 +56,8 @@ class Command(LambLoglevelMixin, LabelCommand):
                 tables = [v for k, v in metadata.tables.items() if k not in exclude_tables]
             else:
                 tables = None
-            kwargs = {"tables": tables}
-            # kwargs = {
-            #     "tables": tables,
-            #     "bind": metadata.bind
-            # }
+            # kwargs = {"tables": tables}
+            kwargs = {"tables": tables, "bind": metadata.bind}
             kwargs = compact(kwargs)
 
             if options["force"]:

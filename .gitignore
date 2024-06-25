@@ -20,3 +20,5 @@ celerybeat-schedule.db
 
 playground.py
 build/
+
+pre-commit.log

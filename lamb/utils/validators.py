@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 import logging
 import ipaddress
 from typing import List, Union, AnyStr, TypeVar, Optional
@@ -16,6 +17,7 @@ from lamb.exc import (
     InvalidParamTypeError,
     InvalidParamValueError,
 )
+from lamb.utils.transformers import transform_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,8 @@ __all__ = [
     "validate_ip_address",
     "validate_timeout",
     "validate_not_empty",
+    "v_opt_uuid",
+    "v_opt_string",
 ]
 
 VT = TypeVar("VT")
@@ -128,7 +132,10 @@ def validate_length(
 
 
 def validate_phone_number(
-    phone_number: Optional[str], region: Optional[str] = None, allow_none: bool = False, check_valid: bool = True
+    phone_number: Optional[str],
+    region: Optional[str] = None,
+    allow_none: bool = False,
+    check_valid: bool = True,
 ) -> Optional[PhoneNumber]:
     """Validate value as valid phone number"""
     # early return
@@ -147,7 +154,6 @@ def validate_phone_number(
         phone_number = PhoneNumber(phone_number, region)
         if check_valid and not phone_number.is_valid_number():
             raise InvalidParamValueError("Phone number is not valid")
-        logger.debug(f"parsed phone number: {phone_number.e164}")
         return phone_number
     except ApiError:
         raise
@@ -223,3 +229,33 @@ def validate_not_empty(value: Optional[VT], min_length=1, **kwargs) -> VT:
     if "value" not in kwargs:
         kwargs["value"] = value
     return validate_length(**kwargs)
+
+
+def v_opt_uuid(value: Optional[str], key: Optional[str] = None) -> Optional[uuid.UUID]:
+    if value is None:
+        return None
+    elif isinstance(value, uuid.UUID):
+        return value
+    elif isinstance(value, str):
+        value = validate_length(value, trimming=True, empty_as_none=True, allow_none=True)
+        if value is None:
+            return None
+    else:
+        if key is not None:
+            raise InvalidParamTypeError(f"Invalid param type for UUID on key {key}")
+        else:
+            raise InvalidParamTypeError("Invalid param type for UUID")
+
+    return transform_uuid(value, key=key)
+
+
+def v_opt_string(value: Optional[str], key: Optional[str] = None) -> Optional[str]:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        if key is not None:
+            raise InvalidParamTypeError(f"Invalid param type for string on key {key}")
+        else:
+            raise InvalidParamTypeError("Invalid param type for string")
+
+    return validate_length(value=value, trimming=True, empty_as_none=True, allow_none=True, key=key)

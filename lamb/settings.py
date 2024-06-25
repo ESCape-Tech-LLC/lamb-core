@@ -1,5 +1,8 @@
 import logging
 
+# main
+LAMB_APP_NAME = None
+
 # device info
 LAMB_DEVICE_INFO_HEADER_FAMILY = "HTTP_X_LAMB_DEVICE_FAMILY"
 LAMB_DEVICE_INFO_HEADER_PLATFORM = "HTTP_X_LAMB_DEVICE_PLATFORM"
@@ -34,6 +37,7 @@ LAMB_PAGINATION_KEY_OMIT_TOTAL = "total_omit"
 
 LAMB_SORTING_KEY = "sorting"
 
+LAMB_RESPONSE_JSON_ENGINE = None
 LAMB_RESPONSE_JSON_INDENT = None
 LAMB_RESPONSE_DATE_FORMAT = "%Y-%m-%d"
 LAMB_RESPONSE_APPLY_TO_APPS = []
@@ -62,6 +66,10 @@ LAMB_AWS_ENDPOINT_URL = None
 LAMB_EXECUTION_TIME_COLLECT_MARKERS = False
 LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL = logging.INFO
 LAMB_EXECUTION_TIME_SKIP_METHODS = "OPTIONS"
+LAMB_EXECUTION_TIME_TIMESCALE = False
+LAMB_EXECUTION_TIME_TIMESCALE_CHUNK_INTERVAL = "7 days"  # in seconds or explicit value
+LAMB_EXECUTION_TIME_TIMESCALE_RETENTION_INTERVAL = "180 days"  # Optional, in seconds or explicit value
+LAMB_EXECUTION_TIME_TIMESCALE_COMPRESS_AFTER = "60 days"  # Optional, in seconds or explicit value
 
 LAMB_VERBOSE_SQL_LOG = False
 LAMB_VERBOSE_SQL_LOG_THRESHOLD = None
@@ -70,6 +78,10 @@ LAMB_DPATH_DICT_ENGINE = "dpath"
 
 # logging
 LAMB_LOG_LINES_FORMAT = "DEFAULT"
+LAMB_LOG_FORMAT_TIME_SPEC = "auto"
+LAMB_LOG_FORMAT_TIME_SEP = "T"
+LAMB_LOG_JSON_ENABLE = False
+LAMB_LOG_JSON_HIDE = []
 LAMB_LOGGING_HEADER_XRAY = "HTTP_X_LAMB_XRAY"
 
 
@@ -84,6 +96,10 @@ LAMB_CARD_TYPE_PARSER = "lamb.acquiring.rbs._default_card_type_parser"
 # database default configs
 DB_PORT = None
 DB_SESSION_OPTS = None
+
+# pools usage on technical services
+LAMB_DB_CONTEXT_POOLED_METRICS = False
+LAMB_DB_CONTEXT_POOLED_SETTINGS = False
 
 
 # CORS support for local tests
@@ -113,4 +129,5 @@ LAMB_ADD_CORS_HEADERS = [
     "X-Lamb-App-Build",
     "X-Lamb-XRay",
     "X-Lamb-TrackID",
+    "X-Lamb-Logging-TrackID",
 ]

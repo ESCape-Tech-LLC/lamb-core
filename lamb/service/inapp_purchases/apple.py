@@ -11,7 +11,6 @@ from .base import PurchaseData, InAppAbstract, SubscriptionStatus
 
 
 class InAppApple(InAppAbstract):
-
     uri_sandbox = "https://sandbox.itunes.apple.com/verifyReceipt"
     uri_production = "https://buy.itunes.apple.com/verifyReceipt"
 

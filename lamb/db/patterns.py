@@ -1,6 +1,8 @@
 # TODO: fix docstrings to pass flake8 with reStructuredText format
 import enum
 
+from django.conf import settings
+
 # Lamb Framework
 from lamb.exc import ServerError
 from lamb.utils import get_primary_keys
@@ -121,7 +123,7 @@ class DbEnum(enum.Enum):
         :return: Explicitily flush enum value to database by touching it within session
         :rtype: None
         """
-        with lamb_db_context() as session:
+        with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_SETTINGS) as session:
             _ = self._db_item(session)
 
     def __getattribute__(self, key):
@@ -129,7 +131,7 @@ class DbEnum(enum.Enum):
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
-                with lamb_db_context() as session:
+                with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_SETTINGS) as session:
                     db_item = self._db_item(session)
                     return getattr(db_item, mapped_key)
         return super().__getattribute__(key)
@@ -139,7 +141,7 @@ class DbEnum(enum.Enum):
             mapping = self.__class__.__attrib_mapping__
             if key in mapping:
                 mapped_key = mapping[key]
-                with lamb_db_context() as session:
+                with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_SETTINGS) as session:
                     db_item = self._db_item(session)
                     db_item.__setattr__(mapped_key, value)
                     session.commit()
@@ -154,7 +156,6 @@ class DbEnum(enum.Enum):
 
 @enum.unique
 class ConfigEnum(DbEnum):
-
     """Config storage processor.
 
     Class that support store of values of enum in database.

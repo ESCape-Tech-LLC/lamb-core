@@ -14,6 +14,7 @@ from sqlalchemy import Float, func
 from sqlalchemy.orm.query import Query
 from sqlalchemy.sql.functions import Function
 from sqlalchemy.orm.attributes import QueryableAttribute
+from sqlalchemy.dialects.postgresql import DOMAIN
 
 # Lamb Framework
 from lamb.exc import (
@@ -23,7 +24,8 @@ from lamb.exc import (
     InvalidParamValueError,
     InvalidBodyStructureError,
 )
-from lamb.utils import compact, dpath_value, datetime_end, datetime_begin
+from lamb.utils import dpath_value, datetime_end, datetime_begin
+from lamb.utils.core import compact
 from lamb.utils.transformers import (
     transform_date,
     transform_boolean,
@@ -260,7 +262,10 @@ class ColumnValueFilter(FieldValueFilter):
             arg_name = ins.name
 
         if req_type is None:
-            req_type = ins.type.python_type
+            if isinstance(ins.type, DOMAIN):
+                req_type = ins.type.data_type.python_type
+            else:
+                req_type = ins.type.python_type
 
         super().__init__(arg_name=arg_name, req_type=req_type, comparing_field=column, **kwargs)
 

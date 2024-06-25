@@ -11,13 +11,13 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 
 # Lamb Framework
 from lamb import exc
-from lamb.utils import compact
 from lamb.json.mixins import ResponseEncodableMixin
 
 from furl import furl
 from botocore.config import Config
 
 from .base import AWSBase
+from ...utils.core import compact
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,6 @@ class S3BucketConfig(ResponseEncodableMixin):
 
 
 class S3Uploader(AWSBase):
-
     _conn_cfg: S3BucketConfig
 
     def __init__(
@@ -150,6 +149,10 @@ class S3Uploader(AWSBase):
         uploaded_url = uploaded_url.url
         logger.debug(f"Uploaded S3 URL: {uploaded_url}")
         return uploaded_url
+
+    def get_object(self, relative_path: str, **kwargs):
+        result = self._client.get_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
+        return result
 
     def delete_object(self, relative_path: str):
         """
