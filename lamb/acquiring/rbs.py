@@ -18,7 +18,8 @@ from lamb.exc import (
     InvalidParamValueError,
     ImproperlyConfiguredError,
 )
-from lamb.utils import compact, dpath_value, masked_dict, import_by_name
+from lamb.utils import dpath_value
+from lamb.utils.core import compact, masked_dict, import_by_name
 from lamb.json.mixins import ResponseEncodableMixin
 
 import requests

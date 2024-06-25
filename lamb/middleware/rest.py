@@ -17,7 +17,8 @@ from lamb.exc import (
     ImproperlyConfiguredError,
 )
 from lamb.json import JsonResponse
-from lamb.utils import LambRequest, import_by_name
+from lamb.utils import LambRequest
+from lamb.utils.core import import_by_name
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
 
 try:

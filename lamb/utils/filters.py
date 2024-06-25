@@ -24,7 +24,8 @@ from lamb.exc import (
     InvalidParamValueError,
     InvalidBodyStructureError,
 )
-from lamb.utils import compact, dpath_value, datetime_end, datetime_begin
+from lamb.utils import dpath_value, datetime_end, datetime_begin
+from lamb.utils.core import compact
 from lamb.utils.transformers import (
     transform_date,
     transform_boolean,

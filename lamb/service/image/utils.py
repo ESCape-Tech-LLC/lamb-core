@@ -10,11 +10,12 @@ from django.conf import settings
 # Lamb Framework
 from lamb.exc import ServerError
 from lamb.types import IT, SliceRule
-from lamb.utils import LambRequest, import_by_name
+from lamb.utils import LambRequest
 from lamb.service.aws.s3 import S3Uploader
 
 from .model import AbstractImage
 from .uploaders import BaseUploader
+from ...utils.core import import_by_name
 
 logger = logging.getLogger(__name__)
 

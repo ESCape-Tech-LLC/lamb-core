@@ -10,7 +10,7 @@ from lamb.exc import (
     InvalidParamValueError,
     InvalidBodyStructureError,
 )
-from lamb.utils import compact
+from lamb.utils.core import compact
 
 import openpyxl
 from lazy import lazy

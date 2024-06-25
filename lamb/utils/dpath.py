@@ -84,7 +84,7 @@ def dpath_value(
             elif isinstance(dict_object, Settings):
                 result = _impl_django_conf(dict_object, key_path=_key_path, **kwargs)
             elif isinstance(dict_object, QueryDict):
-                result = _implt_query_dict(dict_object, key_path=_key_path, **kwargs)
+                result = _impl_query_dict(dict_object, key_path=_key_path, **kwargs)
             elif isinstance(dict_object, (Etree, EtreeElement)):
                 result = _impl_etree(dict_object, key_path=_key_path, **kwargs)
             else:
@@ -229,6 +229,6 @@ def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
         ) from e
 
 
-def _implt_query_dict(dict_object: QueryDict, key_path: Union[str, List[str]] = None, **kwargs) -> Any:
+def _impl_query_dict(dict_object: QueryDict, key_path: Union[str, List[str]] = None, **kwargs) -> Any:
     # TODO: support for multiple values
     return _impl_dict(dict_object.dict(), key_path, **kwargs)

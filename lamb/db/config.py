@@ -7,7 +7,8 @@ from typing import Any, Dict, List, Union, Callable, Optional
 
 # Lamb Framework
 from lamb.exc import ServerError, ImproperlyConfiguredError
-from lamb.utils import compact, masked_url, get_settings_value
+from lamb.utils import get_settings_value
+from lamb.utils.core import compact, masked_url
 
 import furl
 

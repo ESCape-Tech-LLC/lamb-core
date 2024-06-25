@@ -3,33 +3,16 @@ from __future__ import annotations
 import io
 import re
 import sys
-import copy
 import enum
 import json
-import types
 import base64
-import random
-import string
 import asyncio
 import logging
 import tempfile
 import warnings
 import zoneinfo
 import functools
-import importlib
-import urllib.parse
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-    Union,
-    TypeVar,
-    BinaryIO,
-    Callable,
-    Optional,
-    Generator,
-)
+from typing import Any, Dict, List, Tuple, Union, TypeVar, BinaryIO, Callable, Optional
 from inspect import isclass
 from datetime import date, datetime, timezone, timedelta
 from xml.etree import cElementTree
@@ -51,7 +34,6 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
-import furl
 import requests
 from PIL import Image as PILImage
 from asgiref.sync import sync_to_async
@@ -74,6 +56,7 @@ from lamb.exc import (
     ImproperlyConfiguredError,
     InvalidBodyStructureError,
 )
+from lamb.utils.core import DeprecationClassHelper
 from lamb.middleware.grequest import LambGRequestMiddleware
 
 from .dpath import dpath_value
@@ -82,8 +65,6 @@ __all__ = [
     "LambRequest",
     "parse_body_as_json",
     "dpath_value",
-    "random_string",
-    "compact",
     "response_paginated",
     "response_sorted",
     "response_filtered",
@@ -94,16 +75,12 @@ __all__ = [
     "CONTENT_ENCODING_JSON",
     "CONTENT_ENCODING_MULTIPART",
     "dpath_value",
-    "import_by_name",
     "inject_app_defaults",
     "get_settings_value",
     "datetime_end",
     "datetime_begin",
     "check_device_info_versions_above",
-    "list_chunks",
     "DeprecationClassHelper",
-    "masked_dict",
-    "masked_url",
     "timed_lru_cache",
     "timed_lru_cache_clear",
     "async_download_resources",
@@ -115,7 +92,6 @@ __all__ = [
     "str_coercible",
     "get_columns",
     "get_primary_keys",
-    "get_redis_url",
     "get_file_mime_type",
     "tz_now",
     "TZ_MSK",
@@ -177,7 +153,10 @@ PV = TypeVar("PV", list, Query, ModelQuerySet)
 
 
 def response_paginated(
-    data: PV, request: LambRequest = None, params: Dict = None, add_extended_query: bool = False
+    data: PV,
+    request: LambRequest = None,
+    params: Dict = None,
+    add_extended_query: bool = False,
 ) -> dict:
     """Pagination utility
 
@@ -199,7 +178,11 @@ def response_paginated(
     from lamb.utils.transformers import transform_boolean
 
     total_omit = dpath_value(
-        params, settings.LAMB_PAGINATION_KEY_OMIT_TOTAL, str, transform=transform_boolean, default=False
+        params,
+        settings.LAMB_PAGINATION_KEY_OMIT_TOTAL,
+        str,
+        transform=transform_boolean,
+        default=False,
     )
 
     # parse and check offset
@@ -395,7 +378,10 @@ def _sorting_parse_descriptors(raw_sorting_descriptors: Optional[str], model_ins
 
 
 def _sorting_apply_sorters(
-    sorters: List[Sorter], query: Query, model_class: DeclarativeMeta, check_duplicate: bool = True
+    sorters: List[Sorter],
+    query: Query,
+    model_class: DeclarativeMeta,
+    check_duplicate: bool = True,
 ) -> Query:
     applied_sort_fields: List[str] = list()
     for _sorting_field, _sorting_functor in sorters:
@@ -409,7 +395,11 @@ def _sorting_apply_sorters(
 
 
 def response_sorted(
-    query: Query, model_class: DeclarativeMeta, params: dict, default_sorting: str = None, **kwargs
+    query: Query,
+    model_class: DeclarativeMeta,
+    params: dict,
+    default_sorting: str = None,
+    **kwargs,
 ) -> Query:
     """Apply order by sortings to sqlalchemy query instance from params dictionary
 
@@ -476,7 +466,12 @@ def response_sorted(
     return query
 
 
-def response_filtered(query: Query, filters: List[object], request: LambRequest = None, params: Dict = None) -> Query:
+def response_filtered(
+    query: Query,
+    filters: List[object],
+    request: LambRequest = None,
+    params: Dict = None,
+) -> Query:
     # TODO: fix typing for filters
     # TODO: auto discover request params if not provided
     # import lamb.utils.filters
@@ -504,45 +499,6 @@ def response_filtered(query: Query, filters: List[object], request: LambRequest 
         query = f.apply_to_query(query=query, params=params)
 
     return query
-
-
-# compacting
-def compact(*args, traverse: bool = False, collapse: bool = False) -> Union[list, dict, tuple]:
-    """Compact version of container
-    :param traverse: Boolean flag for recursive container lookup
-    :param collapse: Boolean flag for remove child containers in traverse mode if length is 0
-    """
-    # check variadic
-    if len(args) == 1:
-        obj = args[0]
-    else:
-        obj = tuple(args)
-
-    # recursive traverse
-    def _traverse(_o):
-        if not traverse or not isinstance(_o, (list, tuple, dict)):
-            return _o
-        else:
-            _o = compact(_o, traverse=traverse, collapse=collapse)
-            if len(_o) == 0 and collapse:
-                return None
-            return _o
-
-    # compacting
-    if isinstance(obj, list):
-        result = [_traverse(o) for o in obj if o is not None]
-    elif isinstance(obj, tuple):
-        result = tuple([_traverse(o) for o in obj if o is not None])
-    elif isinstance(obj, dict):
-        result = {k: _traverse(v) for k, v in obj.items() if v is not None}
-    else:
-        result = obj
-
-    # collapse - apply only after main compacting to omit double processing and leave top level object stable
-    if collapse:
-        result = compact(result)
-
-    return result
 
 
 # content/response encoding
@@ -631,24 +587,6 @@ def datetime_begin(value: Union[date, datetime]) -> datetime:
 
 
 # other
-def import_by_name(name: str):
-    # try to import as module
-    def _import_module(_name) -> Optional[types.ModuleType]:
-        try:
-            return importlib.import_module(_name)
-        except ImportError:
-            return None
-
-    res = _import_module(name)
-    if res is None:
-        module, _, func_or_class = name.rpartition(".")
-        mod = _import_module(module)
-        try:
-            res = getattr(mod, func_or_class)
-        except AttributeError as e:
-            raise ImportError(f"Could not load {name}") from e
-
-    return res
 
 
 def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: bool = True, **kwargs):
@@ -707,36 +645,11 @@ def inject_app_defaults(application: str):
         pass
 
 
-def random_string(length: int = 10, char_set: str = string.ascii_letters + string.digits) -> str:
-    """Generate random string
-
-    :param length: Length of string to generate, by default 10
-    :param char_set: Character set as string to be used as source for random, by default alphanumeric
-    """
-    result = ""
-    for _ in range(length):
-        result += random.choice(char_set)
-    return result
-
-
-class DeprecationClassHelper(object):
-    def __init__(self, new_target):
-        self.new_target = new_target
-
-    def _warn(self):
-        warnings.warn(f"Class is deprecated, use {self.new_target} instead", DeprecationWarning, stacklevel=3)
-
-    def __call__(self, *args, **kwargs):
-        self._warn()
-        return self.new_target(*args, **kwargs)
-
-    def __getattr__(self, attr):
-        self._warn()
-        return getattr(self.new_target, attr)
-
-
 def check_device_info_versions_above(
-    source: Any, versions: List[Tuple[str, int]], default: bool, skip_options: bool = True
+    source: Any,
+    versions: List[Tuple[str, int]],
+    default: bool,
+    skip_options: bool = True,
 ) -> bool:
     """Application versions check function
 
@@ -778,42 +691,6 @@ def check_device_info_versions_above(
             continue
 
     return True
-
-
-def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
-    return {k: v if k not in masking_keys else "*****" for k, v in dct.items()}
-
-
-def masked_url(u: Union[furl.furl, str]) -> str:
-    if isinstance(u, str):
-        u = furl.furl(u)
-    _u = copy.deepcopy(u)
-    _u.password = "*****"
-    return urllib.parse.unquote(_u.url)
-
-
-CT = TypeVar("CT")
-
-
-def list_chunks(lst: List[CT], n: int) -> Generator[List[CT], None, None]:
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]
-
-
-def get_redis_url(
-    host: str = "localhost", port: int = 6379, password: str = None, db: int = 0, username: Optional[str] = None
-) -> str:
-    result = furl.furl()
-    result.scheme = "redis"
-    result.host = host
-    result.port = port
-    if password is not None and len(password) > 0:
-        result.password = password
-    if username is not None and len(username) > 0:
-        result.username = username
-    result.path.add(str(db))
-    return result.url
 
 
 # time cached

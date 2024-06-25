@@ -11,7 +11,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 # Lamb Framework
 from lamb import exc
-from lamb.utils import LambRequest, compact, file_is_svg
+from lamb.utils import LambRequest, file_is_svg
+from lamb.utils.core import compact
 from lamb.types.image import IT, Mode, SliceRule, ImageSlice
 
 from PIL import Image as PILImage

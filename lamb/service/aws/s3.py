@@ -11,13 +11,13 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 
 # Lamb Framework
 from lamb import exc
-from lamb.utils import compact
 from lamb.json.mixins import ResponseEncodableMixin
 
 from furl import furl
 from botocore.config import Config
 
 from .base import AWSBase
+from ...utils.core import compact
 
 logger = logging.getLogger(__name__)
 

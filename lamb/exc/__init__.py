@@ -4,6 +4,9 @@ import logging
 from enum import IntEnum, unique
 from typing import Any, List, Type, Union, Optional
 
+# Lamb Framework
+from lamb.utils.core import DeprecationClassHelper
+
 __all__ = [
     "LambExceptionCodes",
     "ApiError",
@@ -29,6 +32,11 @@ __all__ = [
     "HumanFriendlyMultipleError",
     "UserBlockedError",
     "RequestBodyTooBigError",
+    "AuthTokenNotProvidedError",
+    "AuthTokenInvalidError",
+    "AuthTokenExpiredError",
+    "AuthForbiddenError",
+    "AuthCredentialsInvalidError",
 ]
 
 
@@ -44,15 +52,16 @@ class LambExceptionCodes(IntEnum):
     InvalidStructure = 3
     InvalidParamValue = 4
     InvalidParamType = 5
-    AuthNotProvided = 6
-    AuthInvalid = 7
-    AuthExpired = 8
+    AuthTokenNotProvided = 6
+    AuthTokenInvalid = 7
+    AuthTokenExpired = 8
     AuthForbidden = 9
     NotExist = 10
     ExternalService = 11
     Database = 12
     AlreadyExist = 13
     RequestBodyTooBig = 14
+    AuthCredentialsInvalid = 15
 
     # throttling and rate limiters
     Throttling = 101
@@ -192,36 +201,54 @@ class AlreadyExistError(ClientError):
     _message = "Object already exist"
 
 
-class AuthCredentialsIsNotProvided(ClientError):
+class AuthTokenNotProvidedError(ClientError):
     """Client side error for invalid credentials structure"""
 
-    _app_error_code = LambExceptionCodes.AuthNotProvided
+    _app_error_code = LambExceptionCodes.AuthTokenNotProvided
     _status_code = 401
     _message = "User auth token is not provided. You must be logged for this request."
 
 
-class AuthCredentialsInvalid(ClientError):
+AuthCredentialsIsNotProvided = DeprecationClassHelper(AuthTokenNotProvidedError)
+
+
+class AuthTokenInvalidError(ClientError):
     """Client side error for invalid credentials value"""
 
-    _app_error_code = LambExceptionCodes.AuthInvalid
+    _app_error_code = LambExceptionCodes.AuthTokenInvalid
     _status_code = 401
     _message = "User auth token is not valid. You must be logged for this request."
 
 
-class AuthCredentialsExpired(ClientError):
+AuthCredentialsInvalid = DeprecationClassHelper(AuthTokenInvalidError)
+
+
+class AuthTokenExpiredError(ClientError):
     """Client side error for expired credentials value"""
 
-    _app_error_code = LambExceptionCodes.AuthExpired
+    _app_error_code = LambExceptionCodes.AuthTokenExpired
     _status_code = 401
     _message = "Provided user auth token has expired. Please renew it."
 
 
-class AuthForbidden(ClientError):
+AuthCredentialsExpired = DeprecationClassHelper(AuthTokenExpiredError)
+
+
+class AuthForbiddenError(ClientError):
     """Client side error for requesting authorized but forbidden resource"""
 
     _app_error_code = LambExceptionCodes.AuthForbidden
     _status_code = 403
     _message = "You have not access to this resource"
+
+
+AuthForbidden = DeprecationClassHelper(AuthForbiddenError)
+
+
+class AuthCredentialsInvalidError(ClientError):
+    _app_error_code = LambExceptionCodes.AuthCredentialsInvalid
+    _status_code = 401
+    _message = "Invalid auth credentials"
 
 
 class ThrottlingError(ClientError):
