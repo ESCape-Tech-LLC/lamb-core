@@ -5,7 +5,7 @@ from enum import IntEnum, unique
 from typing import Any, List, Type, Union, Optional
 
 # Lamb Framework
-from lamb.utils.core import DeprecationClassHelper
+from lamb.utils.core import DeprecationClassMixin
 
 __all__ = [
     "LambExceptionCodes",
@@ -209,7 +209,8 @@ class AuthTokenNotProvidedError(ClientError):
     _message = "User auth token is not provided. You must be logged for this request."
 
 
-AuthCredentialsIsNotProvided = DeprecationClassHelper(AuthTokenNotProvidedError)
+class AuthCredentialsIsNotProvided(DeprecationClassMixin, AuthTokenNotProvidedError):
+    pass
 
 
 class AuthTokenInvalidError(ClientError):
@@ -220,7 +221,8 @@ class AuthTokenInvalidError(ClientError):
     _message = "User auth token is not valid. You must be logged for this request."
 
 
-AuthCredentialsInvalid = DeprecationClassHelper(AuthTokenInvalidError)
+class AuthCredentialsInvalid(DeprecationClassMixin, AuthTokenInvalidError):
+    pass
 
 
 class AuthTokenExpiredError(ClientError):
@@ -231,7 +233,8 @@ class AuthTokenExpiredError(ClientError):
     _message = "Provided user auth token has expired. Please renew it."
 
 
-AuthCredentialsExpired = DeprecationClassHelper(AuthTokenExpiredError)
+class AuthCredentialsExpired(DeprecationClassMixin, AuthTokenExpiredError):
+    pass
 
 
 class AuthForbiddenError(ClientError):
@@ -242,7 +245,8 @@ class AuthForbiddenError(ClientError):
     _message = "You have not access to this resource"
 
 
-AuthForbidden = DeprecationClassHelper(AuthForbiddenError)
+class AuthForbidden(DeprecationClassMixin, AuthForbiddenError):
+    pass
 
 
 class AuthCredentialsInvalidError(ClientError):

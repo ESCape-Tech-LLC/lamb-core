@@ -12,6 +12,7 @@ from typing import TypeVar
 
 __all__ = [
     "DeprecationClassHelper",
+    "DeprecationClassMixin",
     "compact",
     "import_by_name",
     "random_string",
@@ -27,6 +28,7 @@ import furl
 
 
 class DeprecationClassHelper(object):
+    # WARN: actually or work as expected - use mixin
     def __init__(self, new_target):
         self.new_target = new_target
 
@@ -40,6 +42,18 @@ class DeprecationClassHelper(object):
     def __getattr__(self, attr):
         self._warn()
         return getattr(self.new_target, attr)
+
+
+class DeprecationClassMixin:
+
+    def __init__(self):
+        try:
+            target_cls = self.__class__.__bases__[-1]
+            msg = f"Class {self.__class__.__name__} is deprecated, use {target_cls.__name__} instead"
+        except Exception:
+            msg = f"Class {self.__class__.__name__} is deprecated"
+
+        warnings.warn(msg, DeprecationWarning, stacklevel=1)
 
 
 def compact(*args, traverse: bool = False, collapse: bool = False) -> Union[list, dict, tuple]:

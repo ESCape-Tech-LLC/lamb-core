@@ -56,12 +56,31 @@ from lamb.exc import (
     ImproperlyConfiguredError,
     InvalidBodyStructureError,
 )
-from lamb.utils.core import DeprecationClassHelper
+from lamb.utils.core import (
+    DeprecationClassMixin,
+    DeprecationClassHelper,
+    compact,
+    masked_url,
+    list_chunks,
+    masked_dict,
+    get_redis_url,
+    random_string,
+    import_by_name,
+)
 from lamb.middleware.grequest import LambGRequestMiddleware
 
 from .dpath import dpath_value
 
 __all__ = [
+    "DeprecationClassHelper",
+    "DeprecationClassMixin",
+    "compact",
+    "import_by_name",
+    "random_string",
+    "masked_url",
+    "masked_dict",
+    "get_redis_url",
+    "list_chunks",
     "LambRequest",
     "parse_body_as_json",
     "dpath_value",
@@ -80,7 +99,6 @@ __all__ = [
     "datetime_end",
     "datetime_begin",
     "check_device_info_versions_above",
-    "DeprecationClassHelper",
     "timed_lru_cache",
     "timed_lru_cache_clear",
     "async_download_resources",
