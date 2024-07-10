@@ -1,14 +1,21 @@
 # core level utils - should not depend on any other lamb modules to omit circular references
 from __future__ import annotations
 
+import sys
 import copy
 import types
 import random
 import string
 import warnings
+import functools
 import importlib
 import urllib.parse
-from typing import TypeVar
+from typing import Any, Dict, List, Union, TypeVar, Optional, Generator
+
+import furl
+
+if sys.version_info >= (3, 9):
+    from types import GenericAlias
 
 __all__ = [
     "DeprecationClassHelper",
@@ -20,11 +27,8 @@ __all__ = [
     "masked_dict",
     "get_redis_url",
     "list_chunks",
+    "lazy_descriptor",
 ]
-
-from typing import Any, Dict, List, Union, Optional, Generator
-
-import furl
 
 
 class DeprecationClassHelper(object):
@@ -164,3 +168,51 @@ def get_redis_url(
         result.username = username
     result.path.add(str(db))
     return result.url
+
+
+_marker = object()
+
+from lazy import lazy
+
+
+class lazy_descriptor:
+    """Acts like lazy with default decorator descriptor
+
+    Inspired by lazy package to emulate memoize on success function call, otherwise return default
+    """
+
+    def __init__(self, func, default):
+        self.__func = func
+        self.__default = default
+        functools.wraps(self.__func)(self)
+
+    def __set_name__(self, owner, name):
+        self.__name__ = name
+
+    def __get__(self, inst, owner):
+        if inst is None:
+            return self
+
+        if not hasattr(inst, "__dict__"):
+            raise AttributeError("'%s' object has no attribute '__dict__'" % (owner.__name__,))
+
+        name = self.__name__
+        if name.startswith("__") and not name.endswith("__"):
+            name = "_%s%s" % (owner.__name__, name)
+
+        value = inst.__dict__.get(name, _marker)
+        if value is _marker:
+            try:
+                inst.__dict__[name] = value = self.__func(inst)
+            except Exception:
+                value = self.__default
+        print(f"{inst=}, {owner=}, {name=}")
+        return value
+
+    def __set__(self, inst, value):
+        print(f"setting: {inst, value=}")
+        if inst is None:
+            return
+
+    if sys.version_info >= (3, 9):
+        __class_getitem__ = classmethod(GenericAlias)
