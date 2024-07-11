@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-# -*- coding: utf-8 -*-
-__author__ = "KoNEW"
-
 import json
 import logging
 import dataclasses
@@ -10,7 +7,8 @@ from typing import Any, Dict, List, Union, Callable, Optional
 
 # Lamb Framework
 from lamb.exc import ServerError, ImproperlyConfiguredError
-from lamb.utils import masked_url
+from lamb.utils import get_settings_value
+from lamb.utils.core import compact, masked_url
 
 import furl
 
@@ -23,9 +21,11 @@ class InvalidDatabaseConfigError(ImproperlyConfiguredError):
     _message = "Could not initialize database config"
 
 
+auto = object()
+
+
 @dataclasses.dataclass(frozen=True)
 class Config:
-    # TODO: check and validate multihost connections
     driver: Optional[str] = None
     async_driver: Optional[str] = None
     host: Optional[str | List[str]] = None
@@ -33,6 +33,7 @@ class Config:
     db_name: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
+    app_name: Optional[str] = auto
 
     connect_options: Optional[Union[Callable, Dict[str, Any]]] = None
     session_options: Optional[Union[Callable, Dict[str, Any]]] = None
@@ -49,6 +50,10 @@ class Config:
 
         if isinstance(self.port, list) and len(self.port) == 1:
             object.__setattr__(self, "port", self.port[0])
+
+        if self.app_name == auto:
+            app_name = get_settings_value("LAMB_APP_NAME", default=None)
+            object.__setattr__(self, "app_name", app_name)
 
     # properties
     @property
@@ -165,23 +170,31 @@ class Config:
                 result.update(
                     {
                         "insertmanyvalues_page_size": 10000,
-                        "connect_args": {"connect_timeout": 5},
+                        "connect_args": compact({"connect_timeout": 5, "application_name": self.app_name}),
                     }
                 )
                 if pooled:
                     result.update({"pool_recycle": 3600, "pool_size": 5, "max_overflow": 10})
+                    if self.multi_host:
+                        result.update({"pool_pre_ping": True})
             elif _driver == "asyncpg":
                 result.update(
                     {
                         "connect_args": {
-                            "server_settings": {"jit": "off"},
+                            "server_settings": compact(
+                                {
+                                    "jit": "off",
+                                    "application_name": self.app_name,
+                                }
+                            ),
                             "timeout": 5,
                         }
                     }
                 )
                 if pooled:
-                    result.update({"pool_size": 50, "max_overflow": 50})
-                pass
+                    result.update({"pool_size": 50, "max_overflow": 100})
+                    if self.multi_host:
+                        result.update({"pool_pre_ping": True})
             logger.debug(
                 f"<{self.__class__.__name__}>. "
                 f"engine options constructed from DEFAULT: {sync, pooled, _driver=} -> {result}"
@@ -198,7 +211,6 @@ class Config:
             logger.debug(
                 f"<{self.__class__.__name__}>. engine options constructed from CALLABLE: {sync, pooled=} -> {result}"
             )
-            # return _options(self, sync, pooled)
         else:
             raise InvalidDatabaseConfigError
 

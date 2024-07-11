@@ -10,7 +10,7 @@ from django.conf import settings
 from sqlalchemy_utils import PhoneNumber
 
 # Lamb Framework
-from lamb.utils import import_by_name
+from lamb.utils.core import import_by_name
 from lamb.json.mixins import ResponseEncodableMixin
 
 import lazy_object_proxy

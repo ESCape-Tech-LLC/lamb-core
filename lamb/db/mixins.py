@@ -2,11 +2,11 @@ import re
 from datetime import datetime
 
 # SQLAlchemy
-from sqlalchemy import TIMESTAMP, Column, text
-from sqlalchemy.orm import Mapped
+from sqlalchemy import TIMESTAMP, func
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.ext.declarative import declared_attr
 
-__all__ = ["TableConfigMixin", "TimeMarksMixin"]
+__all__ = ["TableConfigMixin", "TimeMarksMixin", "TimeMarksMixinTZ"]
 
 
 class TableConfigMixin(object):
@@ -19,18 +19,31 @@ class TableConfigMixin(object):
     __table_args__ = {"mysql_engine": "InnoDB"}
 
 
-class TimeMarksMixin(object):
+class TimeMarksMixin:
     # columns
-    time_created: Mapped[datetime] = Column(
-        TIMESTAMP,
-        nullable=False,
-        default=datetime.now,
-        server_default=text("CURRENT_TIMESTAMP"),
+    time_created: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=False),
+        server_default=func.CURRENT_TIMESTAMP(),
+        sort_order=-1,
     )
-    time_updated: Mapped[datetime] = Column(
-        TIMESTAMP,
-        nullable=False,
-        default=datetime.now,
-        server_default=text("CURRENT_TIMESTAMP"),
-        onupdate=datetime.now,
+    time_updated: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=False),
+        server_default=func.CURRENT_TIMESTAMP(),
+        onupdate=func.CURRENT_TIMESTAMP(),
+        sort_order=-1,
+    )
+
+
+class TimeMarksMixinTZ:
+    # columns
+    time_created: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.CURRENT_TIMESTAMP(),
+        sort_order=-1,
+    )
+    time_updated: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.CURRENT_TIMESTAMP(),
+        onupdate=func.CURRENT_TIMESTAMP(),
+        sort_order=-1,
     )

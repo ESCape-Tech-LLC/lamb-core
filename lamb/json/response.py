@@ -16,7 +16,8 @@ except ImportError:
 
 # Lamb Framework
 from lamb import exc
-from lamb.utils import dpath_value, import_by_name
+from lamb.utils import dpath_value
+from lamb.utils.core import import_by_name
 
 __all__ = ["JsonResponse"]
 

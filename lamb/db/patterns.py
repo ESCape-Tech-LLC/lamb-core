@@ -156,7 +156,6 @@ class DbEnum(enum.Enum):
 
 @enum.unique
 class ConfigEnum(DbEnum):
-
     """Config storage processor.
 
     Class that support store of values of enum in database.

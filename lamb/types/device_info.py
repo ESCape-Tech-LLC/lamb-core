@@ -15,8 +15,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 # Lamb Framework
 from lamb import exc
 from lamb.types import LambLocale
-from lamb.utils import LambRequest, dpath_value, import_by_name
+from lamb.utils import LambRequest, dpath_value
 from lamb.ext.geoip import get_asn_info, get_city_info, get_country_info
+from lamb.utils.core import import_by_name
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.json.encoder import JsonEncoder
 from lamb.utils.validators import validate_length

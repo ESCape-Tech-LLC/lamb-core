@@ -18,7 +18,8 @@ from lamb.exc import (
     InvalidParamValueError,
     ImproperlyConfiguredError,
 )
-from lamb.utils import compact, dpath_value, masked_dict, import_by_name
+from lamb.utils import dpath_value
+from lamb.utils.core import compact, masked_dict, import_by_name
 from lamb.json.mixins import ResponseEncodableMixin
 
 import requests
@@ -266,9 +267,9 @@ class RBSPaymentEngine(object):
             "merchantLogin": child_merchant_login,
             "jsonParams": json.dumps(json_params, ensure_ascii=False, indent=None) if json_params is not None else None,
             "sessionTimeoutSecs": session_timeout_secs,
-            "expirationDate": expiration_date.strftime("%Y-%m-%dT%H:%M:%S")
-            if isinstance(expiration_date, datetime)
-            else None,
+            "expirationDate": (
+                expiration_date.strftime("%Y-%m-%dT%H:%M:%S") if isinstance(expiration_date, datetime) else None
+            ),
             "bindingId": str(binding_id) if binding_id is not None else None,
             "features": features,
         }
