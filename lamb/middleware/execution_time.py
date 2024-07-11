@@ -16,7 +16,7 @@ from lamb.execution_time import ExecutionTimeMeter
 from lamb.utils.transformers import tf_list_string
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
 
-from lazy import lazy
+from lamb.utils.core import lazy
 
 logger = logging.getLogger(__name__)
 

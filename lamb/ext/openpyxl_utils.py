@@ -13,7 +13,7 @@ from lamb.exc import (
 from lamb.utils.core import compact
 
 import openpyxl
-from lazy import lazy
+from lamb.utils.core import lazy
 from openpyxl.workbook import Workbook as OpenpyxlWorkbook
 from openpyxl.cell.cell import Cell as OpenpyxlCell
 from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet
