@@ -1,14 +1,9 @@
 import os
-import time
-
-# from logging import Formatter, LogRecord
 import logging
 import datetime
 import zoneinfo
 from typing import Union, Optional
-
-# Lamb Framework
-from lamb.utils.core import lazy_descriptor
+from lamb.utils.core import lazy_default
 
 try:
     from gunicorn.glogging import SafeAtoms
@@ -24,9 +19,6 @@ from json_log_formatter import JSONFormatter, _json_serializable
 __all__ = ["LambFormatter", "LambJSONFormatter"]
 
 
-from lazy import lazy
-
-
 class _BaseFormatter(logging.Formatter):
     """
     Lamb base formatter used to convert LogRecord to text.
@@ -35,29 +27,24 @@ class _BaseFormatter(logging.Formatter):
     Separator, timespec and timezone params for logs by default extracted from django conf with lazy_descriptor,
     that give several abilities:
     - usage of default values in descriptors act as last mile until django settings is loaded
-    - descriptors provide ability to modify values in instance level and on class level
+    - descriptors provide ability to modify values on instance level and on class level
     """
 
-    _sep: str = "T"
-    _spec: str = "auto"
-    _tz: Optional[datetime.tzinfo] = None
-
-    # memoize
-    def _sep(self) -> str:
+    # on logger start django settings could not be initialized
+    # use memoized with default descriptors
+    @lazy_default('T')
+    def sep(self) -> str:
         from django.conf import settings
-
         return settings.LAMB_LOG_FORMAT_TIME_SEP
 
-    sep: str = lazy_descriptor(_sep, "T")
-
-    def _timespec(self) -> str:
+    @lazy_default('auto')
+    def timespec(self) -> str:
         from django.conf import settings
 
         return settings.LAMB_LOG_FORMAT_TIME_SPEC
 
-    timespec: str = lazy_descriptor(_timespec, "auto")
-
-    def _tzinfo(self) -> Optional[datetime.tzinfo]:
+    @lazy_default(None)
+    def tzinfo(self) -> Optional[datetime.tzinfo]:
         from django.conf import settings
 
         timezone_name = settings.LAMB_LOG_FORMAT_TIME_ZONE
@@ -69,8 +56,6 @@ class _BaseFormatter(logging.Formatter):
             # to stop lazy cycle on config resolved
             print(f"failed to load timezone: {e}")
             return None
-
-    tzinfo: datetime.tzinfo = lazy_descriptor(_tzinfo, None)
 
     # contract
     def formatTime(self, record, datefmt: Optional[str] = ...) -> str:
@@ -86,46 +71,48 @@ class _BaseFormatter(logging.Formatter):
 
 # mixins
 class _TimeFormatMixin:
+    pass
 
     # configs
-    def _format_time_sep(self) -> str:
-        from django.conf import settings
-
-        return settings.LAMB_LOG_FORMAT_TIME_SEP
-
-    format_time_sep = lazy_descriptor(_format_time_sep, "T")
-
-    def _format_time_spec(self) -> str:
-        from django.conf import settings
-
-        return settings.LAMB_LOG_FORMAT_TIME_SPEC
-
-    format_time_spec = lazy_descriptor(_format_time_spec, "auto")
-
-    def _timezone(self):
-        from django.conf import settings
-
-        return zoneinfo.ZoneInfo(settings.TIME_ZONE)
-
-    timezone = lazy_descriptor(_timezone, TZ_UTC)
-
-    # methods
-    def formatTime(self, record: logging.LogRecord, datefmt: str | None = ...) -> str:
-        dt = datetime.datetime.fromtimestamp(record.created, tz=self.timezone)
-        if datefmt:
-            return dt.strftime(datefmt)
-        else:
-            return dt.isoformat(sep=self.format_time_sep, timespec=self.format_time_spec)
+    # def _format_time_sep(self) -> str:
+    #     from django.conf import settings
+    #
+    #     return settings.LAMB_LOG_FORMAT_TIME_SEP
+    #
+    # format_time_sep = lazy_descriptor(_format_time_sep, "T")
+    #
+    # def _format_time_spec(self) -> str:
+    #     from django.conf import settings
+    #
+    #     return settings.LAMB_LOG_FORMAT_TIME_SPEC
+    #
+    # format_time_spec = lazy_descriptor(_format_time_spec, "auto")
+    #
+    # def _timezone(self):
+    #     from django.conf import settings
+    #
+    #     return zoneinfo.ZoneInfo(settings.TIME_ZONE)
+    #
+    # timezone = lazy_descriptor(_timezone, TZ_UTC)
+    #
+    # # methods
+    # def formatTime(self, record: logging.LogRecord, datefmt: str | None = ...) -> str:
+    #     dt = datetime.datetime.fromtimestamp(record.created, tz=self.timezone)
+    #     if datefmt:
+    #         return dt.strftime(datefmt)
+    #     else:
+    #         return dt.isoformat(sep=self.format_time_sep, timespec=self.format_time_spec)
 
 
 class _LambJSONFormatterBase(_TimeFormatMixin, JSONFormatter):
 
-    def _hide_atoms(self) -> list[str]:
-        from django.conf import settings
-
-        return settings.LAMB_LOG_JSON_HIDE
-
-    hide_fields = lazy_descriptor(_hide_atoms, [])
+    # def _hide_atoms(self) -> list[str]:
+    #     from django.conf import settings
+    #
+    #     return settings.LAMB_LOG_JSON_HIDE
+    #
+    # hide_fields = lazy_descriptor(_hide_atoms, [])
+    hide_fields = []
 
     def to_json(self, record):
         # override parent to adapt non ascii

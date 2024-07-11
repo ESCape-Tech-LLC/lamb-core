@@ -7,9 +7,10 @@ import types
 import random
 import string
 import warnings
-import functools
 import importlib
 import urllib.parse
+import functools
+from types import GenericAlias
 from typing import Any, Dict, List, Union, TypeVar, Optional, Generator
 
 import furl
@@ -27,7 +28,10 @@ __all__ = [
     "masked_dict",
     "get_redis_url",
     "list_chunks",
-    "lazy_descriptor",
+    'lazy',
+    'lazy_ro',
+    'lazy_default',
+    'lazy_default_ro',
 ]
 
 
@@ -148,15 +152,15 @@ CT = TypeVar("CT")
 def list_chunks(lst: List[CT], n: int) -> Generator[List[CT], None, None]:
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
-        yield lst[i : i + n]
+        yield lst[i: i + n]
 
 
 def get_redis_url(
-    host: str = "localhost",
-    port: int = 6379,
-    password: str = None,
-    db: int = 0,
-    username: Optional[str] = None,
+        host: str = "localhost",
+        port: int = 6379,
+        password: str = None,
+        db: int = 0,
+        username: Optional[str] = None,
 ) -> str:
     result = furl.furl()
     result.scheme = "redis"
@@ -170,49 +174,278 @@ def get_redis_url(
     return result.url
 
 
-_marker = object()
+# lazy utils
+_lazy_marker = object()
 
-from lazy import lazy
 
+class lazy:
+    """ Lazy descriptor.
 
-class lazy_descriptor:
-    """Acts like lazy with default decorator descriptor
+    Inspired by https://pypi.org/project/lazy/ project.
 
-    Inspired by lazy package to emulate memoize on success function call, otherwise return default
+    Could be used as drop-in replacement for original project version. Cause __set__ and __delete__ methods not implemented and underlying data stored in __dict__ - it acts like pure lazy evaluated attribute of instance and value can be changed via with direct access
+
+    Usage::
+        from lamb.utils.core import lazy
+
+        def check(cls, l_cls):
+            a = cls()
+
+            print(f'usage 1: {a.some_val}')
+            print(f'usage 2: {a.some_val}')
+
+            a.some_val = 12
+            print(f'after set: {a.some_val}')
+
+            del a.some_val
+            print(f'after del: {a.some_val}')
+
+            l_cls.invalidate(a, 'some_val')
+            print(f'after invalidate: {a.some_val}')
+
+        class A:
+            _val: int = 0
+            @lazy
+            def some_val(self) -> int:
+                self._val += 1
+                return self._val
+
+        >> usage 1: 1
+        >> usage 2: 1
+        >> after set: 12
+        >> after del: 2
+        >> after invalidate: 3
     """
 
-    def __init__(self, func, default):
+    def __init__(self, func):
         self.__func = func
-        self.__default = default
         functools.wraps(self.__func)(self)
+
+    if sys.version_info >= (3, 9):
+        __class_getitem__ = classmethod(GenericAlias)
 
     def __set_name__(self, owner, name):
         self.__name__ = name
 
-    def __get__(self, inst, owner):
-        if inst is None:
-            return self
-
+    def _get_name(self, inst, owner):
         if not hasattr(inst, "__dict__"):
-            raise AttributeError("'%s' object has no attribute '__dict__'" % (owner.__name__,))
+            raise AttributeError(f"'{owner.__name__}' object has no attribute '__dict__'")
 
         name = self.__name__
         if name.startswith("__") and not name.endswith("__"):
-            name = "_%s%s" % (owner.__name__, name)
+            name = f'_{owner.__name__}{name}'
 
-        value = inst.__dict__.get(name, _marker)
-        if value is _marker:
-            try:
-                inst.__dict__[name] = value = self.__func(inst)
-            except Exception:
-                value = self.__default
-        print(f"{inst=}, {owner=}, {name=}")
+        return name
+
+    def __get__(self, inst, owner):
+        """ Get lazy attribute or calculate on first usage"""
+        if inst is None:
+            return self
+
+        name = self._get_name(inst, owner)
+
+        value = inst.__dict__.get(name, _lazy_marker)
+        if value is _lazy_marker:
+            inst.__dict__[name] = value = self.__func(inst)
         return value
 
-    def __set__(self, inst, value):
-        print(f"setting: {inst, value=}")
-        if inst is None:
-            return
+    @classmethod
+    def invalidate(cls, inst, name):
+        """ Invalidate a lazy attribute with class level operation """
+        owner = inst.__class__
 
-    if sys.version_info >= (3, 9):
-        __class_getitem__ = classmethod(GenericAlias)
+        if not hasattr(inst, '__dict__'):
+            raise AttributeError(f"{owner.__name__}' object has no attribute '__dict__'")
+
+        if name.startswith('__') and not name.endswith('__'):
+            name = f'_{owner.__name__}{name}'
+
+        if not isinstance(getattr(owner, name), cls):
+            raise AttributeError(f"{owner.__name__}.{name}' is not a {cls.__name__} attribute")
+
+        if name in inst.__dict__:
+            del inst.__dict__[name]
+
+
+class lazy_ro(lazy):
+    """ Read only lazy descriptor
+
+    Overrides __set__ and __delete__ methods to disable attribute modifications.
+
+    Usage::
+        def check(cls, l_cls):
+            a = cls()
+
+            print(f'usage 1: {a.some_val}')
+            print(f'usage 2: {a.some_val}')
+
+            a.some_val = 12
+            print(f'after set: {a.some_val}')
+
+            del a.some_val
+            print(f'after del: {a.some_val}')
+
+            l_cls.invalidate(a, 'some_val')
+            print(f'after invalidate: {a.some_val}')
+
+        class A:
+            _val: int = 0
+            @lazy_ro
+            def some_val(self) -> int:
+                self._val += 1
+                return self._val
+
+        >> usage 1: 1
+        >> usage 2: 1
+        >> after set: 1
+        >> after del: 1
+        >> after invalidate: 2
+    """
+
+    def __set__(self, instance, value):
+        pass
+
+    def __delete__(self, instance):
+        pass
+
+
+def lazy_default(default):
+    """ Lazy evaluated descriptor with default support
+
+    If underlying function fall with exception would return default value.
+    After first success calculation value would be memoized in instance dict.
+
+    NB: Current implementation disables invalidate classmethod cause wrapped in decorator.
+
+    Usage::
+        def check_default(cls):
+            a = cls()
+
+            for i in range(0, 10):
+                print(f'usage {i+1:2d}: {a.some_val}')
+
+            a.some_val = 12
+            print(f'after set: {a.some_val}')
+
+            del a.some_val
+            print(f'after del: {a.some_val}')
+
+
+        class A:
+            _val: int = 0
+            @lazy_default(default=-1)
+            def some_val(self) -> int:
+                self._val += 1
+                if self._val >= 5:
+                    return self._val
+                else:
+                    raise ValueError
+
+        >> usage  1: -1
+        >> usage  2: -1
+        >> usage  3: -1
+        >> usage  4: -1
+        >> usage  5: 5
+        >> usage  6: 5
+        >> usage  7: 5
+        >> usage  8: 5
+        >> usage  9: 5
+        >> usage 10: 5
+        >> after set: 12
+        >> after del: 6
+    """
+
+    def wrap(func):
+
+        class _lazy(lazy):
+
+            def __get__(self, inst, owner):
+                """ Get lazy attribute or return default on exception"""
+                if inst is None:
+                    return self
+
+                name = self._get_name(inst, owner)
+
+                value = inst.__dict__.get(name, _lazy_marker)
+                if value is _lazy_marker:
+                    try:
+                        inst.__dict__[name] = value = self.__func(inst)
+                    except Exception:
+                        value = default
+
+                return value
+
+        return _lazy(func)
+
+    return wrap
+
+
+def lazy_default_ro(default):
+    """ Lazy evaluated descriptor with default support and read-only logic
+
+    If underlying function fall with exception would return default value.
+    After first success calculation value would be memoized in instance dict.
+
+    NB: Current implementation disables invalidate classmethod cause wrapped in decorator.
+
+    Usage::
+        def check_default(cls):
+            a = cls()
+
+            for i in range(0, 10):
+                print(f'usage {i+1:2d}: {a.some_val}')
+
+            a.some_val = 12
+            print(f'after set: {a.some_val}')
+
+            del a.some_val
+            print(f'after del: {a.some_val}')
+
+
+        class A:
+            _val: int = 0
+            @lazy_default_ro(default=-1)
+            def some_val(self) -> int:
+                self._val += 1
+                if self._val >= 5:
+                    return self._val
+                else:
+                    raise ValueError
+
+        >> usage  1: -1
+        >> usage  2: -1
+        >> usage  3: -1
+        >> usage  4: -1
+        >> usage  5: 5
+        >> usage  6: 5
+        >> usage  7: 5
+        >> usage  8: 5
+        >> usage  9: 5
+        >> usage 10: 5
+        >> after set: 5
+        >> after del: 5
+    """
+
+    def wrap(func):
+
+        class _lazy(lazy_ro):
+
+            def __get__(self, inst, owner):
+                """ Get lazy attribute or return default on exception"""
+                if inst is None:
+                    return self
+
+                name = self._get_name(inst, owner)
+
+                value = inst.__dict__.get(name, _lazy_marker)
+                if value is _lazy_marker:
+                    try:
+                        inst.__dict__[name] = value = self.__func(inst)
+                    except Exception:
+                        value = default
+
+                return value
+
+        return _lazy(func)
+
+    return wrap
