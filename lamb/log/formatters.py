@@ -14,7 +14,8 @@ except ImportError:
 # Lamb Framework
 from lamb.utils import TZ_UTC
 from lamb.log.constants import LAMB_LOG_FORMAT_SIMPLE, LAMB_LOG_FORMAT_CELERY_MAIN_SIMPLE, LAMB_LOG_FORMAT_CELERY_TASK_SIMPLE
-from json_log_formatter import JSONFormatter, _json_serializable
+from lamb.json.encoder import JsonEncoder
+# from json_log_formatter import JSONFormatter, _json_serializable
 
 __all__ = ["LambFormatter", "LambJSONFormatter", 'MultilineFormatter', 'CeleryMultilineFormatter']
 
@@ -100,9 +101,9 @@ BUILTIN_ATTRS = {
     'stack_info',
     'thread',
     'threadName',
-    'taskName',
-    'prefixno',
-    'request'
+    'taskName',  # TODO: check async/sync mode to add/hide field
+    'prefixno',  # in JSON format lamb prefixno not required
+    # 'request',  # django log appends JSON unencodable request object
 }
 
 
@@ -118,7 +119,7 @@ class BaseJsonFormatter(_BaseFormatter):
 
     def to_json(self, record):
         try:
-            return self.json_lib.dumps(record, ensure_ascii=False, default=_json_serializable,)
+            return self.json_lib.dumps(record, ensure_ascii=False, default=JsonEncoder.default,)
         # ujson doesn't support default argument and raises TypeError.
         # "ValueError: Circular reference detected" is raised
         # when there is a reference to object inside the object itself.
@@ -126,8 +127,22 @@ class BaseJsonFormatter(_BaseFormatter):
             try:
                 return self.json_lib.dumps(record, ensure_ascii=False)
             except (TypeError, ValueError, OverflowError) as e:
-                print(f'last barrier: {e} -> {record}')
-                return '{}'
+                try:
+                    msg = {
+                        'exc': str(e),
+                        'exc_info': self.formatException(e),
+                        # 'exc_info': str(e),
+                        'record': str(record)
+                    }
+                    return self.json_lib.dumps(msg, ensure_ascii=False)
+                except Exception as e:
+                    print(f'{self.__class__.__name__}. failed encode JSON: record = {record} with exc={e}')
+                    return '{}'
+                # print(f'last barrier: {e} -> {record}')
+                msg = ""
+                # return '{"ec_info": "%s"}' % str(e)
+                # return f'{"exc_info": {str(e)} }'
+                # return '{}'
 
     def extra_from_record(self, record):
         """Returns `extra` dict you passed to logger.
