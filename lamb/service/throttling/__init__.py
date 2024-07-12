@@ -174,7 +174,7 @@ def redis_rate_check_lua(
             result[bname] = result_record
         end
         return cjson.encode(result)
-        """  # noqa: W291
+        """  # noqa: W291, W293
 
         conn.redis_rate_check_lua = conn.register_script(redis_rate_check_lua_)
         logger.debug(f"Lua throttling. Script compiled and loaded: {conn.redis_rate_check_lua}")

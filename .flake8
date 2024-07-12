@@ -1,7 +1,7 @@
 [flake8]
 show-source = true
 max-line-length = 120
-extend-ignore = E203,E712
+extend-ignore = E203,E712,A005
 per-file-ignores =
     lamb/db/inspect.py: A005
     lamb/db/logging.py: A005
