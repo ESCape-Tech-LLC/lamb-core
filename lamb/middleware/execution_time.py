@@ -12,11 +12,10 @@ from django.utils.deprecation import MiddlewareMixin
 # Lamb Framework
 from lamb.utils import LambRequest, dpath_value
 from lamb.db.context import lamb_db_context
+from lamb.utils.core import lazy
 from lamb.execution_time import ExecutionTimeMeter
 from lamb.utils.transformers import tf_list_string
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
-
-from lamb.utils.core import lazy
 
 logger = logging.getLogger(__name__)
 

@@ -6,10 +6,9 @@ from django.http import HttpResponse
 # Lamb Framework
 from lamb import exc
 from lamb.utils import dpath_value, get_settings_value
+from lamb.utils.core import lazy
 from lamb.utils.transformers import transform_uuid
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
-
-from lamb.utils.core import lazy
 
 __all__ = ["LambXRayMiddleware"]
 

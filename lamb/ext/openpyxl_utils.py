@@ -10,10 +10,9 @@ from lamb.exc import (
     InvalidParamValueError,
     InvalidBodyStructureError,
 )
-from lamb.utils.core import compact
+from lamb.utils.core import lazy, compact
 
 import openpyxl
-from lamb.utils.core import lazy
 from openpyxl.workbook import Workbook as OpenpyxlWorkbook
 from openpyxl.cell.cell import Cell as OpenpyxlCell
 from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet

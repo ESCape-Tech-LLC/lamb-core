@@ -6,7 +6,6 @@ from sqlalchemy.inspection import inspect
 
 # Lamb Framework
 from lamb.exc import ServerError
-
 from lamb.utils.core import lazy
 
 __all__ = ["ModelInspector"]

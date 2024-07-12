@@ -16,7 +16,6 @@ from lamb.utils import (
     get_request_body_encoding,
     get_request_accept_encoding,
 )
-
 from lamb.utils.core import lazy
 
 logger = logging.getLogger(__name__)
