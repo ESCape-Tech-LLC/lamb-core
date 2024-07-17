@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 import os
 import logging
+from typing import Any, Dict
 
-__all__ = ["inject_logging_factory"]
+__all__ = ["inject_logging_factory", "get_gunicorn_logging_dict"]
+
+# Lamb Framework
+from lamb.log.constants import LAMB_LOG_FORMAT_GUNICORN_SIMPLE
 
 
 def inject_logging_factory():
@@ -37,3 +43,46 @@ def inject_logging_factory():
         _logger = logging.getLogger("django")
 
     _logger.info("Lamb logging factory injected")
+
+
+def get_gunicorn_logging_dict(log_formatter_cls: str, fmt: str = LAMB_LOG_FORMAT_GUNICORN_SIMPLE) -> Dict[str, Any]:
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "root": {
+            "level": "INFO",
+            "handlers": [],
+        },
+        "loggers": {
+            "gunicorn.error": {
+                "level": "INFO",
+                "handlers": ["error_console"],
+                "propagate": True,
+                "qualname": "gunicorn.error",
+            },
+            "gunicorn.access": {
+                "level": "INFO",
+                "handlers": ["console"],
+                "propagate": True,
+                "qualname": "gunicorn.access",
+            },
+        },
+        "formatters": {
+            "generic": {
+                "class": log_formatter_cls,
+                "format": fmt,
+            },
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "generic",
+                "stream": "ext://sys.stdout",
+            },
+            "error_console": {
+                "class": "logging.StreamHandler",
+                "formatter": "generic",
+                "stream": "ext://sys.stderr",
+            },
+        },
+    }

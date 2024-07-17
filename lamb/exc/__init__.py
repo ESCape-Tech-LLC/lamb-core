@@ -4,9 +4,6 @@ import logging
 from enum import IntEnum, unique
 from typing import Any, List, Type, Union, Optional
 
-# Lamb Framework
-from lamb.utils.core import DeprecationClassMixin
-
 __all__ = [
     "LambExceptionCodes",
     "ApiError",
@@ -22,10 +19,6 @@ __all__ = [
     "InvalidBodyStructureError",
     "InvalidParamValueError",
     "InvalidParamTypeError",
-    "AuthCredentialsIsNotProvided",
-    "AuthCredentialsInvalid",
-    "AuthCredentialsExpired",
-    "AuthForbidden",
     "ThrottlingError",
     "UpdateRequiredError",
     "HumanFriendlyError",
@@ -209,20 +202,12 @@ class AuthTokenNotProvidedError(ClientError):
     _message = "User auth token is not provided. You must be logged for this request."
 
 
-class AuthCredentialsIsNotProvided(DeprecationClassMixin, AuthTokenNotProvidedError):
-    pass
-
-
 class AuthTokenInvalidError(ClientError):
     """Client side error for invalid credentials value"""
 
     _app_error_code = LambExceptionCodes.AuthTokenInvalid
     _status_code = 401
     _message = "User auth token is not valid. You must be logged for this request."
-
-
-class AuthCredentialsInvalid(DeprecationClassMixin, AuthTokenInvalidError):
-    pass
 
 
 class AuthTokenExpiredError(ClientError):
@@ -233,20 +218,12 @@ class AuthTokenExpiredError(ClientError):
     _message = "Provided user auth token has expired. Please renew it."
 
 
-class AuthCredentialsExpired(DeprecationClassMixin, AuthTokenExpiredError):
-    pass
-
-
 class AuthForbiddenError(ClientError):
     """Client side error for requesting authorized but forbidden resource"""
 
     _app_error_code = LambExceptionCodes.AuthForbidden
     _status_code = 403
     _message = "You have not access to this resource"
-
-
-class AuthForbidden(DeprecationClassMixin, AuthForbiddenError):
-    pass
 
 
 class AuthCredentialsInvalidError(ClientError):

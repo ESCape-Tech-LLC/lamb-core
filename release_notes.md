@@ -1,3 +1,16 @@
+# 3.4.1
+
+**Deprecations:**
+- drop old style exceptions: `AuthCredentialsIsNotProvided`, `AuthCredentialsInvalid`, `AuthCredentialsExpired`, `AuthForbidden`
+
+**Features:**
+- add predefined gunicorn format strings:
+  - `lamb.log.constants.LAMB_LOG_FORMAT_GUNICORN_SIMPLE`
+  - `lamb.log.constants.LAMB_LOG_FORMAT_GUNICORN_PREFIXNO`
+  - `lamb.log.constants.LAMB_LOG_FORMAT_GUNICORN_VERBOSE`
+  - `lamb.log.constants.LAMB_LOG_FORMAT_GUNICORN_VERBOSE_PREFIXNO`
+- add default gunicorn logging dict builder: `lamb.log.utils.get_gunicorn_logging_dict`
+
 # 3.4.0
 
 **Dependencies:**
