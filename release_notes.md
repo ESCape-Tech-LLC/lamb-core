@@ -1,4 +1,4 @@
-# 3.4.1
+# 3.4.2
 
 **Deprecations:**
 - drop old style exceptions: `AuthCredentialsIsNotProvided`, `AuthCredentialsInvalid`, `AuthCredentialsExpired`, `AuthForbidden`
@@ -11,7 +11,7 @@
   - `lamb.log.constants.LAMB_LOG_FORMAT_GUNICORN_VERBOSE_PREFIXNO`
 - add default gunicorn logging dict builder: `lamb.log.utils.get_gunicorn_logging_dict`
 
-# 3.4.0
+# 3.4.1
 
 **Dependencies:**
 - remove dependency: [lazy](https://pypi.org/project/lazy/)
