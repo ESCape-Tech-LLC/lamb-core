@@ -134,7 +134,8 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
 
 
 def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
-    return {k: v if k not in masking_keys else "*****" for k, v in dct.items()}
+    masking_keys = [mk.lower() if isinstance(mk, str) else mk for mk in masking_keys]
+    return {k: v if (k.lower() if isinstance(k, str) else k) not in masking_keys else "*****" for k, v in dct.items()}
 
 
 def masked_url(u: Union[furl.furl, str]) -> str:

@@ -13,7 +13,7 @@ except ImportError:
     SafeAtoms = object()
 
 # Lamb Framework
-from lamb.utils.core import lazy_default
+from lamb.utils.core import masked_dict, lazy_default
 from lamb.json.encoder import JsonEncoder
 from lamb.log.constants import LAMB_LOG_FORMAT_SIMPLE
 
@@ -111,7 +111,6 @@ class _BaseFormatter(logging.Formatter):
     def __init__(self, fmt=None, datefmt=None, style="%", validate=True, *, defaults=None):
         if fmt is None:
             fmt = self.default_fmt
-            # fmt = LAMB_LOG_FORMAT_SIMPLE
         super().__init__(fmt=fmt, datefmt=datefmt, style=style, validate=validate, defaults=defaults)
 
 
@@ -125,6 +124,12 @@ class _BaseJsonFormatter(_BaseFormatter):
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_HIDE
+
+    @lazy_default(list())
+    def extra_masking_keys(self) -> List[str]:
+        from django.conf import settings
+
+        return settings.LAMB_LOG_JSON_EXTRA_MASKING
 
     def to_json(self, record):
         try:
@@ -166,6 +171,8 @@ class _BaseJsonFormatter(_BaseFormatter):
             attr_name: record.__dict__[attr_name] for attr_name in record.__dict__ if attr_name not in BUILTIN_ATTRS
         }
         result = {k: _json_valid(v) for k, v in result.items()}
+        result = masked_dict(result, *self.extra_masking_keys)
+
         return result
 
     def json_record(self, message, record):

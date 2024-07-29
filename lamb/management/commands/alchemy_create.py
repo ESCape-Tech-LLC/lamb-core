@@ -38,7 +38,11 @@ class Command(LambLoglevelMixin, LabelCommand):
     def add_arguments(self, parser):
         super().add_arguments(parser)
         parser.add_argument(
-            "--force", action="store_true", dest="force", default=False, help="Force drop all before create"
+            "--force",
+            action="store_true",
+            dest="force",
+            default=False,
+            help="Force drop all before create",
         )
         parser.add_argument(
             "--exclude-tables",
@@ -56,7 +60,6 @@ class Command(LambLoglevelMixin, LabelCommand):
                 tables = [v for k, v in metadata.tables.items() if k not in exclude_tables]
             else:
                 tables = None
-            # kwargs = {"tables": tables}
             kwargs = {"tables": tables, "bind": metadata.bind}
             kwargs = compact(kwargs)
 

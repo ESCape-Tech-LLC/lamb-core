@@ -1,3 +1,34 @@
+# 3.4.3
+
+**Features:**
+- masking
+  - Json logging formatters supports extra field masking. List of hiding keys could be configured with `LAMB_LOG_JSON_EXTRA_MASKING` - default is `['pass', 'password', 'token', 'accessToken']`
+  - `lamb.utils.core.masked_dict` now acts as case insensitive mode for string keys
+  - _sample_ 
+    ```json
+    {
+      "ts": "2024-07-28T14:07:40.488689",
+      "level": "WARNING",
+      "pid": 98556,
+      "msg": "some message",
+      "moduleName": "views",
+      "fileName": "views.py",
+      "lineNo": 118,
+      "extra": {
+        "app_user_id": null,
+        "xray": "6b292e5b-14a5-44d4-b1f6-69d6e8ebc8b4",
+        "pass": "*****",
+        "PassWord": "*****"
+      },
+      "httpMethod": "GET",
+      "httpUrl": "/api/ping/",
+      "xray": "6b292e5b-14a5-44d4-b1f6-69d6e8ebc8b4",
+      "trackId": "94a5c6bf-7230-4e89-b2cc-5824b8f99c0d",
+      "elapsedTimeMs": 94.227,
+      "urlName": "ping"
+    }
+    ```
+
 # 3.4.2
 
 **Deprecations:**
@@ -35,7 +66,6 @@ Logging:
   - `lamb.log.constants` - predefined collection of format strings for log records
 - formatters:
   - `lamb.log.formatters._BaseFormatter` - base formatter with `formatTime` method
-  - 
 
 **Other:**
 
