@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import logging
 import dataclasses
-from typing import List, Union, Optional
+from typing import Any, Dict, List, Union, Optional
 
 # Lamb Framework
 from lamb.exc import ImproperlyConfiguredError
@@ -11,6 +11,7 @@ from lamb.utils.core import lazy
 from lamb.utils.validators import v_opt_string, validate_range
 from lamb.utils.transformers import tf_list_int, tf_list_string, transform_string_enum
 
+import furl
 import redis
 
 logger = logging.getLogger(__name__)
@@ -110,6 +111,40 @@ class Config:
         if self.mode == Mode.CLUSTER_101 and self.default_db != 0:
             raise ImproperlyConfiguredError("Cluster mode do not support database configuration")
 
+    # utils
+    def _url(
+        self,
+        host: str,
+        port: int,
+        scheme: str = "redis",
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        db: Optional[int] = None,
+    ) -> str:
+        u = furl.furl()
+        u.scheme = scheme.lower()
+        u.host = host
+        u.port = port
+        if _username := username:
+            u.user = _username
+        if _password := password:
+            u.password = _password
+        if _db := db:
+            u.path.add(str(_db))
+        return u.url
+
+    @lazy
+    def url(self) -> str:
+        """Construct simple url for redis"""
+        return self._url(
+            host=self.host[0] if isinstance(self.host, list) else self.host,
+            port=self.port[0] if isinstance(self.port, list) else self.port,
+            scheme="redis",
+            username=self.username,
+            password=self.password,
+            db=self.default_db,
+        )
+
     @lazy
     def _generic_pool(self) -> redis.ConnectionPool:
         return redis.ConnectionPool(
@@ -144,6 +179,35 @@ class Config:
             connection_kwargs["password"] = self.password
         return redis.cluster.RedisCluster(startup_nodes=startup_nodes, **connection_kwargs)
 
+    # sentinel broker support
+    @lazy
+    def broker_url(self) -> str:
+        match self.mode:
+            case Mode.GENERIC:
+                return self.url
+            case Mode.SENTINEL:
+                sentinels = list(zip(self.host, self.port))
+                urls = []
+                for s in sentinels:
+                    u = self._url(
+                        host=s[0], port=s[1], username=self.username, password=self.password, scheme="sentinel"
+                    )
+                    urls.append(u)
+                return ";".join(urls)
+            case _:
+                raise ImproperlyConfiguredError(f"broker_url is not defined on mode: {self.mode}")
+
+    @lazy
+    def broker_transport_options(self) -> Dict[str, Any]:
+        if self.mode != Mode.SENTINEL:
+            return {}
+        else:
+            return {
+                "master_name": self.sentinel_service_name,
+                "sentinel_kwargs": {"password": self.sentinel_password},
+            }
+
+    # connection
     def redis(
         self,
         **connection_kwargs,
