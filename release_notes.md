@@ -1,3 +1,11 @@
+# 3.4.4
+
+**features**
+- redis: `lamb.service.redis.config.Config` - Redis/Valkey config and utils for support Generic/Sentinel/Cluster versions
+- throttling utils moved to `lamb.service.redis.throttling`
+- fixed error code on `HumanFriendlyMultipleError`
+
+
 # 3.4.3
 
 **Features:**

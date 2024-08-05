@@ -271,10 +271,19 @@ class HumanFriendlyError(ClientError):
 
 
 class HumanFriendlyMultipleError(HumanFriendlyError):
+    """Error for multiple human friendly errors"""
+
+    _app_error_code = LambExceptionCodes.HumanFriendlyMultiple
+    _message = None
+    _status_code = 400
     wrapped_errors: List[ApiError]
 
     def __init__(
-        self, *args, wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None, header: str = None, **kwargs
+        self,
+        *args,
+        wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None,
+        header: str = None,
+        **kwargs,
     ):
         self.wrapped_errors = []
         if wrapped_errors:
