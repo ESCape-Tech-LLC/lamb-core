@@ -1,3 +1,14 @@
+# 3.4.6
+
+**features**
+- redis: `lamb.service.redis.config.Config` - renamed `lamb.service.redis.config.RedisConfig`. Old name saved for compatibility - would be removed later
+- kafka: base version of kafka config add `lamb.service.kafka.config.KafkaConfig`
+
+
+# 3.4.5
+
+- fixes on redis configs
+
 # 3.4.4
 
 **features**

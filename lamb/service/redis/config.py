@@ -16,7 +16,7 @@ import redis
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Mode", "Config"]
+__all__ = ["Mode", "RedisConfig"]
 
 
 @enum.unique
@@ -30,7 +30,7 @@ auto = object()
 
 
 @dataclasses.dataclass
-class Config:
+class RedisConfig:
     """Redis config
 
     Usage::
@@ -236,3 +236,7 @@ class Config:
                     return self._get_cluster(**connection_kwargs)
             case _:
                 raise ImproperlyConfiguredError(f"Unsupported Redis mode: {self.mode}")
+
+
+# deprecated version - use base RedisConfig
+Config = RedisConfig
