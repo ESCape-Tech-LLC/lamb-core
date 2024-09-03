@@ -1,3 +1,13 @@
+# 3.4.7
+
+**features**
+
+- improve JSON logging 
+  - `statusCode` assign to log on execution time middleware
+  - hide `xray,app_user_id` fields from `extra`, but enable as plain versions
+  - hide `extra` if dict is empty
+- preparation for rated store on execution_time table
+
 # 3.4.6
 
 **features**

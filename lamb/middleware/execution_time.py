@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import datetime
-from typing import List, Optional
+from typing import Dict, List, Tuple, Optional
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -36,6 +36,11 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_METHODS", str, transform=tf_list_string, default=[])
         result = [r.upper() for r in result]
         logger.debug(f"<{self.__class__.__name__}>. skip methods: {result}")
+        return result
+
+    @lazy
+    def store_rates(self) -> Dict[Tuple[str, str], float]:
+        result = settings.LAMB_EXECUTION_TIME_STORE_RATES
         return result
 
     def _start(self, request):
@@ -90,6 +95,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         # store
         if request.method not in self.skip_methods:
             try:
+                # logger.warning(f'analyze store rate: {self.store_rates}')
                 # database
                 with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
                     # make in context to omit invalid commits under exceptions
@@ -111,9 +117,11 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             if response is not None:
                 length = len(response.content) if not response.streaming else "<stream>"
                 msg = f"{msg} {response.status_code} {length}"
+                status_code = response.status_code
             elif exception is not None:
                 msg = f"{msg} {exception.__class__.__name__}"
-            logger.log(level, msg)
+                status_code = None
+            logger.log(level, msg, extra={"status_code": status_code})
 
     def process_request(self, request: LambRequest):
         logger.debug(f"<{self.__class__.__name__}>: Start - attaching etm")

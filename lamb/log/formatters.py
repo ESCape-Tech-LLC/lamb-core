@@ -46,13 +46,20 @@ BUILTIN_ATTRS = {
     "taskName",  # TODO: check async/sync mode to add/hide field
     "prefixno",  # in JSON format lamb prefixno not required
     "request",  # django log appends JSON unencodable request object
+    # lamb - hide from extra
+    "xray",
+    "app_user_id",
+    "status_code",
 }
 
 HTTP_REQUEST_ATTRS = {
     "method": "httpMethod",
     "path": "httpUrl",
+    # lamb - add to plain
     "xray": "xray",
+    "app_user_id": "userId",
     "lamb_track_id": "trackId",
+    "status_code": "statusCode",
 }
 
 
@@ -191,7 +198,9 @@ class _BaseJsonFormatter(_BaseFormatter):
             result["exc_info"] = self.formatException(record.exc_info)
 
         # TODO: traverse within extra and check for JSON unencodable with convert to str
-        result["extra"] = self.extra_from_record(record)
+        _extra = self.extra_from_record(record)
+        if len(_extra) > 0:
+            result["extra"] = _extra
 
         for k in self.json_hiding_fields:
             result.pop(k, None)
