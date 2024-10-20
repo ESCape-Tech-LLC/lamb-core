@@ -25,6 +25,7 @@ __all__ = [
     "random_string",
     "masked_url",
     "masked_dict",
+    "masked_string",
     "get_redis_url",
     "list_chunks",
     "lazy",
@@ -133,17 +134,32 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
     return result
 
 
-def masked_dict(dct: Dict[Any, Any], *masking_keys) -> Dict[Any, Any]:
+def masked_dict(dct: Optional[Dict[Any, Any]], *masking_keys) -> Optional[Dict[Any, Any]]:
+    if dct is None:
+        return None
     masking_keys = [mk.lower() if isinstance(mk, str) else mk for mk in masking_keys]
     return {k: v if (k.lower() if isinstance(k, str) else k) not in masking_keys else "*****" for k, v in dct.items()}
 
 
-def masked_url(u: Union[furl.furl, str]) -> str:
+def masked_url(u: Union[furl.furl, str], hide_none_pass: bool = False) -> str:
+    if u is None:
+        return None
+
     if isinstance(u, str):
         u = furl.furl(u)
     _u = copy.deepcopy(u)
-    _u.password = "*****"
+
+    if _u.password is not None or hide_none_pass:
+        _u.password = "*****"
+
     return urllib.parse.unquote(_u.url)
+
+
+def masked_string(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return None
+
+    return "*****"
 
 
 CT = TypeVar("CT")
