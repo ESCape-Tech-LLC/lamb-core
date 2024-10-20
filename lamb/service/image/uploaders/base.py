@@ -140,12 +140,19 @@ class BaseUploader(object):
 
                 # store info about new slice
                 image_url = self.store_image(
-                    image=image_copy, proposed_file_name=proposed_file_name, request=request, image_format=image_format
+                    image=image_copy,
+                    proposed_file_name=proposed_file_name,
+                    request=request,
+                    image_format=image_format,
                 )
 
                 result.append(
                     slice_class(
-                        title=s.title, mode=s.mode, url=image_url, width=image_copy.size[0], height=image_copy.size[1]
+                        title=s.title,
+                        mode=s.mode,
+                        url=image_url,
+                        width=image_copy.size[0],
+                        height=image_copy.size[1],
                     )
                 )
 
