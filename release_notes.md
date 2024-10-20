@@ -1,3 +1,9 @@
+# 3.4.8
+
+**features**
+- `lamb.service.image.uploaders.s3.ImageUploadServiceAmazonS3` - migrated to modern `S3BucketConfig` style: accept new arg with connection details or try lookup for `default`
+- `lamb.utils.core.masked_string` - new optional string masking utility
+
 # 3.4.7
 
 **features**
