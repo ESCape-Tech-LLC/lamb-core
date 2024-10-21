@@ -1,3 +1,9 @@
+# 3.4.9
+
+**features**
+
+- `lamb.service.redis.cache` - provides decorators for usage with Views (support plain Redis/Valkey nodes and RedisJson/Stack also)
+
 # 3.4.8
 
 **features**
