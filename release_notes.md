@@ -1,3 +1,9 @@
+# 3.4.10
+
+**features**
+
+- `lamb.service.redis.config` - support for async connections with GENERIC/SENTINEL modes
+
 # 3.4.9
 
 **features**

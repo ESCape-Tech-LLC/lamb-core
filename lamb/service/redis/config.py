@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import logging
 import dataclasses
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Type, Union, TypeVar, Optional
 
 # Lamb Framework
 from lamb.exc import ImproperlyConfiguredError
@@ -13,10 +13,14 @@ from lamb.utils.transformers import tf_list_int, tf_list_string, transform_strin
 
 import furl
 import redis
+import redis.asyncio as redis_asyncio
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["Mode", "RedisConfig"]
+
+
+TS = TypeVar("TS", redis.sentinel.Sentinel, redis_asyncio.sentinel.Sentinel)
 
 
 @enum.unique
@@ -156,10 +160,9 @@ class RedisConfig:
             decode_responses=True,
         )
 
-    @lazy
-    def _sentinel_manager(self) -> redis.sentinel.Sentinel:
+    def _manager(self, cls: Type[TS]) -> TS:
         sentinels = list(zip(self.host, self.port))
-        return redis.sentinel.Sentinel(
+        return cls(
             sentinels=sentinels,
             sentinel_kwargs={"password": self.sentinel_password},
             decode_responses=True,
@@ -167,6 +170,14 @@ class RedisConfig:
             username=self.username,
             db=self.default_db,
         )
+
+    @lazy
+    def _sentinel_manager(self) -> redis.sentinel.Sentinel:
+        return self._manager(cls=redis.sentinel.Sentinel)
+
+    @lazy
+    def _async_sentinel_manager(self) -> redis_asyncio.sentinel.Sentinel:
+        return self._manager(cls=redis_asyncio.sentinel.Sentinel)
 
     @lazy
     def _cluster(self) -> redis.cluster.RedisCluster:
@@ -234,6 +245,29 @@ class RedisConfig:
                 else:
                     # ability to override
                     return self._get_cluster(**connection_kwargs)
+            case _:
+                raise ImproperlyConfiguredError(f"Unsupported Redis mode: {self.mode}")
+
+    async def aredis(self, **connection_kwargs) -> Union[redis_asyncio.Redis, redis_asyncio.RedisCluster]:
+        match self.mode:
+            case Mode.GENERIC:
+                # TODO: discover pool usage in asyncio version
+                return redis_asyncio.Redis.from_url(self.url, **connection_kwargs)
+            case Mode.SENTINEL:
+                sentinel_service_name = connection_kwargs.pop("sentinel_service_name", self.sentinel_service_name)
+                sentinel_slave = connection_kwargs.pop("sentinel_slave", False)
+                if sentinel_slave:
+                    return self._async_sentinel_manager.slave_for(sentinel_service_name, **connection_kwargs)
+                else:
+                    return self._async_sentinel_manager.master_for(sentinel_service_name, **connection_kwargs)
+            # case Mode.CLUSTER_101:
+            #     # TODO: implement async cluster
+            #     if len(connection_kwargs) == 0:
+            #         # use cached
+            #         return self._cluster
+            #     else:
+            #         # ability to override
+            #         return self._get_cluster(**connection_kwargs)
             case _:
                 raise ImproperlyConfiguredError(f"Unsupported Redis mode: {self.mode}")
 
