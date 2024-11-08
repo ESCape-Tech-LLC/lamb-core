@@ -12,9 +12,9 @@ from django.utils.deprecation import MiddlewareMixin
 # Lamb Framework
 from lamb.utils import LambRequest, dpath_value
 from lamb.db.context import lamb_db_context
-from lamb.utils.core import lazy
+from lamb.utils.core import lazy_default_ro
 from lamb.execution_time import ExecutionTimeMeter
-from lamb.utils.transformers import tf_list_string
+from lamb.utils.transformers import tf_list_string, transform_boolean
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
 
 logger = logging.getLogger(__name__)
@@ -31,16 +31,23 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         except Exception:
             pass
 
-    @lazy
-    def skip_methods(self) -> List[str]:
+    @lazy_default_ro(default=[])
+    def settings_skip_methods(self) -> List[str]:
         result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_METHODS", str, transform=tf_list_string, default=[])
         result = [r.upper() for r in result]
-        logger.debug(f"<{self.__class__.__name__}>. skip methods: {result}")
+        logger.debug(f"<{self.__class__.__name__}>. settings_skip_methods: {result}")
         return result
 
-    @lazy
-    def store_rates(self) -> Dict[Tuple[str, str], float]:
+    @lazy_default_ro(default=False)
+    def settings_should_store(self) -> bool:
+        result = dpath_value(settings, "LAMB_EXECUTION_TIME_STORE", str, transform=transform_boolean)
+        logger.debug(f"<{self.__class__.__name__}>. settings_should_store: {result}")
+        return result
+
+    @lazy_default_ro(default={})
+    def settings_store_rates(self) -> Dict[Tuple[str, str], float]:
         result = settings.LAMB_EXECUTION_TIME_STORE_RATES
+        logger.debug(f"<{self.__class__.__name__}>. settings_store_rates: {result}")
         return result
 
     def _start(self, request):
@@ -93,7 +100,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             pass
 
         # store
-        if request.method not in self.skip_methods:
+        if request.method not in self.settings_skip_methods and self.settings_should_store:
             try:
                 # logger.warning(f'analyze store rate: {self.store_rates}')
                 # database
@@ -114,14 +121,23 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             msg = (
                 f'"{request.method} {request.get_full_path()}" {request.lamb_execution_meter.get_total_time():.6f} sec.'
             )
+            extra = {}
             if response is not None:
                 length = len(response.content) if not response.streaming else "<stream>"
                 msg = f"{msg} {response.status_code} {length}"
-                status_code = response.status_code
+                extra = {
+                    "status_code": response.status_code,
+                    "streaming": response.streaming,
+                    "content_length": len(response.content) if not response.streaming else None,
+                }
             elif exception is not None:
                 msg = f"{msg} {exception.__class__.__name__}"
-                status_code = None
-            logger.log(level, msg, extra={"status_code": status_code})
+                extra = {
+                    "status_code": None,
+                    "streaming": None,
+                    "content_length": None,
+                }
+            logger.log(level, msg, extra=extra)
 
     def process_request(self, request: LambRequest):
         logger.debug(f"<{self.__class__.__name__}>: Start - attaching etm")

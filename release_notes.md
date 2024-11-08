@@ -1,3 +1,10 @@
+# 3.4.11
+
+**features**
+- LAMB_EXECUTION_TIME_STORE: new config - boolean indicates to store data in database or not. Can be used to log execution time in log records without database write attempts
+- `lamb.middleware.execution_time.LambExecutionTimeMiddleware` final log extra context changed
+- `lamb.middleware.execution_time.LambExecutionTimeMiddleware` settings lazy renamed and migrated to default ro version
+
 # 3.4.10
 
 **features**

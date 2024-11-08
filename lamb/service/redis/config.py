@@ -252,6 +252,7 @@ class RedisConfig:
         match self.mode:
             case Mode.GENERIC:
                 # TODO: discover pool usage in asyncio version
+                # TODO: auto decode response
                 return redis_asyncio.Redis.from_url(self.url, **connection_kwargs)
             case Mode.SENTINEL:
                 sentinel_service_name = connection_kwargs.pop("sentinel_service_name", self.sentinel_service_name)
