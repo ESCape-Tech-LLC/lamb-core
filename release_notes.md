@@ -1,3 +1,14 @@
+# 3.4.12
+
+**changes**
+
+- `lamb.exc.ExternalServiceError`: status code changed from 501 to 502 for better compatibility
+- `HEAD` requests in case of exception returns empty body for better compatibility
+- S3 wrapper changed:
+  - `head_object` method realized to retrieve low-level HEAD response from S3 storage
+  - `client` property gives access for low-level client connection (dangerous zone with internal property access, but can be useful in case of specific methods required in project)
+  - all underlying requests to S3 API enveloped in try/catch block to emit ExternalServiceError in case of botocore.exceptions.ClientError occurred
+
 # 3.4.11
 
 **features**
