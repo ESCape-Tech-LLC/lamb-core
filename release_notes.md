@@ -1,3 +1,9 @@
+# 3.4.13
+
+**changes**
+
+- logging `exc_info` field replaced with logstash standard `stack_trace`
+
 # 3.4.12
 
 **changes**
