@@ -1,3 +1,10 @@
+# 3.4.14
+
+**fixes**
+
+- s3 `kwargs` compacting before send
+- s3 delete supports `kwargs` for low-level api
+
 # 3.4.13
 
 **changes**
