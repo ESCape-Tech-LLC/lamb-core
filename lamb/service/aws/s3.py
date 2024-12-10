@@ -170,6 +170,10 @@ class S3Uploader(AWSBase):
         :return: S3 GET dict (low-level response)
         """
         try:
+            logger.info(
+                f"Requesting S3 get_object: bucket={self.bucket_name}, path={relative_path}",
+                extra={"bucket": self.bucket_name, "path": relative_path, "kwargs": kwargs},
+            )
             result = self._client.get_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
         except botocore.exceptions.ClientError as e:
             raise exc.ExternalServiceError from e
