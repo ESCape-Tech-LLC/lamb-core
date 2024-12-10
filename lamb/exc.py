@@ -125,7 +125,7 @@ class ExternalServiceError(ServerError):
     """Server side error for problems with external services"""
 
     _app_error_code = LambExceptionCodes.ExternalService
-    _status_code = 501
+    _status_code = 502
     _message = "Failed to communicate with external system"
 
 
