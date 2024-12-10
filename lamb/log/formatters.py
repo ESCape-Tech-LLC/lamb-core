@@ -195,7 +195,7 @@ class _BaseJsonFormatter(_BaseFormatter):
         }
 
         if record.exc_info:
-            result["exc_info"] = self.formatException(record.exc_info)
+            result["stack_trace"] = self.formatException(record.exc_info)
 
         # TODO: traverse within extra and check for JSON unencodable with convert to str
         _extra = self.extra_from_record(record)
