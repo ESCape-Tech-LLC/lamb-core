@@ -170,6 +170,7 @@ class S3Uploader(AWSBase):
         :return: S3 GET dict (low-level response)
         """
         try:
+            kwargs = compact(kwargs)
             logger.info(
                 f"Requesting S3 get_object: bucket={self.bucket_name}, path={relative_path}",
                 extra={"bucket": self.bucket_name, "path": relative_path, "kwargs": kwargs},
@@ -179,14 +180,15 @@ class S3Uploader(AWSBase):
             raise exc.ExternalServiceError from e
         return result
 
-    def delete_object(self, relative_path: str):
+    def delete_object(self, relative_path: str, **kwargs):
         """
         Removes file from S3
 
         :param relative_path: relative path to stored file
         """
         try:
-            self._client.delete_object(Bucket=self.bucket_name, Key=relative_path)
+            kwargs = compact(kwargs)
+            self._client.delete_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
         except botocore.exceptions.ClientError as e:
             raise exc.ExternalServiceError from e
 
@@ -199,6 +201,7 @@ class S3Uploader(AWSBase):
         :return: S3 HEAD info dict
         """
         try:
+            kwargs = compact(kwargs)
             result = self._client.head_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
         except botocore.exceptions.ClientError as e:
             raise exc.ExternalServiceError from e
