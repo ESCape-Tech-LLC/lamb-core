@@ -109,6 +109,9 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
         result["error_message"] = exception.message
         result["error_details"] = exception.error_details
 
+        if request.method == "HEAD":
+            # HEAD requests should not contain any response body
+            result = None
         return JsonResponse(result, status=status_code, request=request)
 
     def process_exception(self, request: LambRequest, exception: Exception):
