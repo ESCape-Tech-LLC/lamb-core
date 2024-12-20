@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 import logging
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,17 @@ class ExecutionTimeMeter(object):
             m = (marker.message, elapsed_absolute, elapsed_relative, percentage)
             result.append(m)
             previous_timestamp = marker.timestamp
+        return result
+
+    def get_log_list(self) -> List[Dict[str, Any]]:
+        """
+        :return: Returns measurements in list of dict format
+        """
+        measurements = self.get_measurements()
+        result = [
+            {"title": m[0], "elapsed": f"{m[2]:.6f}", "total": f"{m[1]:.6f}", "share": f"{m[3]:.2f}%"}
+            for m in measurements
+        ]
         return result
 
     def get_log_messages(self, header: str = None):

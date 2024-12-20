@@ -1,3 +1,8 @@
+# 3.4.15
+
+**features**
+- `lamb.execution_time.ExecutionTimeMeter.get_log_list` - new method with measures in a form of list of dict (suitable for JSON logs)
+
 # 3.4.14
 
 **fixes**
