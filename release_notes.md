@@ -1,3 +1,45 @@
+# 3.4.16
+
+**feauter**
+
+- `LAMB_RESPONSE_EXCEPTION_SERIALIZER` - new config provide ability to modify exception serialization
+- `lamb.utils.default_views` adapted to produce error from middleware classmethod to follow error style  
+
+**Usage**:
+
+```python
+import enum
+from typing import Tuple, Any
+from lamb.exc import ApiError
+from collections import OrderedDict
+
+@enum.unique
+class AppErrorCodes(enum.IntEnum):
+    UserNotExist = 1001
+    UserKeyIvEmpty = 1002
+    Decryption = 1003
+    
+    
+def lamb_exception_serializer(exc: ApiError) -> Tuple[Any, int]:
+    match exc.app_error_code:
+        case AppErrorCodes.Decryption:
+            exc.app_error_code = 100
+            exc.status_code = 401
+        case (AppErrorCodes.UserNotExist | AppErrorCodes.UserNotExist):
+            exc.app_error_code = 3
+            exc.status_code = 401
+        case _:
+            exc.app_error_code = 0
+            exc.status_code = 500
+
+    result = OrderedDict()
+    result['errorCode'] = exc.app_error_code
+    result['errorMessage'] = exc.message
+    return result, exc.status_code
+
+LAMB_RESPONSE_EXCEPTION_SERIALIZER='chattti_s3proxy.settings.lamb_exception_serializer'
+```
+
 # 3.4.15
 
 **features**
