@@ -1,6 +1,6 @@
 # 3.4.16
 
-**feauter**
+**features**
 
 - `LAMB_RESPONSE_EXCEPTION_SERIALIZER` - new config provide ability to modify exception serialization
 - `lamb.utils.default_views` adapted to produce error from middleware classmethod to follow error style  
