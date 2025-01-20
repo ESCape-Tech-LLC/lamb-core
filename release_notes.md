@@ -37,7 +37,7 @@ def lamb_exception_serializer(exc: ApiError) -> Tuple[Any, int]:
     result['errorMessage'] = exc.message
     return result, exc.status_code
 
-LAMB_RESPONSE_EXCEPTION_SERIALIZER='chattti_s3proxy.settings.lamb_exception_serializer'
+LAMB_RESPONSE_EXCEPTION_SERIALIZER='project_name.settings.lamb_exception_serializer'
 ```
 
 # 3.4.15
