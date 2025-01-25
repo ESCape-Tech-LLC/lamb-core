@@ -130,8 +130,6 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
 
         result, status_code = cls._exception_serializer(exception)
 
-        logger.warning(f"pair: {result, status_code}")
-
         if request.method == "HEAD":
             # HEAD requests should not contain any response body
             result = None
