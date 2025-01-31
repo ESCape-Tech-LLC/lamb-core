@@ -15,7 +15,7 @@ __all__ = ["sql_logging_enable", "sql_logging_disable"]
 def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
     conn.info.setdefault("query_start_time", []).append(time.time())
 
-    if settings.LAMB_VERBOSE_SQL_LOG and settings.LAMB_VERBOSE_SQL_LOG_THRESHOLD is None:
+    if settings.LAMB_LOG_SQL_VERBOSE and settings.LAMB_LOG_SQL_VERBOSE_THRESHOLD is None:
         if executemany:
             # TODO: it depends on driver and sqlalchemy version - so should be adapted to properly calculate total
             print(f"Start query: [mode=executemany] {statement} [total=?]")
@@ -24,9 +24,9 @@ def _before_cursor_execute(conn, cursor, statement, parameters, context, execute
 
 
 def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-    if settings.LAMB_VERBOSE_SQL_LOG:
+    if settings.LAMB_LOG_SQL_VERBOSE:
         total = time.time() - conn.info["query_start_time"].pop(-1)
-        _threshold = settings.LAMB_VERBOSE_SQL_LOG_THRESHOLD
+        _threshold = settings.LAMB_LOG_SQL_VERBOSE_THRESHOLD
         if _threshold is None:
             print(f"Total time: {total} sec.")
         elif total > _threshold:

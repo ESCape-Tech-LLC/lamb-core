@@ -73,9 +73,6 @@ LAMB_EXECUTION_TIME_TIMESCALE_CHUNK_INTERVAL = "7 days"  # in seconds or explici
 LAMB_EXECUTION_TIME_TIMESCALE_RETENTION_INTERVAL = "180 days"  # Optional, in seconds or explicit value
 LAMB_EXECUTION_TIME_TIMESCALE_COMPRESS_AFTER = "60 days"  # Optional, in seconds or explicit value
 
-LAMB_VERBOSE_SQL_LOG = False
-LAMB_VERBOSE_SQL_LOG_THRESHOLD = None
-
 LAMB_DPATH_DICT_ENGINE = "dpath"
 
 # logging
@@ -86,8 +83,17 @@ LAMB_LOG_FORMAT_TIME_ZONE = None
 LAMB_LOG_JSON_ENABLE = False
 LAMB_LOG_JSON_HIDE = []
 LAMB_LOG_JSON_EXTRA_MASKING = ["pass", "password", "token", "accessToken"]
-LAMB_LOGGING_HEADER_XRAY = "HTTP_X_LAMB_XRAY"
-
+LAMB_LOG_HEADER_XRAY = "HTTP_X_LAMB_XRAY"
+LAMB_LOG_HEADER_XLINE = "HTTP_X_LAMB_XLINE"
+LAMB_LOG_SQL_VERBOSE = False
+LAMB_LOG_SQL_VERBOSE_THRESHOLD = None
+LAMB_LOG_LEVEL_SEVERITY = {  # pygelf inspired
+    logging.DEBUG: 7,
+    logging.INFO: 6,
+    logging.WARNING: 4,
+    logging.ERROR: 3,
+    logging.CRITICAL: 2,
+}
 
 # services
 LAMB_REDIS_URL = "redis://localhost:6379/0"
@@ -121,6 +127,7 @@ LAMB_ADD_CORS_HEADERS = [
     "Connection",
     "Accept-Encoding",
     "Accept",
+    "Range",
     "If-Modified-Since",
     "Cache-Control",
     "X-Requested-With",
@@ -132,6 +139,5 @@ LAMB_ADD_CORS_HEADERS = [
     "X-Lamb-App-Version",
     "X-Lamb-App-Build",
     "X-Lamb-XRay",
-    "X-Lamb-TrackID",
-    "X-Lamb-Logging-TrackID",
+    "X-Lamb-XLine",
 ]
