@@ -122,12 +122,12 @@ logger = logging.getLogger(__name__)
 
 class LambRequest(HttpRequest):
     """Class used only for proper type hinting in pycharm, does not guarantee that properties will exist
-    :type lamb_db_session: sqlalchemy.orm.Session | None
+    :type lamb_db_session: sqlalchemy.orm.Session | qlalchemy.ext.asyncio.AsyncSession | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     :type lamb_device_info: lamb.types.DeviceInfo | None
-    :type lamb_trace_id: str | None
     :type lamb_locale: lamb.types.LambLocale | None
-    :type lamb_track_id: str | None
+    :type xray: uuid.UUID | None
+    :type xline: uuid.UUID | None
     """
 
     def __init__(self):
@@ -135,9 +135,9 @@ class LambRequest(HttpRequest):
         self.lamb_db_session = None
         self.lamb_execution_meter = None
         self.lamb_device_info = None
-        self.lamb_trace_id = None
         self.lamb_locale = None
-        self.lamb_track_id = None
+        self.xray = None
+        self.xline = None
 
 
 # parsing
@@ -615,6 +615,21 @@ def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: 
     else:
         names_msg = f'{names[0]} ({"/".join(names[1:])})'
 
+    # check deprecations
+    if len(names) > 1:
+        target_setting_name = names[0]
+        for name in names[1:]:
+            try:
+                _ = dpath_value(settings, key_path=name, req_type=req_type, allow_none=allow_none, **kwargs)
+                warnings.warn(
+                    f"Usage of deprecated settings name discovered {name}, use {target_setting_name} instead. "
+                    f"If default or explicit value exist - value under {name} would be ignored",
+                    DeprecationWarning,
+                )
+            except (ImportError, AttributeError, InvalidBodyStructureError):
+                continue
+
+    # extract value
     for index, name in enumerate(names):
         try:
             result = dpath_value(settings, key_path=name, req_type=req_type, allow_none=allow_none, **kwargs)
