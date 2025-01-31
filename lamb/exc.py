@@ -4,9 +4,6 @@ import logging
 from enum import IntEnum, unique
 from typing import Any, List, Type, Union, Optional
 
-# Lamb Framework
-from lamb.utils.core import DeprecationClassMixin
-
 __all__ = [
     "LambExceptionCodes",
     "ApiError",
@@ -22,10 +19,6 @@ __all__ = [
     "InvalidBodyStructureError",
     "InvalidParamValueError",
     "InvalidParamTypeError",
-    "AuthCredentialsIsNotProvided",
-    "AuthCredentialsInvalid",
-    "AuthCredentialsExpired",
-    "AuthForbidden",
     "ThrottlingError",
     "UpdateRequiredError",
     "HumanFriendlyError",
@@ -132,7 +125,7 @@ class ExternalServiceError(ServerError):
     """Server side error for problems with external services"""
 
     _app_error_code = LambExceptionCodes.ExternalService
-    _status_code = 501
+    _status_code = 502
     _message = "Failed to communicate with external system"
 
 
@@ -209,20 +202,12 @@ class AuthTokenNotProvidedError(ClientError):
     _message = "User auth token is not provided. You must be logged for this request."
 
 
-class AuthCredentialsIsNotProvided(DeprecationClassMixin, AuthTokenNotProvidedError):
-    pass
-
-
 class AuthTokenInvalidError(ClientError):
     """Client side error for invalid credentials value"""
 
     _app_error_code = LambExceptionCodes.AuthTokenInvalid
     _status_code = 401
     _message = "User auth token is not valid. You must be logged for this request."
-
-
-class AuthCredentialsInvalid(DeprecationClassMixin, AuthTokenInvalidError):
-    pass
 
 
 class AuthTokenExpiredError(ClientError):
@@ -233,20 +218,12 @@ class AuthTokenExpiredError(ClientError):
     _message = "Provided user auth token has expired. Please renew it."
 
 
-class AuthCredentialsExpired(DeprecationClassMixin, AuthTokenExpiredError):
-    pass
-
-
 class AuthForbiddenError(ClientError):
     """Client side error for requesting authorized but forbidden resource"""
 
     _app_error_code = LambExceptionCodes.AuthForbidden
     _status_code = 403
     _message = "You have not access to this resource"
-
-
-class AuthForbidden(DeprecationClassMixin, AuthForbiddenError):
-    pass
 
 
 class AuthCredentialsInvalidError(ClientError):
@@ -294,10 +271,19 @@ class HumanFriendlyError(ClientError):
 
 
 class HumanFriendlyMultipleError(HumanFriendlyError):
+    """Error for multiple human friendly errors"""
+
+    _app_error_code = LambExceptionCodes.HumanFriendlyMultiple
+    _message = None
+    _status_code = 400
     wrapped_errors: List[ApiError]
 
     def __init__(
-        self, *args, wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None, header: str = None, **kwargs
+        self,
+        *args,
+        wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None,
+        header: str = None,
+        **kwargs,
     ):
         self.wrapped_errors = []
         if wrapped_errors:

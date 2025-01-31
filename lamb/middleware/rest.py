@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import Any, Tuple
 from collections import OrderedDict
 
 from django.conf import settings
@@ -17,7 +20,7 @@ from lamb.exc import (
     ImproperlyConfiguredError,
 )
 from lamb.json import JsonResponse
-from lamb.utils import LambRequest
+from lamb.utils import LambRequest, dpath_value
 from lamb.utils.core import import_by_name
 from lamb.middleware.async_mixin import AsyncMiddlewareMixin
 
@@ -67,6 +70,16 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
 
         return response
 
+    _exception_serializer = None
+
+    @classmethod
+    def _default_exception_serializer(cls, exception: ApiError) -> Tuple[Any, int]:
+        result = OrderedDict()
+        result["error_code"] = exception.app_error_code
+        result["error_message"] = exception.message
+        result["error_details"] = exception.error_details
+        return result, exception.status_code
+
     @classmethod
     def produce_error_response(cls, request: LambRequest, exception: Exception):
         """Internal service for process exception and convert it for proper response info"""
@@ -103,12 +116,23 @@ class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
                 logger.error(f"Converting {e!r} -> {exception!r}")
 
         # envelope error
-        result = OrderedDict()
-        status_code = exception.status_code
-        result["error_code"] = exception.app_error_code
-        result["error_message"] = exception.message
-        result["error_details"] = exception.error_details
+        if cls._exception_serializer is None:
+            if serializer_path := dpath_value(settings, "LAMB_RESPONSE_EXCEPTION_SERIALIZER", str, default=None):
+                try:
+                    cls._exception_serializer = import_by_name(serializer_path)
+                except Exception as e:
+                    exception = ImproperlyConfiguredError()
+                    logger.exception("Failed to load dynamic serializer -> rolling back to default serializer")
+                    logger.error(f"Error occurred: {e!r} -> {exception!r}")
+                    cls._exception_serializer = cls._default_exception_serializer
+            else:
+                cls._exception_serializer = cls._default_exception_serializer
 
+        result, status_code = cls._exception_serializer(exception)
+
+        if request.method == "HEAD":
+            # HEAD requests should not contain any response body
+            result = None
         return JsonResponse(result, status=status_code, request=request)
 
     def process_exception(self, request: LambRequest, exception: Exception):

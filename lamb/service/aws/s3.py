@@ -4,7 +4,7 @@ import re
 import logging
 import warnings
 import dataclasses
-from typing import IO, Tuple, Union, BinaryIO, Optional
+from typing import IO, Any, Dict, Tuple, Union, BinaryIO, Optional
 
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -13,6 +13,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from lamb import exc
 from lamb.json.mixins import ResponseEncodableMixin
 
+import botocore.exceptions
 from furl import furl
 from botocore.config import Config
 
@@ -120,6 +121,13 @@ class S3Uploader(AWSBase):
     def endpoint_url(self) -> Optional[str]:
         return self._conn_cfg.endpoint_url
 
+    @property
+    def client(self) -> object:
+        """
+        Returns low-level S3 client for direct methods access ability
+        """
+        return self._client
+
     # methods
     def put_object(
         self,
@@ -137,13 +145,16 @@ class S3Uploader(AWSBase):
         :param private: defines if to store as private file
         :return: uploaded file url
         """
-        self._client.put_object(
-            Bucket=self.bucket_name,
-            ACL="private" if private else "public-read",
-            Body=body,
-            Key=relative_path,
-            ContentType=file_type,
-        )
+        try:
+            self._client.put_object(
+                Bucket=self.bucket_name,
+                ACL="private" if private else "public-read",
+                Body=body,
+                Key=relative_path,
+                ContentType=file_type,
+            )
+        except botocore.exceptions.ClientError as e:
+            raise exc.ExternalServiceError from e
         uploaded_url = furl(self.bucket_url)
         uploaded_url.path.add(relative_path)
         uploaded_url = uploaded_url.url
@@ -151,28 +162,67 @@ class S3Uploader(AWSBase):
         return uploaded_url
 
     def get_object(self, relative_path: str, **kwargs):
-        result = self._client.get_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
+        """
+        Request object from S3 under relative path
+
+        :param relative_path: relative path to stored file
+        :param kwargs: additional low level client kwargs
+        :return: S3 GET dict (low-level response)
+        """
+        try:
+            kwargs = compact(kwargs)
+            logger.info(
+                f"Requesting S3 get_object: bucket={self.bucket_name}, path={relative_path}",
+                extra={"bucket": self.bucket_name, "path": relative_path, "kwargs": kwargs},
+            )
+            result = self._client.get_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
+        except botocore.exceptions.ClientError as e:
+            raise exc.ExternalServiceError from e
         return result
 
-    def delete_object(self, relative_path: str):
+    def delete_object(self, relative_path: str, **kwargs):
         """
         Removes file from S3
 
         :param relative_path: relative path to stored file
         """
-        self._client.delete_object(Bucket=self.bucket_name, Key=relative_path)
+        try:
+            kwargs = compact(kwargs)
+            self._client.delete_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
+        except botocore.exceptions.ClientError as e:
+            raise exc.ExternalServiceError from e
+
+    def head_object(self, relative_path: str, **kwargs) -> Dict[str, Any]:
+        """
+        Request low-level HEAD info from S3 storage about object
+
+        :param relative_path: relative path to stored file
+        :param kwargs: additional low level client kwargs
+        :return: S3 HEAD info dict
+        """
+        try:
+            kwargs = compact(kwargs)
+            result = self._client.head_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
+        except botocore.exceptions.ClientError as e:
+            raise exc.ExternalServiceError from e
+        return result
 
     def generate_presigned_url(self, relative_path: str, expires_in: Optional[int] = 3600) -> str:
         """
-        Generates presigned url for a stored in S3 file
+        Generates pre-signed url for a stored in S3 file
 
         :param relative_path: stored file relative path
         :param expires_in: interval of link expiry
-        :return: presigned url
+        :return: pre-signed url
         """
-        presigned_url = self._client.generate_presigned_url(
-            ClientMethod="get_object", Params={"Bucket": self.bucket_name, "Key": relative_path}, ExpiresIn=expires_in
-        )
+        try:
+            presigned_url = self._client.generate_presigned_url(
+                ClientMethod="get_object",
+                Params={"Bucket": self.bucket_name, "Key": relative_path},
+                ExpiresIn=expires_in,
+            )
+        except botocore.exceptions.ClientError as e:
+            raise exc.ExternalServiceError from e
         logger.debug(f"Generated S3 presigned URL: {presigned_url}")
         return presigned_url
 

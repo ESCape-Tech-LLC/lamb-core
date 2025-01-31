@@ -9,7 +9,7 @@ from django.conf import settings
 # Lamb Framework
 from lamb import exc
 from lamb.utils import LambRequest
-from lamb.service.aws.s3 import S3Uploader
+from lamb.service.aws.s3 import S3Uploader, S3BucketConfig
 
 from boto3.session import Session as AWSSession
 
@@ -25,17 +25,14 @@ class ImageUploadServiceAmazonS3(BaseUploader):
 
     aws_session: AWSSession
 
-    def __init__(self, envelope_folder: Optional[str] = None):
+    def __init__(self, envelope_folder: Optional[str] = None, conn_cfg: Optional[S3BucketConfig] = None):
         super().__init__(envelope_folder=envelope_folder)
 
-        self._s3_uploader = S3Uploader(
-            aws_access_key_id=settings.LAMB_AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.LAMB_AWS_SECRET_KEY,
-            bucket_name=settings.LAMB_AWS_BUCKET_NAME,
-            region_name=settings.LAMB_AWS_REGION_NAME,
-            endpoint_url=settings.LAMB_AWS_ENDPOINT_URL,
-            bucket_url=settings.LAMB_AWS_BUCKET_URL,
-        )
+        if conn_cfg is None:
+            logger.warning("s3_config not provided -> try auto discover from settings.LAMB_AWS_CONFIG['default']")
+            conn_cfg = settings.LAMB_AWS_CONFIG["default"]
+
+        self._s3_uploader = S3Uploader(conn_cfg=conn_cfg)
 
     def store_image(
         self,
