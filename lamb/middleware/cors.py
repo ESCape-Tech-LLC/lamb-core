@@ -3,9 +3,10 @@ import logging
 from django.conf import settings
 from django.http import HttpResponse
 
+from lamb.middleware.base import LambMiddlewareMixin
+
 # Lamb Framework
 from lamb.utils import LambRequest
-from lamb.middleware.base import LambMiddlewareMixin
 
 __all__ = ["LambCorsMiddleware"]
 

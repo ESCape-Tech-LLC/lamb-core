@@ -3,9 +3,10 @@ from __future__ import annotations
 import dataclasses
 from typing import Optional
 
+from lamb.utils.transformers import tf_list_string
+
 # Lamb Framework
 from lamb.utils.validators import validate_not_empty
-from lamb.utils.transformers import tf_list_string
 
 __all__ = ["Endpoint"]
 

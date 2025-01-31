@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-import re
-import logging
-import warnings
 import dataclasses
-from typing import IO, Any, Dict, Tuple, Union, BinaryIO, Optional
+import logging
+import re
+import warnings
+from typing import IO, Any, BinaryIO, Dict, Optional, Tuple, Union
+
+import botocore.exceptions
+from botocore.config import Config
+from furl import furl
 
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -13,12 +17,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from lamb import exc
 from lamb.json.mixins import ResponseEncodableMixin
 
-import botocore.exceptions
-from furl import furl
-from botocore.config import Config
-
-from .base import AWSBase
 from ...utils.core import compact
+from .base import AWSBase
 
 logger = logging.getLogger(__name__)
 

@@ -3,9 +3,10 @@ from __future__ import annotations
 import dataclasses
 from typing import List, Optional
 
+from lamb.utils.transformers import tf_list_string
+
 # Lamb Framework
 from lamb.utils.validators import v_opt_string
-from lamb.utils.transformers import tf_list_string
 
 __all__ = ["KafkaConfig"]
 

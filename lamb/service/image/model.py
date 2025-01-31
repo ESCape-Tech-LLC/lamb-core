@@ -5,13 +5,13 @@ from typing import List
 
 # SQLAlchemy
 from sqlalchemy import Column
-from sqlalchemy.ext.declarative import AbstractConcreteBase
 from sqlalchemy.dialects.postgresql import BIGINT, VARCHAR
+from sqlalchemy.ext.declarative import AbstractConcreteBase
 
 # Lamb Framework
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.types.image import Mode, SliceRule, ImageSlicesType
+from lamb.types.image import ImageSlicesType, Mode, SliceRule
 
 __all__ = ["AbstractImage", "ImageMixin"]
 

@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-import os
 import logging
-from typing import List, Type, Tuple, Optional
+import os
+from typing import List, Optional, Tuple, Type
 from urllib.parse import urljoin
 
 from django.conf import settings
 
 # Lamb Framework
 from lamb.exc import ServerError
+from lamb.service.aws.s3 import S3Uploader
 from lamb.types import IT, SliceRule
 from lamb.utils import LambRequest
-from lamb.service.aws.s3 import S3Uploader
 
+from ...utils.core import import_by_name
 from .model import AbstractImage
 from .uploaders import BaseUploader
-from ...utils.core import import_by_name
 
 logger = logging.getLogger(__name__)
 

@@ -1,21 +1,22 @@
 from __future__ import annotations
 
 import enum
-from typing import List
 from datetime import datetime
+from typing import List
 
 # SQLAlchemy
-from sqlalchemy import BOOLEAN, VARCHAR, TIMESTAMP, Column, ForeignKey, text
+from sqlalchemy import BOOLEAN, TIMESTAMP, VARCHAR, Column, ForeignKey, text
+from sqlalchemy.dialects.postgresql import ENUM, INET, JSONB
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.dialects.postgresql import ENUM, INET, JSONB
 
-# Lamb Framework
-from lamb.types import DeviceInfoType
 from lamb.db.mixins import TimeMarksMixin
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
+
+# Lamb Framework
+from lamb.types import DeviceInfoType
 
 __all__ = ["EventSourceType", "EventTrack", "EventRecord"]
 

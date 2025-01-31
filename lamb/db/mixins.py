@@ -3,8 +3,8 @@ from datetime import datetime
 
 # SQLAlchemy
 from sqlalchemy import TIMESTAMP, func
-from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import Mapped, mapped_column
 
 __all__ = ["TableConfigMixin", "TimeMarksMixin", "TimeMarksMixinTZ"]
 

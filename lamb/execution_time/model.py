@@ -1,36 +1,37 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional  # noqa: F401
 from datetime import datetime
-
-from django.conf import settings
+from typing import Any, Dict, List, Optional  # noqa: F401
 
 # SQLAlchemy
 from sqlalchemy import (
-    JSON,
-    FLOAT,
     BIGINT,
-    VARCHAR,
+    FLOAT,
+    JSON,
     SMALLINT,
     TIMESTAMP,
+    VARCHAR,
+    Identity,
     Index,
     Table,
-    Identity,
+    event,
     func,
     text,
-    event,
 )
-from sqlalchemy.orm import Mapped, relationship, mapped_column
-from sqlalchemy.engine import Connection
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from django.conf import settings
+
+from lamb.db.session import DeclarativeBase
 
 # Lamb Framework
 from lamb.exc import ImproperlyConfiguredError
+from lamb.json.mixins import ResponseEncodableMixin
 from lamb.types import DeviceInfo, DeviceInfoType
 from lamb.utils import tz_now
-from lamb.db.session import DeclarativeBase
-from lamb.json.mixins import ResponseEncodableMixin
 
 __all__ = ["LambExecutionTimeMarker", "LambExecutionTimeMetric"]
 

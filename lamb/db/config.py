@@ -1,16 +1,16 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
-import dataclasses
-from typing import Any, Dict, List, Union, Callable, Optional
-
-# Lamb Framework
-from lamb.exc import ServerError, ImproperlyConfiguredError
-from lamb.utils import get_settings_value
-from lamb.utils.core import compact, masked_url
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import furl
+
+# Lamb Framework
+from lamb.exc import ImproperlyConfiguredError, ServerError
+from lamb.utils import get_settings_value
+from lamb.utils.core import compact, masked_url
 
 __all__ = ["Config", "parse_django_config"]
 

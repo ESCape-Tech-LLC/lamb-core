@@ -3,11 +3,12 @@ import enum
 
 from django.conf import settings
 
+from lamb.db.context import lamb_db_context
+from lamb.db.session import DeclarativeBase
+
 # Lamb Framework
 from lamb.exc import ServerError
 from lamb.utils import get_primary_keys
-from lamb.db.context import lamb_db_context
-from lamb.db.session import DeclarativeBase
 
 __all__ = ["DbEnum", "ConfigEnum"]
 

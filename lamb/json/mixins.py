@@ -5,10 +5,10 @@ from typing import List
 
 # SQLAlchemy
 from sqlalchemy import Column, inspect
-from sqlalchemy.orm import ColumnProperty, SynonymProperty, RelationshipProperty
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import ColumnProperty, RelationshipProperty, SynonymProperty
+from sqlalchemy.orm.attributes import QueryableAttribute
 
 # Lamb Framework
 from lamb import exc

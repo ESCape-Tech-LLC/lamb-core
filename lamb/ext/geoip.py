@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import logging
-from typing import Union, NewType, Optional
+from typing import NewType, Optional, Union
+
+import geoip2
+import lazy_object_proxy
+from geoip2 import models
+from geoip2.database import Reader
+from geoip2.errors import AddressNotFoundError
+from ipware import get_client_ip
 
 from django.conf import settings
 from django.http import HttpRequest
 
 # Lamb Framework
 from lamb.utils import LambRequest
-
-import geoip2
-import lazy_object_proxy
-from geoip2 import models
-from ipware import get_client_ip
-from geoip2.errors import AddressNotFoundError
-from geoip2.database import Reader
 
 logger = logging.getLogger(__name__)
 

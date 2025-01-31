@@ -1,12 +1,13 @@
-import uuid
 import logging
+import uuid
+
+from lamb.middleware.base import LambMiddlewareMixin
 
 # Lamb Framework
 from lamb.utils import dpath_value, get_settings_value
 from lamb.utils.core import lazy
-from lamb.middleware.base import LambMiddlewareMixin
-from lamb.utils.validators import validate_not_empty
 from lamb.utils.transformers import transform_uuid
+from lamb.utils.validators import validate_not_empty
 
 __all__ = ["LambXRayMiddleware"]
 

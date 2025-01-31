@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import Any, Dict, List, Tuple, Union, Mapping, Callable, Optional
-from operator import getitem
 from functools import reduce
+from operator import getitem
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
+
+# import dpath.util
+import dpath
+import lxml.etree as etree
+from lxml.etree import _Element as EtreeElement
+from lxml.etree import _ElementTree as Etree
 
 from django.conf import Settings
 from django.http.request import QueryDict
@@ -12,12 +18,6 @@ from django.http.request import QueryDict
 # Lamb Framework
 from lamb import exc
 from lamb.ext.lxml import __lxml_hints_reverse_map__
-
-# import dpath.util
-import dpath
-import lxml.etree as etree
-from lxml.etree import _Element as EtreeElement
-from lxml.etree import _ElementTree as Etree
 
 logger = logging.getLogger(__name__)
 

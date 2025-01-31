@@ -4,10 +4,10 @@ import json
 import logging
 from typing import Any, Callable, Optional
 
+import lazy_object_proxy
+
 from django.conf import settings
 from django.http import HttpResponse
-
-import lazy_object_proxy
 
 try:
     import ujson

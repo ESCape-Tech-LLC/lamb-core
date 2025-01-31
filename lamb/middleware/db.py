@@ -1,9 +1,10 @@
 import logging
 
-# Lamb Framework
-from lamb.utils import LambRequest
 from lamb.db.session import lamb_db_session_maker
 from lamb.middleware.base import LambMiddlewareMixin
+
+# Lamb Framework
+from lamb.utils import LambRequest
 
 logger = logging.getLogger(__name__)
 

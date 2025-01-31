@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from enum import IntEnum, unique
-from typing import Any, List, Type, Union, Optional
+from typing import Any, List, Optional, Type, Union
 
 __all__ = [
     "LambExceptionCodes",

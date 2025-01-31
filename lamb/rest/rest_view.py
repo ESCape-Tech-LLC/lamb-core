@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Union
 from functools import update_wrapper
+from typing import Union
 
 from django.utils.decorators import classonlymethod
 
 # Lamb Framework
-from lamb.exc import NotRealizedMethodError, InvalidBodyStructureError
+from lamb.exc import InvalidBodyStructureError, NotRealizedMethodError
 from lamb.utils import (
     CONTENT_ENCODING_MULTIPART,
     dpath_value,
-    parse_body_as_json,
-    get_request_body_encoding,
     get_request_accept_encoding,
+    get_request_body_encoding,
+    parse_body_as_json,
 )
 from lamb.utils.core import lazy
 

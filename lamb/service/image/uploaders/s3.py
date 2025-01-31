@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import logging
 import tempfile
-from typing import Union, BinaryIO, Optional
+from typing import BinaryIO, Optional, Union
+
+from boto3.session import Session as AWSSession
 
 from django.conf import settings
 
 # Lamb Framework
 from lamb import exc
+from lamb.service.aws.s3 import S3BucketConfig, S3Uploader
 from lamb.utils import LambRequest
-from lamb.service.aws.s3 import S3Uploader, S3BucketConfig
 
-from boto3.session import Session as AWSSession
-
-from .base import PILImage, BaseUploader
+from .base import BaseUploader, PILImage
 
 logger = logging.getLogger(__name__)
 

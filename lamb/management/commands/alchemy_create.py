@@ -1,18 +1,19 @@
 import logging
 from importlib import import_module
 
-from django.core.management.base import CommandError, LabelCommand
+from sqlalchemy.dialects.postgresql import DropEnumType
 
 # SQLAlchemy
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
-from sqlalchemy.schema import DropTable, DropSequence
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.dialects.postgresql import DropEnumType
+from sqlalchemy.schema import DropSequence, DropTable
+
+from django.core.management.base import CommandError, LabelCommand
 
 # Lamb Framework
 from lamb.db.session import metadata
-from lamb.utils.core import compact
 from lamb.management.base import LambLoglevelMixin
+from lamb.utils.core import compact
 
 logger = logging.getLogger(__name__)
 

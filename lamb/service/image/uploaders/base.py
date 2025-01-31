@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-import os
-import uuid
 import base64
 import logging
+import os
+import uuid
 from io import BytesIO
-from typing import List, Type, Union, Iterable, Optional
+from typing import Iterable, List, Optional, Type, Union
+
+from PIL import Image as PILImage
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 # Lamb Framework
 from lamb import exc
+from lamb.types.image import IT, ImageSlice, Mode, SliceRule
 from lamb.utils import LambRequest, file_is_svg
 from lamb.utils.core import compact
-from lamb.types.image import IT, Mode, SliceRule, ImageSlice
-
-from PIL import Image as PILImage
 
 logger = logging.getLogger(__name__)
 

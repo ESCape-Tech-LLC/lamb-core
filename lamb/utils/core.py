@@ -1,16 +1,16 @@
 # core level utils - should not depend on any other lamb modules to omit circular references
 from __future__ import annotations
 
-import sys
 import copy
-import types
-import random
-import string
-import warnings
 import functools
 import importlib
+import random
+import string
+import sys
+import types
 import urllib.parse
-from typing import Any, Dict, List, Union, TypeVar, Optional, Generator
+import warnings
+from typing import Any, Dict, Generator, List, Optional, TypeVar, Union
 
 import furl
 

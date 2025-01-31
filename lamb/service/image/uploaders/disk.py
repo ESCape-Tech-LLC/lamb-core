@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
-from typing import Union, BinaryIO, Optional
+from typing import BinaryIO, Optional, Union
+
+import furl
 
 from django.conf import settings
 
@@ -9,9 +11,7 @@ from django.conf import settings
 from lamb import exc
 from lamb.utils import LambRequest
 
-import furl
-
-from .base import PILImage, BaseUploader
+from .base import BaseUploader, PILImage
 
 __all__ = ["ImageUploadServiceDisk"]
 

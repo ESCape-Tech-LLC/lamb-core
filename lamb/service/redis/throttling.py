@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-import re
-import json
-import time
-import logging
 import dataclasses
+import json
+import logging
+import re
+import time
 from typing import Dict, List, Tuple
+
+import redis
 
 # Lamb Framework
 from lamb.exc import (
     ApiError,
-    ThrottlingError,
     ExternalServiceError,
     ImproperlyConfiguredError,
+    ThrottlingError,
 )
 from lamb.utils import dpath_value
-
-import redis
 
 logger = logging.getLogger(__name__)
 

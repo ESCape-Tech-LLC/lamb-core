@@ -1,8 +1,8 @@
 import logging
 
-from django.http import HttpResponse
-
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction
+
+from django.http import HttpResponse
 
 __all__ = ["LambMiddlewareMixin"]
 

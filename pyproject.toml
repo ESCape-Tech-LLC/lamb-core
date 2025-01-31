@@ -1,16 +1,36 @@
-[tool.black]
+[tool.ruff]
+target-version = "py312"
 line-length = 120
-target-version = ['py312']
+exclude = [
+    "playground*.ipynb"
+]
 
-[tool.isort]
-py_version = 312
-profile = 'black'
-src_paths = ['lamb']
-length_sort = true
-known_django = 'django'
-known_lamb = 'lamb'
-known_sqlalchemy = 'sqlalchemy,sqlalchemy_utils'
-import_heading_lamb = 'Lamb Framework'
-import_heading_sqlalchemy = 'SQLAlchemy'
-import_heading_firstparty = 'Project'
-sections = 'FUTURE,STDLIB,DJANGO,SQLALCHEMY,LAMB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER'
+[tool.ruff.lint]
+extend-select = ["A", "FA", "I"]
+fixable = ["I"]
+ignore = ["A005", "F401", "E402"]
+
+[tool.ruff.lint.isort]
+section-order = ["future", "standard-library", "third-party", "django", "lamb", "first-party", "local-folder"]
+
+[tool.ruff.lint.isort.sections]
+"django" = ["django"]
+"lamb" = ["lamb"]
+
+#OLD
+#[tool.black]
+#line-length = 120
+#target-version = ['py312']
+#
+#[tool.isort]
+#py_version = 312
+#profile = 'black'
+#src_paths = ['lamb']
+#length_sort = true
+#known_django = 'django'
+#known_lamb = 'lamb'
+#known_sqlalchemy = 'sqlalchemy,sqlalchemy_utils'
+#import_heading_lamb = 'Lamb Framework'
+#import_heading_sqlalchemy = 'SQLAlchemy'
+#import_heading_firstparty = 'Project'
+#sections = 'FUTURE,STDLIB,DJANGO,SQLALCHEMY,LAMB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER'

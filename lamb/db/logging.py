@@ -1,10 +1,10 @@
 import time
 
-from django.conf import settings
-
 # SQLAlchemy
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+
+from django.conf import settings
 
 __all__ = ["sql_logging_enable", "sql_logging_disable"]
 
