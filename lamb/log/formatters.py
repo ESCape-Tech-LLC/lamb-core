@@ -48,17 +48,18 @@ BUILTIN_ATTRS = {
     "request",  # django log appends JSON unencodable request object
     # lamb - hide from extra
     "xray",
+    "xline",
     "app_user_id",
     "status_code",
 }
 
 HTTP_REQUEST_ATTRS = {
-    "method": "httpMethod",
-    "path": "httpUrl",
+    "method": "http_method",
+    "path": "http_url",
     # lamb - add to plain
     "xray": "xray",
-    "app_user_id": "userId",
-    "lamb_track_id": "trackId",
+    "xline": "xline",
+    "app_user_id": "user_id",
     "status_code": "statusCode",
 }
 
@@ -127,16 +128,22 @@ class _BaseJsonFormatter(_BaseFormatter):
     json_lib = json
 
     @lazy_default(list())
-    def json_hiding_fields(self) -> List[str]:
+    def settings_json_hiding_fields(self) -> List[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_HIDE
 
     @lazy_default(list())
-    def extra_masking_keys(self) -> List[str]:
+    def settings_extra_masking_keys(self) -> List[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_EXTRA_MASKING
+
+    @lazy_default(dict())
+    def settings_severity_mapping(self):
+        from django.conf import settings
+
+        return settings.LAMB_LOG_LEVEL_SEVERITY
 
     def to_json(self, record):
         try:
@@ -178,7 +185,7 @@ class _BaseJsonFormatter(_BaseFormatter):
             attr_name: record.__dict__[attr_name] for attr_name in record.__dict__ if attr_name not in BUILTIN_ATTRS
         }
         result = {k: _json_valid(v) for k, v in result.items()}
-        result = masked_dict(result, *self.extra_masking_keys)
+        result = masked_dict(result, *self.settings_extra_masking_keys)
 
         return result
 
@@ -187,12 +194,20 @@ class _BaseJsonFormatter(_BaseFormatter):
         result = {
             "ts": self.formatTime(record=record, datefmt=self.datefmt),
             "level": record.levelname,
+            "level_value": self.settings_severity_mapping.get(record.levelno, 4),  # default 4 - Warning
             "pid": os.getpid(),  # TODO: cache ???
             "msg": message,
-            "moduleName": record.module,
-            "fileName": record.filename,
-            "lineNo": record.lineno,
+            "line_no": record.lineno,
+            "file_name": record.pathname,
         }
+
+        # path_name = record.pathname
+        # if path_name is not None and (components := path_name.split(os.path.sep)) and len(components) > 3:
+        #     components = components[-3:]
+        #     components.insert(0, '...')
+        #     path_name = os.sep.join(components)
+        #
+        # result['file_name'] = path_name
 
         if record.exc_info:
             result["stack_trace"] = self.formatException(record.exc_info)
@@ -202,7 +217,7 @@ class _BaseJsonFormatter(_BaseFormatter):
         if len(_extra) > 0:
             result["extra"] = _extra
 
-        for k in self.json_hiding_fields:
+        for k in self.settings_json_hiding_fields:
             result.pop(k, None)
 
         return result
@@ -314,7 +329,7 @@ class RequestJsonFormatter(_BaseJsonFormatter):
                 except Exception:
                     pass
         if status_code is not None:
-            result["statusCode"] = status_code
+            result["status_code"] = status_code
 
         # request info
         # Lamb Framework
@@ -332,13 +347,13 @@ class RequestJsonFormatter(_BaseJsonFormatter):
 
             try:
                 etm = request.lamb_execution_meter
-                result["elapsedTimeMs"] = round((record.created - etm.start_time) * 1000, 3)
+                result["elapsed_time"] = round((record.created - etm.start_time) * 1000, 3)
             except AttributeError:
                 pass
 
             try:
                 resolved = resolve(request.path)
-                result["urlName"] = resolved.url_name
+                result["url_name"] = resolved.url_name
             except Exception:
                 pass
 
