@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import logging
-from typing import Any, Type, TypeVar, Optional
+from typing import Any, Optional, Type, TypeVar
 
 # SQLAlchemy
 import sqlalchemy as sa

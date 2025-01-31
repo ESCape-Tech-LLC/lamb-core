@@ -1,25 +1,24 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, List, Union
 from datetime import datetime
+from typing import Any, Dict, List, Union
 
 # SQLAlchemy
 from sqlalchemy import func, text
-from sqlalchemy.orm import mapped_column
 from sqlalchemy.dialects.postgresql import (
-    UUID,
-    JSONB,
     BIGINT,
-    CITEXT,
     BOOLEAN,
+    CITEXT,
     INTEGER,
-    VARCHAR,
+    JSONB,
     SMALLINT,
-    TSVECTOR,
     TIMESTAMP,
+    TSVECTOR,
+    UUID,
+    VARCHAR,
 )
-
+from sqlalchemy.orm import mapped_column
 from typing_extensions import Annotated
 
 __all__ = [

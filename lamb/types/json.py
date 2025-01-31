@@ -4,9 +4,10 @@ import json
 import logging
 from typing import Any
 
+from sqlalchemy.dialects.postgresql import JSONB
+
 # SQLAlchemy
 from sqlalchemy.types import VARCHAR, TypeDecorator
-from sqlalchemy.dialects.postgresql import JSONB
 
 # Lamb Framework
 from lamb import exc

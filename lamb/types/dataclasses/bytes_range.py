@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Self, Optional
+from typing import Optional, Self
 
 # Lamb Framework
-from lamb.exc import RequestRangeError, InvalidParamTypeError, InvalidParamValueError
+from lamb.exc import InvalidParamTypeError, InvalidParamValueError, RequestRangeError
 
 
 @dataclasses.dataclass(frozen=True)

@@ -3,23 +3,22 @@ from __future__ import annotations
 import enum
 import json
 import logging
-from typing import Type, TypeVar, Optional
 from dataclasses import asdict, dataclass
-
-from django.conf import settings
+from typing import Optional, Type, TypeVar
 
 # SQLAlchemy
 import sqlalchemy as sa
+from botocore.exceptions import BotoCoreError
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
+
+from django.conf import settings
 
 # Lamb Framework
 from lamb import exc
 from lamb.json import JsonEncoder
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.service.aws.s3 import S3Uploader
-
-from botocore.exceptions import BotoCoreError
 
 __all__ = [
     "Mode",
