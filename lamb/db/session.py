@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Dict, Tuple, Union
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -31,9 +30,11 @@ logger = logging.getLogger(__name__)
 # TODO: modify to handle config dict version - cause on start LAMB_DB_CONFIG is not exist
 _LAMB_DB_CONFIG = get_settings_value("LAMB_DB_CONFIG", req_type=dict, default=None)
 
-_configs_registry: Dict[str, Config] = {}
+_configs_registry: dict[str, Config] = {}
 if _LAMB_DB_CONFIG is None:
-    warnings.warn("parsing old style django DATABASE config, should migrate to LAMB_DB_CONFIG", DeprecationWarning)
+    warnings.warn(
+        "parsing old style django DATABASE config, should migrate to LAMB_DB_CONFIG", DeprecationWarning, stacklevel=2
+    )
     _configs_registry = parse_django_config()
 else:
     for _db_key, raw_config in _LAMB_DB_CONFIG.items():
@@ -43,10 +44,10 @@ else:
             _configs_registry[_db_key] = Config(**raw_config)
 
 # engines registry
-_engines_registry: Dict[Tuple[str, bool, bool], Union[Engine, AsyncEngine]] = {}
+_engines_registry: dict[tuple[str, bool, bool], Engine | AsyncEngine] = {}
 
 
-def get_engine(db_key: str, pooled: bool, sync: bool) -> Union[Engine, AsyncEngine]:
+def get_engine(db_key: str, pooled: bool, sync: bool) -> Engine | AsyncEngine:
     registry_key = (db_key, pooled, sync)
     if registry_key in _engines_registry:
         return _engines_registry[registry_key]
@@ -73,7 +74,7 @@ def get_engine(db_key: str, pooled: bool, sync: bool) -> Union[Engine, AsyncEngi
 
 
 # session makers
-_maker_registry: Dict[Tuple[str, bool, bool], sessionmaker] = {}
+_maker_registry: dict[tuple[str, bool, bool], sessionmaker] = {}
 
 
 def get_session_maker(db_key: str = "default", pooled: bool = True, sync: bool = True):
@@ -110,9 +111,7 @@ DeclarativeBase = get_declarative_base("default", True, True)
 metadata = DeclarativeBase.metadata
 
 
-def lamb_db_session_maker(
-    pooled: bool = True, db_key: str = "default", sync: bool = True
-) -> Union[Session, AsyncSession]:
+def lamb_db_session_maker(pooled: bool = True, db_key: str = "default", sync: bool = True) -> Session | AsyncSession:
     """Constructor for database sqlalchemy sessions"""
     maker = get_session_maker(db_key=db_key, pooled=pooled, sync=sync)
     return maker()

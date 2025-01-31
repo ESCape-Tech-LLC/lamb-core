@@ -13,15 +13,21 @@ import tempfile
 import warnings
 import zoneinfo
 from collections import OrderedDict
-from datetime import date, datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, date, datetime, timedelta
 from inspect import isclass
-from typing import Any, BinaryIO, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, BinaryIO, TypeVar
 from urllib.parse import unquote
 from xml.etree import cElementTree
 
 import requests
 import sqlalchemy
 from asgiref.sync import sync_to_async
+from django.conf import settings
+from django.core.exceptions import RequestDataTooBig
+from django.core.files.uploadedfile import UploadedFile
+from django.http import HttpRequest
+from django.utils import timezone as d_timezone
 from PIL import Image as PILImage
 from sqlalchemy import Column, asc, desc
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -29,12 +35,6 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import ColumnProperty, Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-
-from django.conf import settings
-from django.core.exceptions import RequestDataTooBig
-from django.core.files.uploadedfile import UploadedFile
-from django.http import HttpRequest
-from django.utils import timezone as d_timezone
 
 try:
     import cassandra
@@ -131,7 +131,7 @@ class LambRequest(HttpRequest):
     """
 
     def __init__(self):
-        super(LambRequest, self).__init__()
+        super().__init__()
         self.lamb_db_session = None
         self.lamb_execution_meter = None
         self.lamb_device_info = None
@@ -141,7 +141,7 @@ class LambRequest(HttpRequest):
 
 
 # parsing
-def parse_body_as_json(request: HttpRequest) -> Union[dict, list]:
+def parse_body_as_json(request: HttpRequest) -> dict | list:
     """Parse request object to dictionary as JSON
 
     :param request: Request object
@@ -159,7 +159,7 @@ def parse_body_as_json(request: HttpRequest) -> Union[dict, list]:
 
     try:
         data = json.loads(body)
-        if not isinstance(data, (dict, list)):
+        if not isinstance(data, (dict | list)):
             raise InvalidBodyStructureError("JSON body of request should be represented in a form of dictionary/array")
         return data
     except ValueError as e:
@@ -173,7 +173,7 @@ PV = TypeVar("PV", list, Query, ModelQuerySet)
 def response_paginated(
     data: PV,
     request: LambRequest = None,
-    params: Dict = None,
+    params: dict = None,
     add_extended_query: bool = False,
 ) -> dict:
     """Pagination utility
@@ -303,10 +303,10 @@ def response_paginated(
     return result
 
 
-Sorter = Tuple[str, Callable]
+Sorter = tuple[str, Callable]
 
 
-def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
+def _get_instance_sorting_attribute_names(ins: object) -> list[str]:
     # TODO: add support for instance and model class params
     # TODO: cache results
     # discover sortable attributes
@@ -324,7 +324,7 @@ def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
     for ormd in sortable_attributes:
         if isinstance(ormd, Column):
             orm_attr_name = ormd.name
-        elif isinstance(ormd, (ColumnProperty, QueryableAttribute)):
+        elif isinstance(ormd, ColumnProperty | QueryableAttribute):
             orm_attr_name = ormd.key
         elif isinstance(ormd, hybrid_property):
             orm_attr_name = ormd.__name__
@@ -350,7 +350,7 @@ def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sort
         sort_functor = "desc"
     else:
         raise InvalidParamValueError(
-            "Invalid sorting descriptor format %s" % raw_sorting_descriptor,
+            f"Invalid sorting descriptor format {raw_sorting_descriptor}",
             error_details={"key_path": "sorting", "descriptor": raw_sorting_descriptor},
         )
 
@@ -359,14 +359,14 @@ def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sort
     field = field.lower()
     if field not in sortable_attributes:
         raise InvalidParamValueError(
-            "Invalid sorting_field value for descriptor %s. Not found in model" % raw_sorting_descriptor,
+            f"Invalid sorting_field value for descriptor {raw_sorting_descriptor}. Not found in model",
             error_details={"key_path": "sorting", "descriptor": raw_sorting_descriptor, "field": field},
         )
 
     sort_functor = sort_functor.lower()
     if sort_functor not in ["asc", "desc"]:
         raise InvalidParamValueError(
-            "Invalid sorting_direction value for descriptor %s. Should be one [asc or desc]" % raw_sorting_descriptor,
+            f"Invalid sorting_direction value for descriptor {raw_sorting_descriptor}. Should be one [asc or desc]",
             error_details={"key_path": "sorting", "descriptor": raw_sorting_descriptor},
         )
 
@@ -375,7 +375,7 @@ def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sort
     return field, sort_functor
 
 
-def _sorting_parse_descriptors(raw_sorting_descriptors: Optional[str], model_inspection) -> List[Sorter]:
+def _sorting_parse_descriptors(raw_sorting_descriptors: str | None, model_inspection) -> list[Sorter]:
     """Parse list of sorting descriptors"""
     # early return and check params
     if raw_sorting_descriptors is None:
@@ -396,12 +396,12 @@ def _sorting_parse_descriptors(raw_sorting_descriptors: Optional[str], model_ins
 
 
 def _sorting_apply_sorters(
-    sorters: List[Sorter],
+    sorters: list[Sorter],
     query: Query,
     model_class: DeclarativeMeta,
     check_duplicate: bool = True,
 ) -> Query:
-    applied_sort_fields: List[str] = list()
+    applied_sort_fields: list[str] = list()
     for _sorting_field, _sorting_functor in sorters:
         if _sorting_field in applied_sort_fields and check_duplicate:
             logger.debug(f"skip duplicate sorting field: {_sorting_field}")
@@ -442,9 +442,9 @@ def response_sorted(
     model_inspection = inspect(model_class)
 
     # discover and apply start sorters
-    all_sorters: List[Sorter] = []
+    all_sorters: list[Sorter] = []
     start_sorters = _sorting_parse_descriptors(
-        raw_sorting_descriptors=kwargs.get("start_sorting", None), model_inspection=model_inspection
+        raw_sorting_descriptors=kwargs.get("start_sorting"), model_inspection=model_inspection
     )
     logger.debug(f"sorters parsed start_sorting: {start_sorters}")
     all_sorters.extend(start_sorters)
@@ -459,7 +459,7 @@ def response_sorted(
 
     # discover and apply final sorters
     final_sorters = []
-    if "final_sorting" in kwargs.keys():
+    if "final_sorting" in kwargs:
         # final_sorting exist - should parse and apply descriptors
         final_sorting_descriptors = kwargs["final_sorting"]
         if final_sorting_descriptors is not None:
@@ -486,9 +486,9 @@ def response_sorted(
 
 def response_filtered(
     query: Query,
-    filters: List[object],
+    filters: list[object],
     request: LambRequest = None,
-    params: Dict = None,
+    params: dict = None,
 ) -> Query:
     # TODO: fix typing for filters
     # TODO: auto discover request params if not provided
@@ -504,12 +504,12 @@ def response_filtered(
     from lamb.utils.filters import Filter
 
     if not isinstance(query, Query):
-        logger.warning("Invalid query data type: %s" % query)
+        logger.warning(f"Invalid query data type: {query}")
         raise ServerError("Improperly configured query item for filtering")
 
     for f in filters:
         if not isinstance(f, Filter):
-            logger.warning("Invalid filters item data type: %s" % f)
+            logger.warning(f"Invalid filters item data type: {f}")
             raise ServerError("Improperly configured filters for filtering")
 
     # apply filters
@@ -567,13 +567,13 @@ def get_request_accept_encoding(request: HttpRequest) -> str:
     return _get_encoding_for_header(request, "HTTP_ACCEPT")
 
 
-def get_current_request() -> Optional[LambRequest]:
+def get_current_request() -> LambRequest | None:
     return LambGRequestMiddleware.get_request(None)
 
 
 # datetime
-def datetime_end(value: Union[date, datetime]) -> datetime:
-    if not isinstance(value, (date, datetime)):
+def datetime_end(value: date | datetime) -> datetime:
+    if not isinstance(value, (date | datetime)):
         raise InvalidParamTypeError("Invalid data type for date/datetime convert")
 
     return datetime(
@@ -588,8 +588,8 @@ def datetime_end(value: Union[date, datetime]) -> datetime:
     )
 
 
-def datetime_begin(value: Union[date, datetime]) -> datetime:
-    if not isinstance(value, (date, datetime)):
+def datetime_begin(value: date | datetime) -> datetime:
+    if not isinstance(value, (date | datetime)):
         raise InvalidParamTypeError("Invalid data type for date/datetime convert")
 
     return datetime(
@@ -607,7 +607,7 @@ def datetime_begin(value: Union[date, datetime]) -> datetime:
 # other
 
 
-def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: bool = True, **kwargs):
+def get_settings_value(*names, req_type: Callable | None = None, allow_none: bool = True, **kwargs):
     if len(names) == 0:
         raise InvalidParamValueError("At least one setting name required")
     elif len(names) == 1:
@@ -625,6 +625,7 @@ def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: 
                     f"Usage of deprecated settings name discovered {name}, use {target_setting_name} instead. "
                     f"If default or explicit value exist - value under {name} would be ignored",
                     DeprecationWarning,
+                    stacklevel=2,
                 )
             except (ImportError, AttributeError, InvalidBodyStructureError):
                 continue
@@ -635,7 +636,7 @@ def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: 
             result = dpath_value(settings, key_path=name, req_type=req_type, allow_none=allow_none, **kwargs)
             if index > 0:
                 warnings.warn(
-                    "Use of deprecated settings param %s, use %s instead" % (name, names[0]), DeprecationWarning
+                    f"Use of deprecated settings param {name}, use {names[0]} instead", DeprecationWarning, stacklevel=2
                 )
             return result
         except (ImportError, AttributeError, InvalidBodyStructureError):
@@ -651,11 +652,11 @@ def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: 
 def inject_app_defaults(application: str):
     """Inject an application's default settings"""
     try:
-        __import__("%s.settings" % application)
+        __import__(f"{application}.settings")
         import sys
 
         # Import our defaults, project defaults, and project settings
-        _app_settings = sys.modules["%s.settings" % application]
+        _app_settings = sys.modules[f"{application}.settings"]
         _def_settings = sys.modules["django.conf.global_settings"]
         _settings = sys.modules["django.conf"].settings
 
@@ -679,7 +680,7 @@ def inject_app_defaults(application: str):
 
 def check_device_info_versions_above(
     source: Any,
-    versions: List[Tuple[str, int]],
+    versions: list[tuple[str, int]],
     default: bool,
     skip_options: bool = True,
 ) -> bool:
@@ -700,7 +701,7 @@ def check_device_info_versions_above(
     else:
         _source = source
 
-    if not isinstance(_source, (DeviceInfo, None.__class__)):
+    if not isinstance(_source, DeviceInfo | None.__class__):
         logger.warning(f"received object: {source, source.__class__}")
         raise ServerError("Invalid object received for version checking")
 
@@ -715,7 +716,7 @@ def check_device_info_versions_above(
     for min_v in versions:
         try:
             _platform = min_v[0].lower()
-            _min_app_build = int(min_v[1]) if not isinstance(min_v[1], (int, float)) else min_v[1]
+            _min_app_build = int(min_v[1]) if not isinstance(min_v[1], int | float) else min_v[1]
             if _source.device_platform.lower() == _platform and _min_app_build > _source.app_build:
                 return False
         except Exception as e:
@@ -744,7 +745,7 @@ BANK_CARDS_REGEX_MAPPING = {
 }
 
 
-def bank_card_type_parse(masked_pan: str) -> Optional[str]:
+def bank_card_type_parse(masked_pan: str) -> str | None:
     # replace masking symbols
     _pan = masked_pan
     _pan = _pan.replace("-", "")
@@ -768,7 +769,7 @@ def bank_card_type_parse(masked_pan: str) -> Optional[str]:
 
 
 # time cached
-_timed_lru_cache_functions: Dict[Callable, Callable] = {}
+_timed_lru_cache_functions: dict[Callable, Callable] = {}
 
 
 def timed_lru_cache(**timedelta_kwargs):
@@ -826,8 +827,8 @@ def _handle_async_fall(e: Exception, fall_strategy: AsyncFallStrategy):
 
 @sync_to_async
 def _async_request_url(
-    url: Optional[str], timeout, fall_strategy: AsyncFallStrategy, headers: Optional[Dict[str, Any]] = None
-) -> Optional[Union[requests.Response, Exception]]:
+    url: str | None, timeout, fall_strategy: AsyncFallStrategy, headers: dict[str, Any] | None = None
+) -> requests.Response | Exception | None:
     logger.debug(f"downloading resource from url: {url}, timeout={timeout}, headers={headers}")
     if url is None:
         return None
@@ -843,8 +844,8 @@ def _async_request_url(
 
 
 async def _async_request_resources(
-    urls: List[Optional[str]], timeout: int, fall_strategy: AsyncFallStrategy, headers: Optional[Dict[str, Any]] = None
-) -> List[Optional[Union[requests.Response, Exception]]]:
+    urls: list[str | None], timeout: int, fall_strategy: AsyncFallStrategy, headers: dict[str, Any] | None = None
+) -> list[requests.Response | Exception | None]:
     tasks = []
     for url in urls:
         tasks.append(_async_request_url(url=url, timeout=timeout, headers=headers, fall_strategy=fall_strategy))
@@ -854,11 +855,11 @@ async def _async_request_resources(
 
 
 def async_request_urls(
-    urls: List[Optional[str]],
+    urls: list[str | None],
     timeout=30,
-    headers: Optional[Dict[str, Any]] = None,
+    headers: dict[str, Any] | None = None,
     fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING,
-) -> List[Optional[Union[requests.Response, Exception]]]:
+) -> list[requests.Response | Exception | None]:
     loop = asyncio.new_event_loop()
     try:
         asyncio.set_event_loop(loop)
@@ -871,25 +872,25 @@ def async_request_urls(
 
 
 def async_download_resources(
-    urls: List[Optional[str]],
+    urls: list[str | None],
     timeout=30,
-    headers: Optional[Dict[str, Any]] = None,
+    headers: dict[str, Any] | None = None,
     fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING,
-) -> List[Optional[bytes]]:
+) -> list[bytes | None]:
     result = async_request_urls(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
     result = [res.content if isinstance(res, requests.Response) else res for res in result]
     return result
 
 
 def async_download_images(
-    urls: List[Optional[str]],
+    urls: list[str | None],
     timeout=30,
-    headers: Optional[Dict[str, Any]] = None,
+    headers: dict[str, Any] | None = None,
     fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING,
-) -> List[Optional[PILImage.Image]]:
+) -> list[PILImage.Image | None]:
     result = async_download_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
     buffer = []
-    for index, res in enumerate(result):
+    for res in result:
         try:
             if res is None:
                 buffer.append(None)
@@ -962,7 +963,7 @@ def image_convert_to_rgb(image: PILImage.Image) -> PILImage.Image:
         return image.convert("RGB")
 
 
-def file_is_svg(file: Union[str, BinaryIO]) -> bool:
+def file_is_svg(file: str | BinaryIO) -> bool:
     try:
         tag = next(cElementTree.iterparse(file, ("start",)))[1].tag
     except cElementTree.ParseError:
@@ -982,7 +983,7 @@ def image_decode_base64(b64image: str, verify: bool = False) -> PILImage:
     return image
 
 
-def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
+def get_file_mime_type(src_file: str | bytes | UploadedFile) -> str:
     import magic
 
     try:
@@ -1020,7 +1021,7 @@ def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
 
 # timezones
 TZ_MSK = zoneinfo.ZoneInfo("Europe/Moscow")
-TZ_UTC = timezone.utc
+TZ_UTC = UTC
 
 
 def tz_now() -> datetime:

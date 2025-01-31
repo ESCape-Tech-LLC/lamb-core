@@ -7,7 +7,7 @@ import uuid
 import warnings
 from datetime import date, datetime
 from functools import singledispatch
-from typing import List, Optional, Type, TypeVar, Union
+from typing import TypeVar
 
 import dateutil
 
@@ -55,26 +55,28 @@ def transform_boolean(value) -> bool:
             return False
         else:
             raise InvalidParamValueError("Invalid value for boolean convert")
-    elif isinstance(value, (int, float)):
+    elif isinstance(value, (int | float)):
         return value != 0.0
     else:
         raise InvalidParamTypeError("Invalid data type for boolean convert")
 
 
-def transform_date(value: Union[datetime, date, str], **kwargs) -> datetime.date:
+def transform_date(value: datetime | date | str, **kwargs) -> datetime.date:
     return transform_datetime(value, **kwargs).date()
 
 
 _ISO_MSEC_REGEX = r"(?P<prefix>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?P<seconds>\.\d{1,3})(?P<suffix>\+\d{2}:\d{2})"
 
 
-def transform_datetime(value: Union[datetime, date, str, int, float], __format=None, **kwargs) -> datetime:
+def transform_datetime(value: datetime | date | str | int | float, __format=None, **kwargs) -> datetime:
     from django.conf import settings
 
     from lamb.utils import datetime_begin
 
     if __format is None and "format" in kwargs:
-        warnings.warn("transform_date: format keyword is deprecated, use __format instead", DeprecationWarning)
+        warnings.warn(
+            "transform_date: format keyword is deprecated, use __format instead", DeprecationWarning, stacklevel=2
+        )
         __format = kwargs["format"]
 
     if __format is None:
@@ -84,7 +86,7 @@ def transform_datetime(value: Union[datetime, date, str, int, float], __format=N
         return value
     if isinstance(value, date):
         return datetime_begin(value)
-    elif isinstance(value, (str, int)):
+    elif isinstance(value, (str | int)):
         # try to convert as timestamp
         try:
             float_value = float(value)
@@ -125,13 +127,13 @@ def transform_datetime(value: Union[datetime, date, str, int, float], __format=N
             return result
         except Exception as e:
             raise InvalidParamValueError(
-                "Invalid to convert date from string=%s according to format=%s" % (value, __format)
+                f"Invalid to convert date from string={value} according to format={__format}"
             ) from e
     else:
         raise InvalidParamTypeError("Invalid data type for date convert")
 
 
-def transform_uuid(value: str, key: Optional[str] = None) -> uuid.UUID:
+def transform_uuid(value: str, key: str | None = None) -> uuid.UUID:
     """Transforms value into UUID version"""
     if isinstance(value, uuid.UUID):
         return value
@@ -171,17 +173,17 @@ def transform_datetime_microseconds_int(value: datetime) -> int:
 ET = TypeVar("ET")
 
 
-def transform_string_enum(value: str, enum_class: Type[ET]) -> ET:
+def transform_string_enum(value: str, enum_class: type[ET]) -> ET:
     """Transforms string version into string based Enum"""
     if isinstance(value, enum_class):
         return value
 
     # check data types
     if not issubclass(enum_class, enum.Enum) and not issubclass(enum_class, str):
-        logger.warning("transform_string_enum received object of class %s as enum_class arg" % enum_class)
+        logger.warning(f"transform_string_enum received object of class {enum_class} as enum_class arg")
         raise ServerError("Invalid class type for enum converting")
     if not isinstance(value, str):
-        logger.warning("transform_string_enum received object of class %s as value arg" % value.__class__.__name__)
+        logger.warning(f"transform_string_enum received object of class {value.__class__.__name__} as value arg")
         raise ServerError("Invalid class type for enum converting")
 
     # try to convert
@@ -195,13 +197,13 @@ def transform_string_enum(value: str, enum_class: Type[ET]) -> ET:
     except ApiError:
         raise
     except Exception as e:
-        raise InvalidParamValueError("Failed to convert enum value %s" % value) from e
+        raise InvalidParamValueError(f"Failed to convert enum value {value}") from e
 
 
 @singledispatch
 def transform_typed_list(
-    value: Union[object, ET, List[ET]], cls: Type[ET], convert: bool = False, key: Optional[str] = None, **_
-) -> List[ET]:
+    value: object | ET | list[ET], cls: type[ET], convert: bool = False, key: str | None = None, **_
+) -> list[ET]:
     if isinstance(value, cls):
         value = [value]
 
@@ -221,7 +223,7 @@ def transform_typed_list(
 
 
 @transform_typed_list.register(str)
-def _transform_typed_list(value: str, cls: Type[ET], skip_empty: bool = True, separator: str = ",", **kwargs) -> ET:
+def _transform_typed_list(value: str, cls: type[ET], skip_empty: bool = True, separator: str = ",", **kwargs) -> ET:
     value = value.split(separator)
     if skip_empty:
         value = [v for v in value if len(v) > 0]
@@ -232,19 +234,19 @@ def _transform_typed_list(value: str, cls: Type[ET], skip_empty: bool = True, se
     return transform_typed_list(value, **kwargs)  # forward to main processing
 
 
-def tf_list_string(value, **kwargs) -> List[str]:
+def tf_list_string(value, **kwargs) -> list[str]:
     kwargs["cls"] = str
     if "separator" not in kwargs:
         kwargs["separator"] = ","
     return transform_typed_list(value, **kwargs)
 
 
-def tf_list_int(value, **kwargs) -> List[int]:
+def tf_list_int(value, **kwargs) -> list[int]:
     kwargs["cls"] = int
     return transform_typed_list(value, **kwargs)
 
 
-def tf_list_uuid(value, **kwargs) -> List[uuid.UUID]:
+def tf_list_uuid(value, **kwargs) -> list[uuid.UUID]:
     kwargs["cls"] = uuid.UUID
     if "convert" not in kwargs:
         kwargs["convert"] = True

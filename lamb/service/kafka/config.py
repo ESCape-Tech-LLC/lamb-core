@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional
 
 from lamb.utils.transformers import tf_list_string
 from lamb.utils.validators import v_opt_string
@@ -11,11 +10,11 @@ __all__ = ["KafkaConfig"]
 
 @dataclasses.dataclass
 class KafkaConfig:
-    bootstrap_servers: List[str]
-    security_protocol: Optional[str] = None
-    sasl_mechanism: Optional[str] = None
-    sasl_plain_username: Optional[str] = None
-    sasl_plain_password: Optional[str] = None
+    bootstrap_servers: list[str]
+    security_protocol: str | None = None
+    sasl_mechanism: str | None = None
+    sasl_plain_username: str | None = None
+    sasl_plain_password: str | None = None
 
     def __post_init__(self):
         self.bootstrap_servers = tf_list_string(self.bootstrap_servers)

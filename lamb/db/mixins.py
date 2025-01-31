@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 __all__ = ["TableConfigMixin", "TimeMarksMixin", "TimeMarksMixinTZ"]
 
 
-class TableConfigMixin(object):
+class TableConfigMixin:
     @declared_attr
     def __tablename__(cls):
         class_name = cls.__name__

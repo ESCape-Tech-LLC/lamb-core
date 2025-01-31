@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import List, Optional, Tuple, Type
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -28,13 +27,13 @@ __all__ = [
 ]
 
 
-def get_default_uploader_class() -> Type[BaseUploader]:
+def get_default_uploader_class() -> type[BaseUploader]:
     """
     Load module for image uploading.
 
     :return: Imported uploader class.
     """
-    logger.info("Image uploader created: %s" % settings.LAMB_IMAGE_UPLOAD_ENGINE)
+    logger.info(f"Image uploader created: {settings.LAMB_IMAGE_UPLOAD_ENGINE}")
     result = import_by_name(settings.LAMB_IMAGE_UPLOAD_ENGINE)
     if not issubclass(result, BaseUploader):
         raise ServerError("Improperly configured image uploader")
@@ -43,12 +42,12 @@ def get_default_uploader_class() -> Type[BaseUploader]:
 
 def create_image_slices(
     request: LambRequest,
-    slicing: List[SliceRule],
-    envelope_folder: Optional[str] = None,
-    limit: Optional[int] = None,
-    uploader_class: Optional[Type[BaseUploader]] = None,
-    allow_svg: Optional[bool] = False,
-) -> List[List[IT]]:
+    slicing: list[SliceRule],
+    envelope_folder: str | None = None,
+    limit: int | None = None,
+    uploader_class: type[BaseUploader] | None = None,
+    allow_svg: bool | None = False,
+) -> list[list[IT]]:
     """
     Uploads images from request and generates slices.
 
@@ -74,13 +73,13 @@ def create_image_slices(
 
 def upload_images(
     request: LambRequest,
-    slicing: List[SliceRule],
-    image_class: Type[AbstractImage],
-    envelope_folder: Optional[str] = None,
-    limit: Optional[int] = None,
-    uploader_class: Optional[Type[BaseUploader]] = None,
-    allow_svg: Optional[bool] = False,
-) -> List[AbstractImage]:
+    slicing: list[SliceRule],
+    image_class: type[AbstractImage],
+    envelope_folder: str | None = None,
+    limit: int | None = None,
+    uploader_class: type[BaseUploader] | None = None,
+    allow_svg: bool | None = False,
+) -> list[AbstractImage]:
     """
     Uploads image from request to project storage.
 
@@ -111,7 +110,7 @@ def upload_images(
     return result
 
 
-def parse_static_url(url: str) -> Tuple[str, str]:
+def parse_static_url(url: str) -> tuple[str, str]:
     """
     :return: Tuple of relative path and full path to static file
     """
@@ -143,7 +142,7 @@ def parse_static_url(url: str) -> Tuple[str, str]:
     return relative_path, os.path.join(static_folder, relative_path)
 
 
-def remove_image_from_storage(image: AbstractImage, fail_silently: Optional[bool] = True):
+def remove_image_from_storage(image: AbstractImage, fail_silently: bool | None = True):
     """
     Removes all slices of an image from storage.
     Supports slices that were uploaded using ImageUploadServiceDisk and ImageUploadServiceAmazonS3

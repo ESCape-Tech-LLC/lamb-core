@@ -4,14 +4,13 @@ import dataclasses
 import logging
 import re
 import warnings
-from typing import IO, Any, BinaryIO, Dict, Optional, Tuple, Union
+from typing import IO, Any, BinaryIO
 
 import botocore.exceptions
 from botocore.config import Config
-from furl import furl
-
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from furl import furl
 
 from lamb import exc
 from lamb.json.mixins import ResponseEncodableMixin
@@ -26,15 +25,15 @@ __all__ = ["S3Uploader", "S3BucketConfig"]
 
 @dataclasses.dataclass
 class S3BucketConfig(ResponseEncodableMixin):
-    bucket_name: Optional[str] = None
-    region_name: Optional[str] = None
-    access_key: Optional[str] = None
-    secret_key: Optional[str] = None
-    endpoint_url: Optional[str] = None
-    bucket_url: Optional[str] = None
+    bucket_name: str | None = None
+    region_name: str | None = None
+    access_key: str | None = None
+    secret_key: str | None = None
+    endpoint_url: str | None = None
+    bucket_url: str | None = None
     check_buckets_list: bool = True
-    connect_timeout: Optional[float] = None
-    read_timeout: Optional[float] = None
+    connect_timeout: float | None = None
+    read_timeout: float | None = None
 
     def response_encode(self, request=None) -> dict:
         return dataclasses.asdict(self)
@@ -45,13 +44,13 @@ class S3Uploader(AWSBase):
 
     def __init__(
         self,
-        aws_access_key_id: Optional[str] = None,
-        aws_secret_access_key: Optional[str] = None,
-        bucket_name: Optional[str] = None,
-        region_name: Optional[str] = None,
-        endpoint_url: Optional[str] = None,
-        bucket_url: Optional[str] = None,
-        conn_cfg: Optional[S3BucketConfig] = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        bucket_name: str | None = None,
+        region_name: str | None = None,
+        endpoint_url: str | None = None,
+        bucket_url: str | None = None,
+        conn_cfg: S3BucketConfig | None = None,
         *args,
         **kwargs,
     ):
@@ -59,7 +58,9 @@ class S3Uploader(AWSBase):
         if conn_cfg is not None:
             self._conn_cfg = conn_cfg
         else:
-            warnings.warn("Use of deprecated S3Uploader args, use S3BucketConfig instead", DeprecationWarning)
+            warnings.warn(
+                "Use of deprecated S3Uploader args, use S3BucketConfig instead", DeprecationWarning, stacklevel=2
+            )
             self._conn_cfg = S3BucketConfig(
                 bucket_name=bucket_name or settings.LAMB_AWS_BUCKET_NAME,
                 region_name=region_name or settings.LAMB_AWS_REGION_NAME,
@@ -70,10 +71,10 @@ class S3Uploader(AWSBase):
             )
 
         # process
-        super(S3Uploader, self).__init__(
+        super().__init__(
+            *args,
             aws_access_key_id=self._conn_cfg.access_key,
             aws_secret_access_key=self._conn_cfg.secret_key,
-            *args,
             **kwargs,
         )
 
@@ -102,11 +103,11 @@ class S3Uploader(AWSBase):
 
     # properties wrappers
     @property
-    def bucket_name(self) -> Optional[str]:
+    def bucket_name(self) -> str | None:
         return self._conn_cfg.bucket_name
 
     @property
-    def bucket_url(self) -> Optional[str]:
+    def bucket_url(self) -> str | None:
         if self._conn_cfg.bucket_url is None:
             if self._conn_cfg.region_name is not None:
                 result = f"https://s3.{self._conn_cfg.region_name}.amazonaws.com/{self._conn_cfg.bucket_name}/"
@@ -117,7 +118,7 @@ class S3Uploader(AWSBase):
         return result
 
     @property
-    def endpoint_url(self) -> Optional[str]:
+    def endpoint_url(self) -> str | None:
         return self._conn_cfg.endpoint_url
 
     @property
@@ -130,10 +131,10 @@ class S3Uploader(AWSBase):
     # methods
     def put_object(
         self,
-        body: Union[BinaryIO, InMemoryUploadedFile, IO],
+        body: BinaryIO | InMemoryUploadedFile | IO,
         relative_path: str,
         file_type: str,
-        private: Optional[bool] = False,
+        private: bool | None = False,
     ) -> str:
         """
         Uploads file to S3
@@ -191,7 +192,7 @@ class S3Uploader(AWSBase):
         except botocore.exceptions.ClientError as e:
             raise exc.ExternalServiceError from e
 
-    def head_object(self, relative_path: str, **kwargs) -> Dict[str, Any]:
+    def head_object(self, relative_path: str, **kwargs) -> dict[str, Any]:
         """
         Request low-level HEAD info from S3 storage about object
 
@@ -206,7 +207,7 @@ class S3Uploader(AWSBase):
             raise exc.ExternalServiceError from e
         return result
 
-    def generate_presigned_url(self, relative_path: str, expires_in: Optional[int] = 3600) -> str:
+    def generate_presigned_url(self, relative_path: str, expires_in: int | None = 3600) -> str:
         """
         Generates pre-signed url for a stored in S3 file
 
@@ -226,7 +227,7 @@ class S3Uploader(AWSBase):
         return presigned_url
 
     @staticmethod
-    def s3_parse_url(url: str) -> Tuple[str, str, str]:
+    def s3_parse_url(url: str) -> tuple[str, str, str]:
         # TODO: adapt to non AWS s3 storages
         """
         :return: Tuple of aws region name, bucket name, and file path

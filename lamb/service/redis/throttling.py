@@ -5,7 +5,6 @@ import json
 import logging
 import re
 import time
-from typing import Dict, List, Tuple
 
 import redis
 
@@ -23,8 +22,8 @@ __all__ = ["redis_rate_check_pipelined", "redis_rate_check_lua", "redis_rate_cle
 
 
 # utilities
-def _check_limits(limits: List[Tuple[int, int]]) -> Dict[int, int]:
-    limits_dict: Dict[int, int] = {}
+def _check_limits(limits: list[tuple[int, int]]) -> dict[int, int]:
+    limits_dict: dict[int, int] = {}
     for limit, duration in limits:
         if duration <= 0:
             logger.error(f"invalid duration received: {duration}")
@@ -61,9 +60,9 @@ class _RateLimit:
         return self.current <= self.limit
 
 
-def _redis_rate_parse_limits(bucket_name_base, limits: List[Tuple[int, int]]) -> List[_RateLimit]:
+def _redis_rate_parse_limits(bucket_name_base, limits: list[tuple[int, int]]) -> list[_RateLimit]:
     # check and sort limits
-    limits_dict: Dict[int, int] = _check_limits(limits)
+    limits_dict: dict[int, int] = _check_limits(limits)
     bucket_name_base = _hash_marked_bucket_name(bucket_name_base)
 
     # repack bucket and limits
@@ -80,7 +79,7 @@ def _redis_rate_parse_limits(bucket_name_base, limits: List[Tuple[int, int]]) ->
     return result
 
 
-def _redis_rate_parse_response(response: Dict[str, dict]) -> List[_RateLimit]:
+def _redis_rate_parse_response(response: dict[str, dict]) -> list[_RateLimit]:
     """Internal function to parse response from Redis API"""
     result = []
     for key, res in response.items():
@@ -113,7 +112,7 @@ def redis_rate_check_pipelined(conn: redis.Redis, bucket_name_base: str, limits=
     if limits is None:
         limits = list()
     logger.debug(f"start rate check pipelined: {conn, bucket_name_base, limits}")
-    limits_dict: Dict[int, int] = _check_limits(limits)
+    limits_dict: dict[int, int] = _check_limits(limits)
 
     # check limits
     now = int(time.time())
@@ -136,7 +135,7 @@ def redis_rate_check_lua(
     bucket_name_base: str,
     limits=None,
     increment: bool = True,
-) -> List[_RateLimit]:
+) -> list[_RateLimit]:
     """Throttling service based on Redis LUA scripting over throttling buckets
 
     :param conn: connection to Redis instance

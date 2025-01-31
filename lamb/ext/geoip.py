@@ -5,13 +5,12 @@ from typing import NewType, Optional, Union
 
 import geoip2
 import lazy_object_proxy
+from django.conf import settings
+from django.http import HttpRequest
 from geoip2 import models
 from geoip2.database import Reader
 from geoip2.errors import AddressNotFoundError
 from ipware import get_client_ip
-
-from django.conf import settings
-from django.http import HttpRequest
 
 from lamb.utils import LambRequest
 
@@ -25,7 +24,7 @@ __all__ = ["get_country_info", "get_city_info", "get_asn_info"]
 ProxyReader = NewType("ProxyReader", Reader)
 
 
-def _geoip2_reader(db_path: Optional[str]) -> Optional[Reader]:
+def _geoip2_reader(db_path: str | None) -> Reader | None:
     try:
         logger.info(f"max_mind. loading database on path: {db_path}")
         return geoip2.database.Reader(db_path)
@@ -34,7 +33,7 @@ def _geoip2_reader(db_path: Optional[str]) -> Optional[Reader]:
         return None
 
 
-def _resolve_ip_source(value: Union[str, LambRequest]) -> Optional[str]:
+def _resolve_ip_source(value: str | LambRequest) -> str | None:
     try:
         if isinstance(value, str):
             ip_address = value
@@ -50,7 +49,7 @@ def _resolve_ip_source(value: Union[str, LambRequest]) -> Optional[str]:
         return None
 
 
-def _get_info(source: Union[str, LambRequest], reader: ProxyReader, reader_name: str):
+def _get_info(source: str | LambRequest, reader: ProxyReader, reader_name: str):
     if reader is None or reader == None:  # noqa
         logger.debug(f"max_mind. {reader_name}: break -> reader is None")
         return None
@@ -95,13 +94,13 @@ _geoip2_db_reader_asn: ProxyReader = lazy_object_proxy.Proxy(
 
 
 # public interface
-def get_city_info(source: Union[str, LambRequest]) -> Optional[models.City]:
+def get_city_info(source: str | LambRequest) -> models.City | None:
     return _get_info(source=source, reader=_geoip2_db_reader_city, reader_name="geoip2_db_city")
 
 
-def get_country_info(source: Union[str, LambRequest]) -> Optional[models.Country]:
+def get_country_info(source: str | LambRequest) -> models.Country | None:
     return _get_info(source=source, reader=_geoip2_db_reader_country, reader_name="geoip2_db_country")
 
 
-def get_asn_info(source: Union[str, LambRequest]) -> Optional[models.ASN]:
+def get_asn_info(source: str | LambRequest) -> models.ASN | None:
     return _get_info(source=source, reader=_geoip2_db_reader_asn, reader_name="geoip2_db_asn")

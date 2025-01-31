@@ -1,7 +1,6 @@
 import logging
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction
-
 from django.http import HttpResponse
 
 __all__ = ["LambMiddlewareMixin"]
@@ -44,7 +43,7 @@ class LambMiddlewareMixin:
         super().__init__()
 
     def __repr__(self):
-        return "<%s get_response=%s>" % (
+        return "<{} get_response={}>".format(
             self.__class__.__qualname__,
             getattr(
                 self.get_response,

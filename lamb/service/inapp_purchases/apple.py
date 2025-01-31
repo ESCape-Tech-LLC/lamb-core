@@ -50,8 +50,8 @@ class InAppApple(InAppAbstract):
 
         try:
             data = json.loads(response.content)
-        except json.decoder.JSONDecodeError:
-            raise ExternalServiceError("Unable to decode a response for inapp purchase from Apple server")
+        except json.decoder.JSONDecodeError as e:
+            raise ExternalServiceError("Unable to decode a response for inapp purchase from Apple server") from e
 
         if "status" not in data:
             raise ExternalServiceError("Malformed response for inapp purchase from Apple server")

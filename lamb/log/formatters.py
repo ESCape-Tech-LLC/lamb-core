@@ -5,13 +5,15 @@ import json
 import logging
 import os
 import zoneinfo
-from typing import Any, List, Optional
+from typing import Any
 
 try:
     from gunicorn.glogging import SafeAtoms
 except ImportError:
     SafeAtoms = object()
 
+
+import contextlib
 
 from lamb.json.encoder import JsonEncoder
 from lamb.log.constants import LAMB_LOG_FORMAT_SIMPLE
@@ -93,7 +95,7 @@ class _BaseFormatter(logging.Formatter):
         return settings.LAMB_LOG_FORMAT_TIME_SPEC
 
     @lazy_default(None)
-    def tzinfo(self) -> Optional[datetime.tzinfo]:
+    def tzinfo(self) -> datetime.tzinfo | None:
         from django.conf import settings
 
         timezone_name = settings.LAMB_LOG_FORMAT_TIME_ZONE
@@ -107,12 +109,9 @@ class _BaseFormatter(logging.Formatter):
             return None
 
     # contract
-    def formatTime(self, record, datefmt: Optional[str] = ...) -> str:
+    def formatTime(self, record, datefmt: str | None = ...) -> str:
         ct = datetime.datetime.fromtimestamp(record.created, tz=self.tzinfo)
-        if datefmt:
-            s = ct.strftime(datefmt)
-        else:
-            s = ct.isoformat(sep=self.sep, timespec=self.timespec)
+        s = ct.strftime(datefmt) if datefmt else ct.isoformat(sep=self.sep, timespec=self.timespec)
 
         return s
 
@@ -128,13 +127,13 @@ class _BaseJsonFormatter(_BaseFormatter):
     json_lib = json
 
     @lazy_default(list())
-    def settings_json_hiding_fields(self) -> List[str]:
+    def settings_json_hiding_fields(self) -> list[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_HIDE
 
     @lazy_default(list())
-    def settings_extra_masking_keys(self) -> List[str]:
+    def settings_extra_masking_keys(self) -> list[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_EXTRA_MASKING
@@ -272,11 +271,10 @@ class MultilineFormatter(_BaseFormatter):
 
     def _collect_message(self, record: logging.LogRecord):
         message = record.getMessage()
-        if record.exc_info:
+        if record.exc_info and not record.exc_text:
             # Cache the traceback text to avoid converting it multiple times
             # (it's constant anyway)
-            if not record.exc_text:
-                record.exc_text = self.formatException(record.exc_info)
+            record.exc_text = self.formatException(record.exc_info)
         if record.exc_text:
             if message[-1:] != "\n":
                 message = message + "\n"
@@ -323,10 +321,8 @@ class RequestJsonFormatter(_BaseJsonFormatter):
             status_code = record.status_code
         except AttributeError:
             if isinstance(record.args, SafeAtoms):
-                try:
+                with contextlib.suppress(Exception):
                     status_code = int(record.args["s"])
-                except Exception:
-                    pass
         if status_code is not None:
             result["status_code"] = status_code
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Union
+from typing import Annotated, Any
 
 from sqlalchemy import func, text
 from sqlalchemy.dialects.postgresql import (
@@ -18,7 +18,6 @@ from sqlalchemy.dialects.postgresql import (
     VARCHAR,
 )
 from sqlalchemy.orm import mapped_column
-from typing_extensions import Annotated
 
 __all__ = [
     "uuid_pk",
@@ -50,4 +49,4 @@ str_ts = Annotated[str, mapped_column(TSVECTOR)]
 
 timestamp_tz = Annotated[datetime, mapped_column(TIMESTAMP(timezone=True))]
 
-jsonb = Annotated[Union[List[Any], Dict[str, Any]], mapped_column(JSONB)]
+jsonb = Annotated[list[Any] | dict[str, Any], mapped_column(JSONB)]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import logging
-from typing import Any, Optional, Type, TypeVar
+from typing import Any, TypeVar
 
 import sqlalchemy as sa
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
@@ -24,10 +24,10 @@ class IntEnumType(sa.types.TypeDecorator, ScalarCoercible):
     python_type = ET
 
     # internal attributes
-    _enum_type: Type[ET]
-    _impl_type: Type[sa.types.Integer]
+    _enum_type: type[ET]
+    _impl_type: type[sa.types.Integer]
 
-    def __init__(self, enum_type: Type[ET], impl_type: Optional[Type[sa.Integer]] = None, *args, **kwargs):
+    def __init__(self, enum_type: type[ET], impl_type: type[sa.Integer] | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._enum_type = enum_type
         self._impl_type = impl_type
@@ -38,7 +38,7 @@ class IntEnumType(sa.types.TypeDecorator, ScalarCoercible):
         else:
             return dialect.type_descriptor(self.impl)
 
-    def process_bind_param(self, value: Optional[ET], dialect):
+    def process_bind_param(self, value: ET | None, dialect):
         if value is None:
             return None
 
@@ -47,7 +47,7 @@ class IntEnumType(sa.types.TypeDecorator, ScalarCoercible):
         else:
             return value
 
-    def process_result_value(self, value: Optional[Any], dialect):
+    def process_result_value(self, value: Any | None, dialect):
         if value is None:
             return None
         try:
@@ -55,7 +55,7 @@ class IntEnumType(sa.types.TypeDecorator, ScalarCoercible):
         except ValueError as e:
             raise exc.InvalidParamValueError(f"Unknown enum value: {value}") from e
 
-    def _coerce(self, value: Optional[Any]) -> Optional[ET]:
+    def _coerce(self, value: Any | None) -> ET | None:
         if value is not None and not isinstance(value, enum.Enum):
             try:
                 return self._enum_type(value)

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import contextlib
 import enum
 import json
 import logging
 from dataclasses import asdict, dataclass
-from typing import Optional, Type, TypeVar
+from typing import TypeVar
 
 import sqlalchemy as sa
 from botocore.exceptions import BotoCoreError
+from django.conf import settings
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
-
-from django.conf import settings
 
 from lamb import exc
 from lamb.json import JsonEncoder
@@ -74,10 +74,10 @@ class ImageSlice(ResponseEncodableMixin):
     """Real stored image single slice"""
 
     title: str
-    mode: Optional[Mode]
+    mode: Mode | None
     url: str
-    width: Optional[int]
-    height: Optional[int]
+    width: int | None
+    height: int | None
 
     def response_encode(self, request=None):
         if "ImageUploadServiceAmazonS3" in settings.LAMB_IMAGE_UPLOAD_ENGINE:
@@ -85,10 +85,8 @@ class ImageSlice(ResponseEncodableMixin):
             if bucket_url:
                 s3_uploader = S3Uploader()
                 _, _, path = s3_uploader.s3_parse_url(self.url)
-                try:
+                with contextlib.suppress(BotoCoreError):
                     self.url = s3_uploader.generate_presigned_url(path, 300)
-                except BotoCoreError:
-                    pass
         return asdict(self)
 
 
@@ -108,11 +106,11 @@ class ImageSlicesType(types.TypeDecorator):  # noqa
     impl = sa.VARCHAR
     python_type = list
 
-    _encoder_class: Type[JsonEncoder]
-    _slice_class: Type[IT]
+    _encoder_class: type[JsonEncoder]
+    _slice_class: type[IT]
 
     def __init__(
-        self, *args, encoder_class: Type[JsonEncoder] = JsonEncoder, slice_class: Type[IT] = ImageSlice, **kwargs
+        self, *args, encoder_class: type[JsonEncoder] = JsonEncoder, slice_class: type[IT] = ImageSlice, **kwargs
     ):
         self._encoder_class = encoder_class
         self._slice_class = slice_class
@@ -132,7 +130,7 @@ class ImageSlicesType(types.TypeDecorator):  # noqa
 
         # check params
         if not isinstance(value, list):
-            logger.warning("Invalid data type to store as image slices: %s" % value)
+            logger.warning(f"Invalid data type to store as image slices: {value}")
             raise exc.ServerError("Invalid data type to store as image slices")
         if not all([isinstance(s, self._slice_class) for s in value]):
             logger.warning(f"Invalid data type to store as image slices: {value}, required class = {self._slice_class}")
@@ -177,11 +175,11 @@ class ImageListSlicesType(types.TypeDecorator):  # noqa
     impl = sa.VARCHAR
     python_type = list
 
-    _encoder_class: Type[JsonEncoder]
-    _slice_class: Type[IT]
+    _encoder_class: type[JsonEncoder]
+    _slice_class: type[IT]
 
     def __init__(
-        self, *args, encoder_class: Type[JsonEncoder] = JsonEncoder, slice_class: Type[IT] = ImageSlice, **kwargs
+        self, *args, encoder_class: type[JsonEncoder] = JsonEncoder, slice_class: type[IT] = ImageSlice, **kwargs
     ):
         self._encoder_class = encoder_class
         self._slice_class = slice_class

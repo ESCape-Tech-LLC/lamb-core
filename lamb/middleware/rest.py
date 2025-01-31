@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import logging
 from collections import OrderedDict
-from typing import Any, Tuple
-
-from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
 from django.http import HttpResponse, StreamingHttpResponse
 from django.utils.deprecation import MiddlewareMixin
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
 from lamb.exc import (
     ApiError,
@@ -63,7 +62,7 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
             return response
 
         # try to encode response
-        if not isinstance(response, (HttpResponse, StreamingHttpResponse)):
+        if not isinstance(response, HttpResponse | StreamingHttpResponse):
             try:
                 response = JsonResponse(response, request=request)
             except Exception as e:
@@ -74,7 +73,7 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
     _exception_serializer = None
 
     @classmethod
-    def _default_exception_serializer(cls, exception: ApiError) -> Tuple[Any, int]:
+    def _default_exception_serializer(cls, exception: ApiError) -> tuple[Any, int]:
         result = OrderedDict()
         result["error_code"] = exception.app_error_code
         result["error_message"] = exception.message

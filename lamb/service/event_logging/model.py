@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime
-from typing import List
 
 from sqlalchemy import BOOLEAN, TIMESTAMP, VARCHAR, Column, ForeignKey, text
 from sqlalchemy.dialects.postgresql import ENUM, INET, JSONB
@@ -37,8 +36,8 @@ class EventTrack(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):
 
     # relations
     @declared_attr
-    def records(self) -> List["EventRecord"]:
-        return relationship("EventRecord", uselist=True, passive_updates=True, passive_deletes=True)  # type: List[EventRecord]
+    def records(self) -> list[EventRecord]:
+        return relationship("EventRecord", uselist=True, passive_updates=True, passive_deletes=True)
 
 
 class EventRecord(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):

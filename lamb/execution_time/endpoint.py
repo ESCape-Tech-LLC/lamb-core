@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 from lamb.utils.transformers import tf_list_string
 from lamb.utils.validators import validate_not_empty
@@ -13,7 +12,7 @@ __all__ = ["Endpoint"]
 class Endpoint:
     app_name: str
     url_name: str
-    http_methods: Optional[str] = None
+    http_methods: str | None = None
 
     def __post_init__(self):
         self.app_name = validate_not_empty(self.app_name)

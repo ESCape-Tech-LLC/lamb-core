@@ -36,8 +36,8 @@ class JSONType(TypeDecorator):
         # Check that value is JSON serializable
         try:
             string_value = json.dumps(value, cls=self._encoder_class)
-        except TypeError:
-            raise exc.ServerError("Invalid data type to store as JSON")
+        except TypeError as e:
+            raise exc.ServerError("Invalid data type to store as JSON") from e
 
         result = value if dialect.name == "postgresql" else string_value
         return result

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import logging
 import tempfile
-from typing import BinaryIO, Optional, Union
+from typing import BinaryIO
 
 from boto3.session import Session as AWSSession
-
 from django.conf import settings
 
 from lamb import exc
@@ -24,7 +23,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
 
     aws_session: AWSSession
 
-    def __init__(self, envelope_folder: Optional[str] = None, conn_cfg: Optional[S3BucketConfig] = None):
+    def __init__(self, envelope_folder: str | None = None, conn_cfg: S3BucketConfig | None = None):
         super().__init__(envelope_folder=envelope_folder)
 
         if conn_cfg is None:
@@ -35,11 +34,11 @@ class ImageUploadServiceAmazonS3(BaseUploader):
 
     def store_image(
         self,
-        image: Union[PILImage.Image, BinaryIO],
+        image: PILImage.Image | BinaryIO,
         proposed_file_name: str,
         request: LambRequest,
-        image_format: Optional[str] = None,
-        private: Optional[bool] = False,
+        image_format: str | None = None,
+        private: bool | None = False,
     ) -> str:
         """
         Implements specific storage logic
@@ -71,7 +70,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             except Exception as e:
                 raise exc.ServerError("Failed to save image") from e
 
-    def get_presigned_url(self, filename: str, expires_in: Optional[int] = 3600):
+    def get_presigned_url(self, filename: str, expires_in: int | None = 3600):
         relative_path = self.construct_relative_path(filename)
         presigned_url = self._s3_uploader.generate_presigned_url(relative_path, expires_in)
         logger.debug(f"Received S3 presigned URL: {presigned_url}")

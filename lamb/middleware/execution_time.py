@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import datetime
 import logging
-from typing import Dict, List, Optional, Tuple
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -28,13 +28,11 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
     @classmethod
     def append_mark(cls, request: LambRequest, message: str):
         """Appends new marker to request"""
-        try:
+        with contextlib.suppress(Exception):
             request.lamb_execution_meter.append_marker(message)
-        except Exception:
-            pass
 
     @lazy_default_ro(default=[])
-    def settings_skip_methods(self) -> List[str]:
+    def settings_skip_methods(self) -> list[str]:
         result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_METHODS", str, transform=tf_list_string, default=[])
         result = [r.upper() for r in result]
         logger.debug(f"<{self.__class__.__name__}>. settings_skip_methods: {result}")
@@ -47,7 +45,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         return result
 
     @lazy_default_ro(default={})
-    def settings_store_rates(self) -> Dict[Tuple[str, str], float]:
+    def settings_store_rates(self) -> dict[tuple[str, str], float]:
         result = settings.LAMB_EXECUTION_TIME_STORE_RATES
         logger.debug(f"<{self.__class__.__name__}>. settings_store_rates: {result}")
         return result
@@ -57,7 +55,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         """Appends metric object to request"""
         request.lamb_execution_meter = ExecutionTimeMeter()
 
-    def _finish(self, request: LambRequest, response: Optional[HttpResponse], exception: Optional[Exception]):
+    def _finish(self, request: LambRequest, response: HttpResponse | None, exception: Exception | None):
         """Stores collected data in database"""
         metric = LambExecutionTimeMetric()
         metric.http_method = request.method
@@ -71,7 +69,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             time_measure = request.lamb_execution_meter
 
             if time_measure.context:
-                if isinstance(time_measure.context, (list, tuple, set, dict)):
+                if isinstance(time_measure.context, list | tuple | set | dict):
                     metric.context = time_measure.context
                 else:
                     logger.warning(

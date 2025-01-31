@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import sqlalchemy.orm
-
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
@@ -16,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class LambLoglevelMixin:
-    log_level: Optional[str] = None
+    log_level: str | None = None
     db_session: sqlalchemy.orm.Session
 
     def __init__(self, *args, **kwargs):

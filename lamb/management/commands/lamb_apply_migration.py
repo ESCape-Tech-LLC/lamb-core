@@ -71,7 +71,7 @@ class Command(LambCommand):
         if not migration_file_path.is_file():
             raise CommandError(f"Object at path is not file: {migration_file_path}")
 
-        with open(migration_file_path, "r") as f:
+        with open(migration_file_path) as f:
             _STMT = f.read()
             env_bust = dpath_value(options, "env_bust", bool, default=False)
             if env_bust:

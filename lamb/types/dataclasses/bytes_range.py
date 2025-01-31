@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional, Self
+from typing import Self
 
 from lamb.exc import InvalidParamTypeError, InvalidParamValueError, RequestRangeError
 
 
 @dataclasses.dataclass(frozen=True)
 class BytesRange:
-    bytes_start: Optional[int] = None
-    bytes_end: Optional[int] = None
+    bytes_start: int | None = None
+    bytes_end: int | None = None
 
     @property
     def slice(self) -> slice:  # noqa: A003
@@ -33,7 +33,7 @@ class BytesRange:
         return str(self).__format__(format_spec)
 
     @classmethod
-    def parse_bytes_range(cls, value: str, safe: bool = True) -> Optional[Self]:
+    def parse_bytes_range(cls, value: str, safe: bool = True) -> Self | None:
         try:
             if not isinstance(value, str):
                 raise InvalidParamTypeError("Invalid object for bytes range parsing")
@@ -67,7 +67,7 @@ class BytesRange:
             else:
                 raise e
 
-    def content_range(self, length: int) -> Optional[str]:
+    def content_range(self, length: int) -> str | None:
         if self.bytes_start is None and self.bytes_end is None:
             return None
         match self.bytes_start, self.bytes_end:

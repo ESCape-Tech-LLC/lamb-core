@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import logging
 import os
 import uuid
+from collections.abc import Iterable
 from io import BytesIO
-from typing import Iterable, List, Optional, Type, Union
-
-from PIL import Image as PILImage
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image as PILImage
 
 from lamb import exc
 from lamb.types.image_type import IT, ImageSlice, Mode, SliceRule
@@ -36,7 +36,7 @@ def _is_base64(sb) -> bool:
         return False
 
 
-def _get_bytes_image_mime_type(data: bytes) -> Optional[str]:
+def _get_bytes_image_mime_type(data: bytes) -> str | None:
     try:
         stream = BytesIO(data)
 
@@ -48,7 +48,7 @@ def _get_bytes_image_mime_type(data: bytes) -> Optional[str]:
         return None
 
 
-class BaseUploader(object):
+class BaseUploader:
     def __init__(self, envelope_folder: str = None) -> None:
         super().__init__()
         self.enveloper_folder = envelope_folder
@@ -60,13 +60,13 @@ class BaseUploader(object):
 
     def process_image(
         self,
-        source_image: Union[PILImage.Image, str, BytesIO],
+        source_image: PILImage.Image | str | BytesIO,
         request: LambRequest,
         slices: Iterable[SliceRule] = (),
-        image_format: Optional[str] = None,
-        allow_svg: Optional[bool] = False,
-        slice_class: Type[IT] = ImageSlice,
-    ) -> List[IT]:
+        image_format: str | None = None,
+        allow_svg: bool | None = False,
+        slice_class: type[IT] = ImageSlice,
+    ) -> list[IT]:
         """
         Processes single image
 
@@ -82,17 +82,12 @@ class BaseUploader(object):
 
         is_svg = False
         try:
-            if isinstance(source_image, PILImage.Image):
-                src = source_image
-            else:
-                src = PILImage.open(source_image)
-        except IOError as e:
+            src = source_image if isinstance(source_image, PILImage.Image) else PILImage.open(source_image)
+        except OSError as e:
             if allow_svg:
                 # Seek to 0 if bytes and check if svg file
-                try:
+                with contextlib.suppress(AttributeError):
                     source_image.seek(0)
-                except AttributeError:
-                    pass
                 is_svg = file_is_svg(source_image)
             if not is_svg:
                 raise exc.InvalidParamTypeError("Could not open file as valid image") from e
@@ -161,11 +156,11 @@ class BaseUploader(object):
         self,
         request: LambRequest,
         slicing: Iterable[SliceRule] = (),
-        required_count: Optional[int] = None,
-        image_format: Optional[str] = None,
-        allow_svg: Optional[bool] = False,
-        slice_class: Type[IT] = ImageSlice,
-    ) -> List[List[IT]]:
+        required_count: int | None = None,
+        image_format: str | None = None,
+        allow_svg: bool | None = False,
+        slice_class: type[IT] = ImageSlice,
+    ) -> list[list[IT]]:
         """
         Performs uploading of request's image files.
 
@@ -205,7 +200,7 @@ class BaseUploader(object):
             raise exc.InvalidBodyStructureError("Uploading image is missing")
         if required_count is not None:
             if not isinstance(required_count, int):
-                logger.warning("Invalid data type received for required_count = %s" % required_count)
+                logger.warning(f"Invalid data type received for required_count = {required_count}")
                 raise exc.ServerError("Improperly configured uploader")
             if len(files) != required_count:
                 raise exc.InvalidBodyStructureError("Invalid count of uploading images")
@@ -226,7 +221,7 @@ class BaseUploader(object):
         return result
 
     def store_image(
-        self, image: PILImage.Image, proposed_file_name: str, request: LambRequest, image_format: Optional[str] = None
+        self, image: PILImage.Image, proposed_file_name: str, request: LambRequest, image_format: str | None = None
     ) -> str:
         """
         Implements specific storage logic

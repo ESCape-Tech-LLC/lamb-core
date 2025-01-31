@@ -1,12 +1,11 @@
 import logging
 from importlib import import_module
 
+from django.core.management.base import CommandError, LabelCommand
 from sqlalchemy.dialects.postgresql import DropEnumType
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.schema import DropSequence, DropTable
-
-from django.core.management.base import CommandError, LabelCommand
 
 from lamb.db.session import metadata
 from lamb.management.base import LambLoglevelMixin
@@ -66,8 +65,8 @@ class Command(LambLoglevelMixin, LabelCommand):
 
             metadata.create_all(**kwargs)
         except ImportError as e:
-            logging.warning("Module import failed: %s" % e)
-            raise CommandError('Failed to import module. "%s"' % e)
+            logging.warning(f"Module import failed: {e}")
+            raise CommandError(f'Failed to import module. "{e}"') from e
         except (SQLAlchemyError, DBAPIError) as e:
-            logger.warning("Database commit failed: %s" % e)
-            raise CommandError('Database error occurred. "%s"' % e)
+            logger.warning(f"Database commit failed: {e}")
+            raise CommandError(f'Database error occurred. "{e}"') from e

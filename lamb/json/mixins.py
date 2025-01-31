@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 from sqlalchemy import Column, inspect
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -27,9 +26,9 @@ logger = logging.getLogger(__name__)
 _DEFAULT_ATTRIBUTE_NAMES_REGISTRY = {}
 
 
-class ResponseEncodableMixin(object):
+class ResponseEncodableMixin:
     @classmethod
-    def response_attributes(cls) -> List:
+    def response_attributes(cls) -> list:
         return None
 
     def response_encode(self, request=None) -> dict:
@@ -85,7 +84,7 @@ class ResponseEncodableMixin(object):
                 elif isinstance(orm_descriptor, Column):
                     orm_attr_name = orm_descriptor.name
                 elif isinstance(
-                    orm_descriptor, (ColumnProperty, RelationshipProperty, QueryableAttribute, SynonymProperty)
+                    orm_descriptor, ColumnProperty | RelationshipProperty | QueryableAttribute | SynonymProperty
                 ):
                     orm_attr_name = orm_descriptor.key
                 elif isinstance(orm_descriptor, hybrid_property):

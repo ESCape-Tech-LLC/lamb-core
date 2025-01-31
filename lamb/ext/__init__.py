@@ -1,1 +1,1 @@
-""" Extensions to external libraries """
+"""Extensions to external libraries"""

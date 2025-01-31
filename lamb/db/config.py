@@ -3,7 +3,8 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-from typing import Any, Callable, Dict, List, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
 import furl
 
@@ -25,22 +26,22 @@ auto = object()
 
 @dataclasses.dataclass(frozen=True)
 class Config:
-    driver: Optional[str] = None
-    async_driver: Optional[str] = None
-    host: Optional[str | List[str]] = None
-    port: Optional[int | List[int]] = None
-    db_name: Optional[str] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    app_name: Optional[str] = auto
+    driver: str | None = None
+    async_driver: str | None = None
+    host: str | list[str] | None = None
+    port: int | list[int] | None = None
+    db_name: str | None = None
+    username: str | None = None
+    password: str | None = None
+    app_name: str | None = auto
 
-    connect_options: Optional[Union[Callable, Dict[str, Any]]] = None
-    session_options: Optional[Union[Callable, Dict[str, Any]]] = None
-    engine_options: Optional[Union[Callable, Dict[str, Any]]] = None
+    connect_options: Callable | dict[str, Any] | None = None
+    session_options: Callable | dict[str, Any] | None = None
+    engine_options: Callable | dict[str, Any] | None = None
 
-    aconnect_options: Optional[Union[Callable, Dict[str, Any]]] = None
-    asession_options: Optional[Union[Callable, Dict[str, Any]]] = None
-    aengine_options: Optional[Union[Callable, Dict[str, Any]]] = None
+    aconnect_options: Callable | dict[str, Any] | None = None
+    asession_options: Callable | dict[str, Any] | None = None
+    aengine_options: Callable | dict[str, Any] | None = None
 
     def __post_init__(self):
         # TODO: check only for postrgesql
@@ -107,7 +108,7 @@ class Config:
         return result.url
 
     # connect options
-    def connect_options_(self, sync: bool, pooled: bool) -> Dict[str, Any]:
+    def connect_options_(self, sync: bool, pooled: bool) -> dict[str, Any]:
         _options = self.connect_options if sync else self.aconnect_options
 
         if _options is None:
@@ -135,7 +136,7 @@ class Config:
         return result
 
     # session options
-    def session_options_(self, sync: bool, pooled: bool) -> Dict[str, Any]:
+    def session_options_(self, sync: bool, pooled: bool) -> dict[str, Any]:
         _options = self.session_options if sync else self.asession_options
 
         if _options is None:
@@ -149,7 +150,7 @@ class Config:
             raise InvalidDatabaseConfigError
 
     # engine options
-    def engine_options_(self, sync: bool, pooled: bool) -> Dict[str, Any]:
+    def engine_options_(self, sync: bool, pooled: bool) -> dict[str, Any]:
         # early returns
         _options = self.engine_options if sync else self.aengine_options
 
@@ -215,7 +216,7 @@ class Config:
         return result
 
 
-def parse_django_config() -> Dict[str, Config]:
+def parse_django_config() -> dict[str, Config]:
     from django.conf import settings
 
     result = {}

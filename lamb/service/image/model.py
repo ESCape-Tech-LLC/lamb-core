@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import BIGINT, VARCHAR
@@ -18,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 # declarative base and mixins
-class ImageMixin(object):
+class ImageMixin:
     """Abstract mixin for image subclasses."""
 
-    __slicing__: List[SliceRule] = [SliceRule("origin", -1, Mode.NoAction, "")]
+    __slicing__: list[SliceRule] = [SliceRule("origin", -1, Mode.NoAction, "")]
     slices_info = Column(ImageSlicesType, nullable=False)
 
 

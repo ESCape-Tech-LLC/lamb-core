@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from enum import IntEnum, unique
-from typing import Any, List, Optional, Type, Union
+from typing import Any
 
 __all__ = [
     "LambExceptionCodes",
@@ -80,7 +80,7 @@ class ApiError(Exception):
     message: str
     status_code: int
     app_error_code: int
-    error_details: Optional[Any]
+    error_details: Any | None
 
     def __init__(self, message=None, status_code=None, app_error_code=None, error_details=None):
         status_code = status_code or self._status_code
@@ -241,10 +241,10 @@ class ThrottlingError(ClientError):
     _status_code = 429
     _message = "Too many requests"
 
-    limits: Optional[list]
+    limits: list | None
 
     def __init__(self, *args, limits=None, **kwargs):
-        super(ThrottlingError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.limits = limits or []
 
 
@@ -278,12 +278,12 @@ class HumanFriendlyMultipleError(HumanFriendlyError):
     _app_error_code = LambExceptionCodes.HumanFriendlyMultiple
     _message = None
     _status_code = 400
-    wrapped_errors: List[ApiError]
+    wrapped_errors: list[ApiError]
 
     def __init__(
         self,
         *args,
-        wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None,
+        wrapped_errors: list[ApiError | type[ApiError]] = None,
         header: str = None,
         **kwargs,
     ):

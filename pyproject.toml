@@ -16,45 +16,39 @@ filename = "lamb/__init__.py"
 
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py311"
 line-length = 120
 exclude = [
     "playground*.ipynb",
-    "tests/*"
+    "tests"
 ]
 
 [tool.ruff.lint]
-#select = [
-#    # pycodestyle
-#    "E",
-#    # Pyflakes
-#    "F",
-##    # pyupgrade
-##    "UP",
-#    # flake8-bugbear
-#    "B",
-##    # flake8-simplify
-##    "SIM",
-##    # isort
-##    "I",
-#]
 extend-select = [
-    "A", "FA",
+    "A",
+    "FA",
     # isort
     "I",
-    # flake8-bugbear
-    "B",
-    # flake8-simplify
-    "SIM",
-    # pyupgrade
-    "UP",
+#    # flake8-bugbear
+#    "B",
+#    # flake8-simplify
+#    "SIM",
+#    # pyupgrade
+#    "UP",
 ]
-fixable = ["I"]
+fixable = [
+    "I",
+#    "UP", "SIM"
+]
 ignore = ["F401", "E402"]
 
 [tool.ruff.lint.isort]
-section-order = ["future", "standard-library", "third-party", "django", "lamb", "first-party", "local-folder"]
+section-order = ["future", "standard-library", "third-party", "lamb", "first-party", "local-folder"]
 
 [tool.ruff.lint.isort.sections]
-"django" = ["django"]
 "lamb" = ["lamb"]
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+indent-style = "space"

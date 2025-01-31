@@ -5,9 +5,8 @@ import uuid
 from decimal import Decimal
 
 import lazy_object_proxy
-from sqlalchemy_utils import PhoneNumber
-
 from django.conf import settings
+from sqlalchemy_utils import PhoneNumber
 
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.utils.core import import_by_name

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional  # noqa: F401
+from typing import Any
 
+from django.conf import settings
 from sqlalchemy import (
     BIGINT,
     FLOAT,
@@ -21,8 +22,6 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from django.conf import settings
 
 from lamb.db.session import DeclarativeBase
 from lamb.exc import ImproperlyConfiguredError
@@ -50,22 +49,22 @@ class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
         primary_key=True,
         server_default=func.CURRENT_TIMESTAMP(),
     )
-    app_name: Mapped[Optional[str]] = mapped_column(VARCHAR(100))
-    url_name: Mapped[Optional[str]] = mapped_column(VARCHAR(100))
-    http_method: Mapped[Optional[str]] = mapped_column(VARCHAR(15))
-    headers: Mapped[Optional[Dict[str, Any]]] = mapped_column(_JSON)
-    args: Mapped[Optional[Dict[str, Any]]] = mapped_column(_JSON)
+    app_name: Mapped[str | None] = mapped_column(VARCHAR(100))
+    url_name: Mapped[str | None] = mapped_column(VARCHAR(100))
+    http_method: Mapped[str | None] = mapped_column(VARCHAR(15))
+    headers: Mapped[dict[str, Any] | None] = mapped_column(_JSON)
+    args: Mapped[dict[str, Any] | None] = mapped_column(_JSON)
     device_info: Mapped[DeviceInfo] = mapped_column(
         DeviceInfoType,
         default=DeviceInfo(),
         server_default=text("'{}'::JSONB"),
     )
-    status_code: Mapped[Optional[int]] = mapped_column(SMALLINT)
+    status_code: Mapped[int | None] = mapped_column(SMALLINT)
     elapsed_time: Mapped[float] = mapped_column(FLOAT, default=0.0, server_default=text("0"))
-    context: Mapped[Optional[Any]] = mapped_column(_JSON, nullable=True)
+    context: Mapped[Any | None] = mapped_column(_JSON, nullable=True)
 
     # relations
-    markers: Mapped[List[LambExecutionTimeMarker]] = relationship(
+    markers: Mapped[list[LambExecutionTimeMarker]] = relationship(
         "LambExecutionTimeMarker",
         back_populates="metric",
         primaryjoin="LambExecutionTimeMetric.metric_id == foreign(LambExecutionTimeMarker.metric_id)",
@@ -128,7 +127,7 @@ class LambExecutionTimeMarker(ResponseEncodableMixin, DeclarativeBase):
     absolute_interval: Mapped[float] = mapped_column(FLOAT, nullable=False)
     relative_interval: Mapped[float] = mapped_column(FLOAT, nullable=False)
     percentage: Mapped[float] = mapped_column(FLOAT, nullable=False)
-    marker: Mapped[Optional[str]] = mapped_column(VARCHAR, nullable=True)
+    marker: Mapped[str | None] = mapped_column(VARCHAR, nullable=True)
 
     # relations
     metric = relationship(
