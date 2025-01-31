@@ -115,6 +115,7 @@ __all__ = [
     "TZ_MSK",
     "TZ_UTC",
     "humanize_bytes",
+    "bank_card_type_parse",
 ]
 
 
@@ -733,6 +734,40 @@ def humanize_bytes(num, suffix="b"):
             return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
     return f"{num:.1f}Y{suffix}"
+
+
+BANK_CARDS_REGEX_MAPPING = {
+    "VISA": re.compile(r"^4[0-9]{12}(?:[0-9]{3})?$"),
+    "MASTER CARD": re.compile(r"^(?:5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}$"),
+    "AMERICAN EXPRESS": re.compile(r"^3[47][0-9]{13}$"),
+    "JCB": re.compile(r"^(?:2131|1800|35\d{3})\d{11}$"),
+    "DINERS CLUB": re.compile(r"^3(?:0[0-5]|[68][0-9])[0-9]{11}$"),
+    "DISCOVER": re.compile(r"^6(?:011|5[0-9]{2})[0-9]{12}$"),
+    "MIR": re.compile(r"^220[0-4][0-9]{12}$"),
+}
+
+
+def bank_card_type_parse(masked_pan: str) -> Optional[str]:
+    # replace masking symbols
+    _pan = masked_pan
+    _pan = _pan.replace("-", "")
+    _pan = _pan.replace(" ", "")
+    _pan = _pan.replace("X", "*")
+
+    # padding from last unknown symbol
+    if len(_pan) < 16 and "*" in _pan:
+        last_index = _pan.rindex("*")
+        _pan = _pan[:last_index] + "*" * (16 - len(_pan)) + _pan[last_index:]
+
+    # finally replace
+    _pan = _pan.replace("*", "0")
+    card_type = None
+    for result, regex in BANK_CARDS_REGEX_MAPPING.items():
+        if regex.match(_pan) is not None:
+            card_type = result
+            break
+
+    return card_type
 
 
 # time cached
