@@ -54,7 +54,7 @@ class DeprecationClassHelper(object):
 
 class DeprecationClassMixin:
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         try:
             target_cls = self.__class__.__bases__[-1]
             msg = f"Class {self.__class__.__name__} is deprecated, use {target_cls.__name__} instead"
@@ -62,6 +62,8 @@ class DeprecationClassMixin:
             msg = f"Class {self.__class__.__name__} is deprecated"
 
         warnings.warn(msg, DeprecationWarning, stacklevel=1)
+
+        super().__init__(*args, **kwargs)
 
 
 def compact(*args, traverse: bool = False, collapse: bool = False) -> Union[list, dict, tuple]:
