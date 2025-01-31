@@ -7,6 +7,7 @@ from collections import OrderedDict
 from django.conf import settings
 from django.http import HttpResponse, StreamingHttpResponse
 from django.core.exceptions import RequestDataTooBig
+from django.utils.deprecation import MiddlewareMixin
 
 # SQLAlchemy
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
@@ -22,7 +23,6 @@ from lamb.exc import (
 from lamb.json import JsonResponse
 from lamb.utils import LambRequest, dpath_value
 from lamb.utils.core import import_by_name
-from lamb.middleware.async_mixin import AsyncMiddlewareMixin
 
 try:
     from cassandra import DriverException
@@ -42,7 +42,10 @@ logger = logging.getLogger(__name__)
 __all__ = ["LambRestApiJsonMiddleware"]
 
 
-class LambRestApiJsonMiddleware(AsyncMiddlewareMixin):
+# TODO: migrate to async/sync version
+
+
+class LambRestApiJsonMiddleware(MiddlewareMixin):
     """Simple middleware that converts data to JSON.
 
     1. Looks for all exceptions and converts it to JSON representation

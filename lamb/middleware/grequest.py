@@ -8,7 +8,7 @@ import logging
 from django.http import HttpResponse
 
 # Lamb Framework
-from lamb.middleware.async_mixin import AsyncMiddlewareMixin
+from lamb.middleware.base import LambMiddlewareMixin
 
 __all__ = ["LambGRequestMiddleware"]
 
@@ -16,7 +16,7 @@ __all__ = ["LambGRequestMiddleware"]
 logger = logging.getLogger(__name__)
 
 
-class LambGRequestMiddleware(AsyncMiddlewareMixin):
+class LambGRequestMiddleware(LambMiddlewareMixin):
     """
     Provides storage for the "current" request object, so that code anywhere
     in your project can access it, without it having to be passed to that code
@@ -25,21 +25,18 @@ class LambGRequestMiddleware(AsyncMiddlewareMixin):
     Drop in replacement for CRequestMiddleware
     """
 
-    def _call(self, request) -> HttpResponse:
-        logger.debug(f"<{self.__class__.__name__}>: Attaching request to context")
-        self.__class__.set_request(request)
-        response = self.get_response(request)
-        logger.debug(f"<{self.__class__.__name__}>: Detaching request from context")
-        self.__class__.del_request()
+    def before_request(self, request):
+        LambGRequestMiddleware.set_request(request)
+        logger.debug(f"<{self.__class__.__name__}>: Did attach request to context")
+
+    def after_response(self, request, response: HttpResponse):
+        LambGRequestMiddleware.del_request()
+        logger.debug(f"<{self.__class__.__name__}>: Did detach request from context")
         return response
 
-    async def _acall(self, request) -> HttpResponse:
-        logger.debug(f"<{self.__class__.__name__}>: Attaching request to context")
-        self.__class__.set_request(request)
-        response = await self.get_response(request)
-        logger.debug(f"<{self.__class__.__name__}>: Detaching request from context")
-        self.__class__.del_request()
-        return response
+    def process_exception(self, request, exception: Exception):
+        LambGRequestMiddleware.del_request()
+        logger.debug(f"<{self.__class__.__name__}>: Did detach request from context on exception")
 
     @classmethod
     def get_request(cls, default=None):

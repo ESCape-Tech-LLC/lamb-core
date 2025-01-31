@@ -4,7 +4,8 @@ from django.conf import settings
 from django.http import HttpResponse
 
 # Lamb Framework
-from lamb.middleware.async_mixin import AsyncMiddlewareMixin
+from lamb.utils import LambRequest
+from lamb.middleware.base import LambMiddlewareMixin
 
 __all__ = ["LambCorsMiddleware"]
 
@@ -12,9 +13,9 @@ __all__ = ["LambCorsMiddleware"]
 logger = logging.getLogger(__name__)
 
 
-class LambCorsMiddleware(AsyncMiddlewareMixin):
-    def process_response(self, _, response: HttpResponse) -> HttpResponse:
-        logger.debug(f"<{self.__class__.__name__}>: Processing response: {response}")
+class LambCorsMiddleware(LambMiddlewareMixin):
+
+    def after_response(self, request: LambRequest, response: HttpResponse):
         if settings.LAMB_ADD_CORS_ENABLED:
             response["Access-Control-Allow-Origin"] = settings.LAMB_ADD_CORS_ORIGIN
             response["Access-Control-Allow-Methods"] = settings.LAMB_ADD_CORS_METHODS

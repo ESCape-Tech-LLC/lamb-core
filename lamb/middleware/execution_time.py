@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["LambExecutionTimeMiddleware"]
 
+# TODO: modify to act like StatsD daemon
+# TODO: migrate to async/sync version
+
 
 class LambExecutionTimeMiddleware(MiddlewareMixin):
     @classmethod
@@ -50,6 +53,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         logger.debug(f"<{self.__class__.__name__}>. settings_store_rates: {result}")
         return result
 
+    # utils
     def _start(self, request):
         """Appends metric object to request"""
         request.lamb_execution_meter = ExecutionTimeMeter()
@@ -139,6 +143,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                 }
             logger.log(level, msg, extra=extra)
 
+    # lifecycle
     def process_request(self, request: LambRequest):
         logger.debug(f"<{self.__class__.__name__}>: Start - attaching etm")
         self._start(request=request)
