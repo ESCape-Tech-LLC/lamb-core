@@ -30,6 +30,7 @@ __all__ = [
     "AuthTokenExpiredError",
     "AuthForbiddenError",
     "AuthCredentialsInvalidError",
+    "RequestRangeError",
 ]
 
 
@@ -55,6 +56,7 @@ class LambExceptionCodes(IntEnum):
     AlreadyExist = 13
     RequestBodyTooBig = 14
     AuthCredentialsInvalid = 15
+    RequestRange = 16
 
     # throttling and rate limiters
     Throttling = 101
@@ -317,3 +319,9 @@ class RequestBodyTooBigError(ClientError):
     _app_error_code = LambExceptionCodes.RequestBodyTooBig
     _status_code = 400
     _message = "Request data too big"
+
+
+class RequestRangeError(ClientError):
+    _app_error_code = LambExceptionCodes.RequestRange
+    _status_code = 416
+    _message = "Requested Range Not Satisfiable"
