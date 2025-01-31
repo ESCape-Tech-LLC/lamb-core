@@ -4,7 +4,6 @@ from functools import wraps
 
 from django.conf import settings
 
-# Lamb Framework
 from lamb.json import JsonResponse
 from lamb.service.redis.config import RedisConfig
 

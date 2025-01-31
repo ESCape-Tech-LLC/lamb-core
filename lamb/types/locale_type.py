@@ -1,14 +1,11 @@
 import logging
 
 import babel
-
-# SQLAlchemy
 from sqlalchemy import types
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
 from django.conf import settings
 
-# Lamb Framework
 from lamb.exc import InvalidParamValueError, ServerError
 from lamb.json.mixins import ResponseEncodableMixin
 

@@ -7,7 +7,6 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import furl
 
-# Lamb Framework
 from lamb.exc import ImproperlyConfiguredError, ServerError
 from lamb.utils import get_settings_value
 from lamb.utils.core import compact, masked_url
@@ -155,7 +154,6 @@ class Config:
         _options = self.engine_options if sync else self.aengine_options
 
         if _options is None:
-            # Lamb Framework
             from lamb.json.encoder import JsonEncoder  # TODO: check move to top level
 
             # extract driver

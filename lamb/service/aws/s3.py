@@ -13,7 +13,6 @@ from furl import furl
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
-# Lamb Framework
 from lamb import exc
 from lamb.json.mixins import ResponseEncodableMixin
 

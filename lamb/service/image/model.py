@@ -3,15 +3,13 @@ from __future__ import annotations
 import logging
 from typing import List
 
-# SQLAlchemy
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import BIGINT, VARCHAR
 from sqlalchemy.ext.declarative import AbstractConcreteBase
 
-# Lamb Framework
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.types.image import ImageSlicesType, Mode, SliceRule
+from lamb.types.image_type import ImageSlicesType, Mode, SliceRule
 
 __all__ = ["AbstractImage", "ImageMixin"]
 

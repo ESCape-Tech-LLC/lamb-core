@@ -6,13 +6,11 @@ import json
 import logging
 from typing import Type
 
-# SQLAlchemy
 from sqlalchemy import TEXT, VARCHAR, Column
 
 from django.conf import settings
 from django.core.cache import cache
 
-# Lamb Framework
 from lamb import exc
 from lamb.db.context import lamb_db_context
 from lamb.db.patterns import DbEnum
@@ -39,15 +37,14 @@ class BaseConverter(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def process_bind_param(self, value):
         logger.warning(
-            f"Call to abstract method process_bind_param" f" on class = {self.__class__.__name__} with value = {value}"
+            f"Call to abstract method process_bind_param on class = {self.__class__.__name__} with value = {value}"
         )
         raise exc.ServerError("Invalid server configs")
 
     @abc.abstractmethod
     def process_result_value(self, value):
         logger.warning(
-            f"Call to abstract method process_result_value"
-            f" on class = {self.__class__.__name__} with value = {value}"
+            f"Call to abstract method process_result_value on class = {self.__class__.__name__} with value = {value}"
         )
 
 

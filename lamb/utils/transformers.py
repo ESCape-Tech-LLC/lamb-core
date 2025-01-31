@@ -11,7 +11,6 @@ from typing import List, Optional, Type, TypeVar, Union
 
 import dateutil
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
     InvalidParamTypeError,
@@ -72,7 +71,6 @@ _ISO_MSEC_REGEX = r"(?P<prefix>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?P<seconds>\
 def transform_datetime(value: Union[datetime, date, str, int, float], __format=None, **kwargs) -> datetime:
     from django.conf import settings
 
-    # Lamb Framework
     from lamb.utils import datetime_begin
 
     if __format is None and "format" in kwargs:

@@ -5,14 +5,10 @@ import os
 import pathlib
 
 import jinja2
-
-# SQLAlchemy
 from sqlalchemy import text
 
 from lamb.db.session import lamb_db_session_maker
 from lamb.management.base import CommandError, LambCommand
-
-# Lamb Framework
 from lamb.utils import dpath_value
 from lamb.utils.validators import validate_not_empty
 

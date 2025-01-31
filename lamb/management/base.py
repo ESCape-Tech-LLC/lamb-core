@@ -3,13 +3,11 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-# SQLAlchemy
 import sqlalchemy.orm
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-# Lamb Framework
 from lamb.db.session import lamb_db_session_maker
 
 __all__ = ["LambCommand", "LambLoglevelMixin", "CommandError"]

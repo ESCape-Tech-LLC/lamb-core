@@ -4,7 +4,6 @@ import logging
 import warnings
 from typing import Dict, Tuple, Union
 
-# SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -12,8 +11,6 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 
 from lamb.db.config import Config, parse_django_config
-
-# Lamb Framework
 from lamb.exc import ServerError
 from lamb.utils import get_settings_value
 
@@ -101,7 +98,7 @@ def get_session_maker(db_key: str = "default", pooled: bool = True, sync: bool =
 # metadata
 def get_declarative_base(db_key: str, pooled: bool, sync: bool):
     components = ["_".join(db_key.split()), "PT" if pooled else "PoolF", "ST" if sync else "SF"]
-    cls_name = f'Base{"_".join(components)}'
+    cls_name = f"Base{'_'.join(components)}"
     _result = declarative_base(name=cls_name)
     _metadata = _result.metadata
     _metadata.bind = get_engine(db_key, pooled=pooled, sync=sync)

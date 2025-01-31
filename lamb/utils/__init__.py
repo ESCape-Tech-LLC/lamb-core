@@ -20,8 +20,6 @@ from urllib.parse import unquote
 from xml.etree import cElementTree
 
 import requests
-
-# SQLAlchemy
 import sqlalchemy
 from asgiref.sync import sync_to_async
 from PIL import Image as PILImage
@@ -45,7 +43,7 @@ except ImportError:
     cassandra = None
     ModelQuerySet = None
 
-# Lamb Framework
+
 from lamb.exc import (
     ApiError,
     ExternalServiceError,
@@ -194,7 +192,7 @@ def response_paginated(
         params = request.GET
 
     # parse omit total
-    # Lamb Framework
+
     from lamb.utils.transformers import transform_boolean
 
     total_omit = dpath_value(
@@ -502,7 +500,7 @@ def response_filtered(
         params = request.GET
 
     # check params
-    # Lamb Framework
+
     from lamb.utils.filters import Filter
 
     if not isinstance(query, Query):
@@ -615,7 +613,7 @@ def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: 
     elif len(names) == 1:
         names_msg = names[0]
     else:
-        names_msg = f'{names[0]} ({"/".join(names[1:])})'
+        names_msg = f"{names[0]} ({'/'.join(names[1:])})"
 
     # check deprecations
     if len(names) > 1:
@@ -671,7 +669,6 @@ def inject_app_defaults(application: str):
                 if not hasattr(_settings, _k):
                     setattr(_settings, _k, getattr(_app_settings, _k))
 
-        # Lamb Framework
         from lamb.utils.dpath import adapt_dict_impl
 
         adapt_dict_impl()
@@ -692,8 +689,8 @@ def check_device_info_versions_above(
     - `default` value used in case of device_info version missing
     - for matched platforms compare app_build field and returns True/False depends on result
     """
-    # Lamb Framework
-    from lamb.types.device_info import DeviceInfo
+
+    from lamb.types.device_info_type import DeviceInfo
 
     # prepare params
     if isinstance(source, HttpRequest):

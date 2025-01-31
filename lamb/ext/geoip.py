@@ -13,7 +13,6 @@ from ipware import get_client_ip
 from django.conf import settings
 from django.http import HttpRequest
 
-# Lamb Framework
 from lamb.utils import LambRequest
 
 logger = logging.getLogger(__name__)

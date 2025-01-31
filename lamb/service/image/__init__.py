@@ -1,5 +1,3 @@
-# Lamb Framework
-
 from .model import AbstractImage, ImageMixin
 from .uploaders import BaseUploader, ImageUploadServiceAmazonS3, ImageUploadServiceDisk
 from .utils import (

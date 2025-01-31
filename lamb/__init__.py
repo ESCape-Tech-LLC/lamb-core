@@ -5,7 +5,6 @@ import logging
 
 from django.apps import AppConfig
 
-# Lamb Framework
 from lamb.utils import inject_app_defaults
 
 logger = logging.getLogger(__name__)

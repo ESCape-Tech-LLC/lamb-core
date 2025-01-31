@@ -7,7 +7,6 @@ from urllib.parse import urljoin
 
 from django.conf import settings
 
-# Lamb Framework
 from lamb.exc import ServerError
 from lamb.service.aws.s3 import S3Uploader
 from lamb.types import IT, SliceRule

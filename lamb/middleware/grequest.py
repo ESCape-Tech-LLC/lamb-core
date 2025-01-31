@@ -7,7 +7,6 @@ import logging
 
 from django.http import HttpResponse
 
-# Lamb Framework
 from lamb.middleware.base import LambMiddlewareMixin
 
 __all__ = ["LambGRequestMiddleware"]

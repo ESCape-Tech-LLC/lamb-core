@@ -8,7 +8,6 @@ from typing import Optional
 
 from lxml.etree import _Element, tostring
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
     InvalidBodyStructureError,

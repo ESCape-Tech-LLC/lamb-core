@@ -12,8 +12,6 @@ from django.utils.deprecation import MiddlewareMixin
 from lamb.db.context import lamb_db_context
 from lamb.execution_time import ExecutionTimeMeter
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
-
-# Lamb Framework
 from lamb.utils import LambRequest, dpath_value
 from lamb.utils.core import lazy_default_ro
 from lamb.utils.transformers import tf_list_string, transform_boolean

@@ -2,8 +2,6 @@ import logging
 
 from lamb.db.session import lamb_db_session_maker
 from lamb.middleware.base import LambMiddlewareMixin
-
-# Lamb Framework
 from lamb.utils import LambRequest
 
 logger = logging.getLogger(__name__)
@@ -13,7 +11,6 @@ __all__ = ["LambSQLAlchemyMiddleware"]
 
 
 class LambSQLAlchemyMiddleware(LambMiddlewareMixin):
-
     def __call__(self, request: LambRequest):
         if self.async_mode:
             return self.__acall__(request)

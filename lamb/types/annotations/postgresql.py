@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Union
 
-# SQLAlchemy
 from sqlalchemy import func, text
 from sqlalchemy.dialects.postgresql import (
     BIGINT,

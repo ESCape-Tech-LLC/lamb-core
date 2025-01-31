@@ -5,7 +5,6 @@ Django default error views
 
 from django.http import HttpRequest
 
-# Lamb Framework
 from lamb.exc import ClientError, NotExistError, ServerError
 from lamb.json.response import JsonResponse
 from lamb.middleware.rest import LambRestApiJsonMiddleware

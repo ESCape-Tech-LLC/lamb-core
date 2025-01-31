@@ -7,7 +7,6 @@ import furl
 
 from django.conf import settings
 
-# Lamb Framework
 from lamb import exc
 from lamb.utils import LambRequest
 

@@ -8,7 +8,6 @@ from boto3.session import Session as AWSSession
 
 from django.conf import settings
 
-# Lamb Framework
 from lamb import exc
 from lamb.service.aws.s3 import S3BucketConfig, S3Uploader
 from lamb.utils import LambRequest

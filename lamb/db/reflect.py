@@ -1,10 +1,8 @@
 import logging
 
-# SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy.inspection import inspect
 
-# Lamb Framework
 from lamb.exc import ServerError
 from lamb.utils.core import lazy
 

@@ -1,6 +1,5 @@
 import logging
 
-# SQLAlchemy
 from sqlalchemy.orm.session import Session as SASession
 
 from .session import lamb_db_session_maker

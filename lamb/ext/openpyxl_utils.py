@@ -8,7 +8,6 @@ from openpyxl.cell.cell import Cell as OpenpyxlCell
 from openpyxl.workbook import Workbook as OpenpyxlWorkbook
 from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
     InvalidBodyStructureError,

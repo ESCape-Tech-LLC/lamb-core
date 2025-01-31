@@ -9,7 +9,6 @@ from typing import Dict, List, Tuple
 
 import redis
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
     ExternalServiceError,

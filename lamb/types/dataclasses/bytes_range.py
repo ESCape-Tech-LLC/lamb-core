@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 from typing import Optional, Self
 
-# Lamb Framework
 from lamb.exc import InvalidParamTypeError, InvalidParamValueError, RequestRangeError
 
 

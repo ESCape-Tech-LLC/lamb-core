@@ -4,7 +4,6 @@ import logging
 from collections import OrderedDict
 from typing import Any, Tuple
 
-# SQLAlchemy
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
 from django.conf import settings
@@ -12,7 +11,6 @@ from django.core.exceptions import RequestDataTooBig
 from django.http import HttpResponse, StreamingHttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
     DatabaseError,

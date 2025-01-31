@@ -11,25 +11,9 @@
 # pre-commit run --all-files --color never > pre-commit.log
 
 repos:
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.4
     hooks:
-      - id: black
-        language_version: python3.12
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: [ "--filter-files" ]
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - flake8-builtins
-          - flake8-future-annotations
-          - flake8-rst-docstrings
-          - pydocstyle
-          - pygments
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format

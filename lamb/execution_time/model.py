@@ -4,7 +4,6 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional  # noqa: F401
 
-# SQLAlchemy
 from sqlalchemy import (
     BIGINT,
     FLOAT,
@@ -26,11 +25,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from django.conf import settings
 
 from lamb.db.session import DeclarativeBase
-
-# Lamb Framework
 from lamb.exc import ImproperlyConfiguredError
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.types import DeviceInfo, DeviceInfoType
+
+# from lamb.types import DeviceInfo, DeviceInfoType
+from lamb.types.device_info_type import DeviceInfo, DeviceInfoType
 from lamb.utils import tz_now
 
 __all__ = ["LambExecutionTimeMarker", "LambExecutionTimeMetric"]

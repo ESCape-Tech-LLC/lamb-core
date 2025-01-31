@@ -5,12 +5,10 @@ import logging
 import uuid
 from typing import AnyStr, List, Optional, TypeVar, Union
 
-# SQLAlchemy
 from sqlalchemy_utils import PhoneNumber
 
 from django.core.validators import EmailValidator, URLValidator, ValidationError
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
     InvalidParamTypeError,
@@ -213,7 +211,7 @@ def validate_ip_address(value: Optional[str], version: Optional[int] = None, all
         raise InvalidParamValueError("Invalid ip address") from e
     if version is not None and ip.version != version:
         raise InvalidParamValueError(
-            f"Invalid ip address. Version check failed. " f"Actual: {ip.version}, requested: {version}."
+            f"Invalid ip address. Version check failed. Actual: {ip.version}, requested: {version}."
         )
     return value
 

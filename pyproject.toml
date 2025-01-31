@@ -1,14 +1,56 @@
+[tool.bumpversion]
+current_version = "3.4.19"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+commit = true
+message = "Bump version: {current_version} → {new_version}"
+tag = true
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+
+[[tool.bumpversion.files]]
+filename = "VERSION"
+
+[[tool.bumpversion.files]]
+filename = "lamb/__init__.py"
+
+
 [tool.ruff]
 target-version = "py312"
 line-length = 120
 exclude = [
-    "playground*.ipynb"
+    "playground*.ipynb",
+    "tests/*"
 ]
 
 [tool.ruff.lint]
-extend-select = ["A", "FA", "I"]
+#select = [
+#    # pycodestyle
+#    "E",
+#    # Pyflakes
+#    "F",
+##    # pyupgrade
+##    "UP",
+#    # flake8-bugbear
+#    "B",
+##    # flake8-simplify
+##    "SIM",
+##    # isort
+##    "I",
+#]
+extend-select = [
+    "A", "FA",
+    # isort
+    "I",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # pyupgrade
+    "UP",
+]
 fixable = ["I"]
-ignore = ["A005", "F401", "E402"]
+ignore = ["F401", "E402"]
 
 [tool.ruff.lint.isort]
 section-order = ["future", "standard-library", "third-party", "django", "lamb", "first-party", "local-folder"]
@@ -16,21 +58,3 @@ section-order = ["future", "standard-library", "third-party", "django", "lamb", 
 [tool.ruff.lint.isort.sections]
 "django" = ["django"]
 "lamb" = ["lamb"]
-
-#OLD
-#[tool.black]
-#line-length = 120
-#target-version = ['py312']
-#
-#[tool.isort]
-#py_version = 312
-#profile = 'black'
-#src_paths = ['lamb']
-#length_sort = true
-#known_django = 'django'
-#known_lamb = 'lamb'
-#known_sqlalchemy = 'sqlalchemy,sqlalchemy_utils'
-#import_heading_lamb = 'Lamb Framework'
-#import_heading_sqlalchemy = 'SQLAlchemy'
-#import_heading_firstparty = 'Project'
-#sections = 'FUTURE,STDLIB,DJANGO,SQLALCHEMY,LAMB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER'

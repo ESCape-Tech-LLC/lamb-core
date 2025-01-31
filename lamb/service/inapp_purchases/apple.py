@@ -3,7 +3,6 @@ from datetime import datetime
 
 import requests
 
-# Lamb Framework
 from lamb.exc import ExternalServiceError
 
 from .base import InAppAbstract, PurchaseData, SubscriptionStatus
@@ -63,7 +62,7 @@ class InAppApple(InAppAbstract):
                 data = self._make_request(sandbox=True)
         elif data["status"] == 21002:
             raise ExternalServiceError(
-                "The data in the receipt was malformed or the Apple service experienced a " "temporary issue"
+                "The data in the receipt was malformed or the Apple service experienced a temporary issue"
             )
         elif data["status"] != 0:
             raise ExternalServiceError("Unknown error for inapp purchase from Apple server")

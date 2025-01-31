@@ -14,7 +14,7 @@ try:
 except ImportError:
     ujson = None
 
-# Lamb Framework
+
 from lamb import exc
 from lamb.utils import dpath_value
 from lamb.utils.core import import_by_name

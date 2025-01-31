@@ -7,7 +7,6 @@ from typing import Union
 
 from django.utils.decorators import classonlymethod
 
-# Lamb Framework
 from lamb.exc import InvalidBodyStructureError, NotRealizedMethodError
 from lamb.utils import (
     CONTENT_ENCODING_MULTIPART,

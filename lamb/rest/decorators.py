@@ -2,7 +2,6 @@ from functools import wraps
 
 from django.http import HttpResponse
 
-# Lamb Framework
 from lamb.exc import NotAllowedMethodError
 from lamb.rest.rest_view import RestView
 

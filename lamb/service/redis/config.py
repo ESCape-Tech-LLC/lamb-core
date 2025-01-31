@@ -9,7 +9,6 @@ import furl
 import redis
 import redis.asyncio as redis_asyncio
 
-# Lamb Framework
 from lamb.exc import ImproperlyConfiguredError
 from lamb.utils.core import lazy
 from lamb.utils.transformers import tf_list_int, tf_list_string, transform_string_enum

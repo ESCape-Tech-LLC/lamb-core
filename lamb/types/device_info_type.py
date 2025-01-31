@@ -7,19 +7,16 @@ from functools import partial
 from typing import Any, Dict, Optional, Type, TypeVar
 
 from ipware import get_client_ip
-
-# SQLAlchemy
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
 
 from django.conf import settings
 
-# Lamb Framework
 from lamb import exc
 from lamb.ext.geoip import get_asn_info, get_city_info, get_country_info
 from lamb.json.encoder import JsonEncoder
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.types import LambLocale
+from lamb.types.locale_type import LambLocale
 from lamb.utils import LambRequest, dpath_value
 from lamb.utils.core import import_by_name
 from lamb.utils.validators import validate_length

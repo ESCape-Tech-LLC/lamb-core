@@ -4,7 +4,6 @@ import enum
 from datetime import datetime
 from typing import List
 
-# SQLAlchemy
 from sqlalchemy import BOOLEAN, TIMESTAMP, VARCHAR, Column, ForeignKey, text
 from sqlalchemy.dialects.postgresql import ENUM, INET, JSONB
 from sqlalchemy.ext.declarative import declared_attr
@@ -14,8 +13,6 @@ from sqlalchemy_utils import UUIDType
 from lamb.db.mixins import TimeMarksMixin
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
-
-# Lamb Framework
 from lamb.types import DeviceInfoType
 
 __all__ = ["EventSourceType", "EventTrack", "EventRecord"]
@@ -41,9 +38,7 @@ class EventTrack(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):
     # relations
     @declared_attr
     def records(self) -> List["EventRecord"]:
-        return relationship(
-            "EventRecord", uselist=True, passive_updates=True, passive_deletes=True
-        )  # type: List[EventRecord]
+        return relationship("EventRecord", uselist=True, passive_updates=True, passive_deletes=True)  # type: List[EventRecord]
 
 
 class EventRecord(ResponseEncodableMixin, TimeMarksMixin, DeclarativeBase):

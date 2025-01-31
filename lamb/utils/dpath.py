@@ -15,7 +15,6 @@ from lxml.etree import _ElementTree as Etree
 from django.conf import Settings
 from django.http.request import QueryDict
 
-# Lamb Framework
 from lamb import exc
 from lamb.ext.lxml import __lxml_hints_reverse_map__
 

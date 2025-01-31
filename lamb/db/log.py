@@ -1,6 +1,5 @@
 import time
 
-# SQLAlchemy
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
+import datetime
 import json
 import logging
-import datetime
+import os
 import zoneinfo
 from typing import Any, List, Optional
 
@@ -12,10 +12,10 @@ try:
 except ImportError:
     SafeAtoms = object()
 
-# Lamb Framework
-from lamb.utils.core import masked_dict, lazy_default
+
 from lamb.json.encoder import JsonEncoder
 from lamb.log.constants import LAMB_LOG_FORMAT_SIMPLE
+from lamb.utils.core import lazy_default, masked_dict
 
 __all__ = ["MultilineFormatter", "CeleryMultilineFormatter", "RequestJsonFormatter", "CeleryJsonFormatter"]
 
@@ -229,7 +229,6 @@ class _BaseJsonFormatter(_BaseFormatter):
 
 
 class CeleryMixin:
-
     @lazy_default(lambda: None)
     def get_current_task(self):
         from celery._state import get_current_task
@@ -332,7 +331,7 @@ class RequestJsonFormatter(_BaseJsonFormatter):
             result["status_code"] = status_code
 
         # request info
-        # Lamb Framework
+
         from lamb.utils import get_current_request
 
         request = get_current_request()

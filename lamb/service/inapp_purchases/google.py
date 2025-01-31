@@ -7,7 +7,6 @@ from typing import Union
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account as google_service_account
 
-# Lamb Framework
 from lamb.exc import (
     ExternalServiceError,
     InvalidBodyStructureError,
@@ -46,7 +45,7 @@ class InAppGoogle(InAppAbstract):
             self.purchase_token = receipt_data["purchaseToken"]
         except KeyError:
             raise InvalidBodyStructureError(
-                "Invalid receipt_data structure. Not all packageName, productId, " "purchaseToken are present"
+                "Invalid receipt_data structure. Not all packageName, productId, purchaseToken are present"
             )
 
         if isinstance(service_account, str):
@@ -103,7 +102,7 @@ class InAppGoogle(InAppAbstract):
                 error_reason = data["error"]["errors"][0]["reason"]
                 if error_reason == "purchaseTokenDoesNotMatchPackageName":
                     raise ExternalServiceError(
-                        "Error while processing data. Purchase token does not " "match package name"
+                        "Error while processing data. Purchase token does not match package name"
                     )
                 elif error_reason == "invalid":
                     raise ExternalServiceError("Error while processing data. Invalid token value")

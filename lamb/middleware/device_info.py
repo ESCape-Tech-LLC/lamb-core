@@ -3,10 +3,10 @@ import logging
 from django.conf import settings
 
 from lamb.middleware.base import LambMiddlewareMixin
+from lamb.types.device_info_type import device_info_factory
 
-# Lamb Framework
-from lamb.types import LambLocale
-from lamb.types.device_info import device_info_factory
+# from lamb.types import LambLocale
+from lamb.types.locale_type import LambLocale
 
 logger = logging.getLogger(__name__)
 

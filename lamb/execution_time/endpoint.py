@@ -4,8 +4,6 @@ import dataclasses
 from typing import Optional
 
 from lamb.utils.transformers import tf_list_string
-
-# Lamb Framework
 from lamb.utils.validators import validate_not_empty
 
 __all__ = ["Endpoint"]

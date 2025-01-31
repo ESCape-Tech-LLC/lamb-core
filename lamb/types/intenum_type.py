@@ -4,11 +4,9 @@ import enum
 import logging
 from typing import Any, Optional, Type, TypeVar
 
-# SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
-# Lamb Framework
 from lamb import exc
 
 __all__ = ["IntEnumType"]

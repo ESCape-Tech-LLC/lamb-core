@@ -5,7 +5,6 @@ from datetime import date, datetime
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union
 
-# SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy import Float, func
 from sqlalchemy.dialects.postgresql import DOMAIN
@@ -16,7 +15,6 @@ from sqlalchemy.sql.functions import Function
 from django.conf import settings
 from django.http import QueryDict
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
     InvalidBodyStructureError,

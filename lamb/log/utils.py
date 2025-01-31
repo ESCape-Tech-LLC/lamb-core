@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import os
 import logging
+import os
 from typing import Any, Dict
 
 __all__ = ["inject_logging_factory", "get_gunicorn_logging_dict"]
 
-# Lamb Framework
+
 from lamb.log.constants import LAMB_LOG_FORMAT_GUNICORN_SIMPLE
 
 
@@ -14,7 +14,6 @@ def inject_logging_factory():
     old_factory = logging.getLogRecordFactory()
 
     def _logging_factory(*args, **kwargs):
-        # Lamb Framework
         from lamb.utils import get_current_request
 
         record = old_factory(*args, **kwargs)

@@ -1,7 +1,6 @@
 import re
 from datetime import datetime
 
-# SQLAlchemy
 from sqlalchemy import TIMESTAMP, func
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column
