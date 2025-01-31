@@ -1,3 +1,53 @@
+# 3.5.0
+
+**Dependencies:**
+- `psycogp2` bumped to actual version
+- `uvicorn-worker` included within ASGI pack
+
+**Features:**
+
+- `RequestRangeError` new error with `status_code=416` and `error_code=16` for requests where requested data range invalid for object
+- `lamb.utils.get_settings_value` discover usage of old styled configs and raise warnings (actually would use default lamb value)
+- `lamb.utils.humanize_bytes` bytes in human friendly form
+- `lamb.utils.bank_card_type_parse` bank card issuer parsing based on masked card number
+- `lamb.types.*` moved to files with `_type.py` suffix 
+- `lamb.types.dataclasses.bytes_range` contains `BytesRange` class suitable to parse `Range` header and calculate corresponding length and ranges data
+- `lamb.db.inspect` moved to `lamb.db.reflect`
+- `lamb.db.logging` moved to `lamb.db.log`
+- JSON logging formatters changed:
+  - camelCased fields replaced with snake_case variants
+  - `level_value` new field contains syslog severity level value
+  - `module_name` field remove
+  - `file_name` fidl now represents full fila path
+  - 
+
+**Middlewares:**
+
+- `LambMiddlewareMixin` replacement for old `AsyncMiddlewareMixin` aimed for modern style middlewares only
+- coroutine checking fixed to properly work in ASGI mode under python 3.12+
+- CORS, XRay, DeviceInfo, GRequest adpated to new base class
+- `LambEventLoggingMiddleware` deprecated and combined with `LambXRayMiddleware`:
+  - track_id field deprecated
+  - new `xline` field paired to `xray` introduced, by default would have `None` value (omit not explicit tracing)
+- `LambSQLAlchemyMiddleware` adapted to new base class and check underlying view (view or middleware) on async mode support - in this case produce AsyncSession object
+
+
+**Tools:**
+- Lint, format tools migrated to `ruff`
+- Bump version tool migrated to `bump-my-version`
+> NOTE: pre-commit hooks should be reinstalled
+
+**Settings:**
+- `LAMB_VERBOSE_SQL_LOG` renamed to `LAMB_LOG_SQL_VERBOSE`
+- `LAMB_VERBOSE_SQL_LOG_THRESHOLD` renamed to `LAMB_LOG_SQL_VERBOSE_THRESHOLD`
+- `LAMB_LOGGING_HEADER_XRAY` renamed to `LAMB_LOG_HEADER_XRAY`
+- `LAMB_LOG_HEADER_XLINE` new config for xline header name
+- `LAMB_LOG_LEVEL_SEVERITY` new config for python log levels mapping into syslog severity levels (default acts like `pygelf`)
+- `LAMB_ADD_CORS_HEADERS` value change - add `Range`, `X-Lamb-XLine` and drop `X-Lamb-TrackID`
+
+**Deprecations:**
+- Old `acquiring` module removed
+
 # 3.4.16
 
 **features**
