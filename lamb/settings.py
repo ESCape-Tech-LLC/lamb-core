@@ -117,27 +117,6 @@ LAMB_ADD_CORS_ENABLED = False
 LAMB_ADD_CORS_ORIGIN = "*"
 LAMB_ADD_CORS_METHODS = "GET,POST,OPTIONS,DELETE,PATCH,COPY"
 LAMB_ADD_CORS_CREDENTIALS = "true"
-LAMB_ADD_CORS_HEADERS = [
-    "User-Agent",
-    "Keep-Alive",
-    "Content-Type",
-    "Origin",
-    "Referer",
-    "Content-Length",
-    "Connection",
-    "Accept-Encoding",
-    "Accept",
-    "Range",
-    "If-Modified-Since",
-    "Cache-Control",
-    "X-Requested-With",
-    "X-Lamb-Auth-Token",
-    "X-Lamb-Device-Family",
-    "X-Lamb-Device-Platform",
-    "X-Lamb-Device-OS-Version",
-    "X-Lamb-Device-Locale",
-    "X-Lamb-App-Version",
-    "X-Lamb-App-Build",
-    "X-Lamb-XRay",
-    "X-Lamb-XLine",
-]
+# use format from nginx to parse
+_CORS = "User-Agent,Keep-Alive,Content-Type,Origin,Referer,Content-Length,Content-Disposition,Connection,Accept-Encoding,Accept,Range,If-Modified-Since,Cache-Control,DNT,X-Requested-With,X-Mx-ReqToken,X-Lamb-Auth-Token,X-Lamb-Device-Family,X-Lamb-Device-Platform,X-Lamb-Device-OS-Version,X-Lamb-Device-Locale,X-Lamb-Device-Timezone,X-Lamb-App-Version,X-Lamb-App-Build,X-Lamb-App-Id,X-Lamb-App-Type,X-Lamb-XRay,X-Lamb-XLine"
+LAMB_ADD_CORS_HEADERS = _CORS.split(",")
