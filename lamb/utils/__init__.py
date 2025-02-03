@@ -122,7 +122,7 @@ logger = logging.getLogger(__name__)
 
 class LambRequest(HttpRequest):
     """Class used only for proper type hinting in pycharm, does not guarantee that properties will exist
-    :type lamb_db_session: sqlalchemy.orm.Session | qlalchemy.ext.asyncio.AsyncSession | None
+    :type lamb_db_session: sqlalchemy.orm.Session | sqlalchemy.ext.asyncio.AsyncSession | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     :type lamb_device_info: lamb.types.DeviceInfo | None
     :type lamb_locale: lamb.types.LambLocale | None
@@ -775,7 +775,7 @@ _timed_lru_cache_functions: dict[Callable, Callable] = {}
 def timed_lru_cache(**timedelta_kwargs):
     def _wrapper(func):
         update_delta = timedelta(**timedelta_kwargs)
-        next_update = datetime.utcnow() + update_delta
+        next_update = datetime.now(tz=TZ_UTC) + update_delta
         func_full_name = f"{sys.modules[func.__module__].__name__}.{func.__name__}"
         logger.debug(f"timed_lru_cache initial update calculated: {func_full_name} -> {next_update}")
         # Apply @lru_cache to func with no cache size limit
@@ -787,7 +787,7 @@ def timed_lru_cache(**timedelta_kwargs):
         @functools.wraps(func_lru_cached)
         def _wrapped(*args, **kwargs):
             nonlocal next_update
-            now = datetime.utcnow()
+            now = datetime.now(tz=TZ_UTC)
             if now >= next_update:
                 func_lru_cached.cache_clear()
                 next_update = now + update_delta
