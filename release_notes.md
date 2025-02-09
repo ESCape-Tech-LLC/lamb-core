@@ -1,6 +1,6 @@
 # 3.5.3
 
-Features:
+**Features:**
 
 - `lamb.contrib.handbook` - new base module for handbooks and enum based handbooks
 - `lamb.db.dialects.postgres` - new module mixing postgresql ENUMs with enum based handbooks
