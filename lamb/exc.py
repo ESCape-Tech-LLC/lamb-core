@@ -31,6 +31,7 @@ __all__ = [
     "AuthForbiddenError",
     "AuthCredentialsInvalidError",
     "RequestRangeError",
+    "ProgrammingError",
 ]
 
 
@@ -57,6 +58,7 @@ class LambExceptionCodes(IntEnum):
     RequestBodyTooBig = 14
     AuthCredentialsInvalid = 15
     RequestRange = 16
+    Programming = 17
 
     # throttling and rate limiters
     Throttling = 101
@@ -145,6 +147,14 @@ class DatabaseError(ServerError):
     _app_error_code = LambExceptionCodes.Database
     _status_code = 500
     _message = "Database error occurred"
+
+
+class ProgrammingError(ServerError):
+    """Programming error wrapper"""
+
+    _app_error_code = LambExceptionCodes.Programming
+    _status_code = 500
+    _message = "Improperly implemented server side call"
 
 
 # client errors

@@ -1,3 +1,18 @@
+# 3.5.3
+
+Features:
+
+- `lamb.contrib.handbook` - new base module for handbooks and enum based handbooks
+- `lamb.db.dialects.postgres` - new module mixing postgresql ENUMs with enum based handbooks
+- `lamb.db.session` - declarative bases and corresponding metadata stored in registry to reuse in models creation and subclassing
+- `lamb.json` - mixin and encoder adapted to support generic `ResponseConformProtocol`
+- `lamb.management.base` - accept target database key as argument
+- `lamb.management.commands.alchemy_create` - accept target database argument to work over required metadata
+- `lamb.management.csv_command` - base CSV command command
+- `lamb.types.intrstrenum_type` - database representation of paired int/str handbook
+- `lamb.utils.core.class_or_instance_method` - new descriptor
+- `lamb.exc.ProgrammingError` - new exception for with `error_code=17` and `status_code=500`
+
 # 3.5.0
 
 **Dependencies:**

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import warnings
+from typing import Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -21,6 +22,7 @@ __all__ = [
     "create_engine",
     "create_async_engine",
     "get_declarative_base",
+    "get_metadata",
 ]
 
 logger = logging.getLogger(__name__)
@@ -97,13 +99,24 @@ def get_session_maker(db_key: str = "default", pooled: bool = True, sync: bool =
 
 
 # metadata
+_declarative_registry: dict[str, Any] = {}
+
+
 def get_declarative_base(db_key: str, pooled: bool, sync: bool):
-    components = ["_".join(db_key.split()), "PT" if pooled else "PoolF", "ST" if sync else "SF"]
-    cls_name = f"Base{'_'.join(components)}"
-    _result = declarative_base(name=cls_name)
-    _metadata = _result.metadata
-    _metadata.bind = get_engine(db_key, pooled=pooled, sync=sync)
-    return _result
+    components = ["PT" if pooled else "PF", "ST" if sync else "SF", "_".join(db_key.split())]
+    cls_name = f"DeclarativeBase_{'_'.join(components)}"
+    if cls_name not in _declarative_registry:
+        _result = declarative_base(name=cls_name)
+        _metadata = _result.metadata
+        _metadata.bind = get_engine(db_key, pooled=pooled, sync=sync)
+        _declarative_registry[cls_name] = _result
+    logger.debug(f"did return declarative: {cls_name}")
+    return _declarative_registry[cls_name]
+
+
+def get_metadata(db_key: str, pooled: bool, sync: bool):
+    _declarative = get_declarative_base(db_key, pooled, sync)
+    return _declarative.metadata
 
 
 # defaults - compatibility mode

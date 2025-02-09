@@ -31,6 +31,7 @@ __all__ = [
     "lazy_ro",
     "lazy_default",
     "lazy_default_ro",
+    "class_or_instance_method",
 ]
 
 
@@ -131,6 +132,35 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
     return result
 
 
+CT = TypeVar("CT")
+
+
+def list_chunks(lst: list[CT], n: int) -> Generator[list[CT], None, None]:
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
+
+
+def get_redis_url(
+    host: str = "localhost",
+    port: int = 6379,
+    password: str = None,
+    db: int = 0,
+    username: str | None = None,
+) -> str:
+    result = furl.furl()
+    result.scheme = "redis"
+    result.host = host
+    result.port = port
+    if password is not None and len(password) > 0:
+        result.password = password
+    if username is not None and len(username) > 0:
+        result.username = username
+    result.path.add(str(db))
+    return result.url
+
+
+# maskers
 def masked_dict(dct: dict[Any, Any] | None, *masking_keys) -> dict[Any, Any] | None:
     if dct is None:
         return None
@@ -159,32 +189,11 @@ def masked_string(v: str | None) -> str | None:
     return "*****"
 
 
-CT = TypeVar("CT")
-
-
-def list_chunks(lst: list[CT], n: int) -> Generator[list[CT], None, None]:
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]
-
-
-def get_redis_url(
-    host: str = "localhost",
-    port: int = 6379,
-    password: str = None,
-    db: int = 0,
-    username: str | None = None,
-) -> str:
-    result = furl.furl()
-    result.scheme = "redis"
-    result.host = host
-    result.port = port
-    if password is not None and len(password) > 0:
-        result.password = password
-    if username is not None and len(username) > 0:
-        result.username = username
-    result.path.add(str(db))
-    return result.url
+# descriptors
+class class_or_instance_method(classmethod):
+    def __get__(self, instance, type_):
+        descr_get = super().__get__ if instance is None else self.__func__.__get__
+        return descr_get(instance, type_)
 
 
 # lazy utils

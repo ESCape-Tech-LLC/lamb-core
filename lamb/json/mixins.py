@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, Protocol, runtime_checkable
 
 from sqlalchemy import Column, inspect
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -9,6 +10,7 @@ from sqlalchemy.orm import ColumnProperty, RelationshipProperty, SynonymProperty
 from sqlalchemy.orm.attributes import QueryableAttribute
 
 from lamb import exc
+from lamb.utils import LambRequest
 
 try:
     import cassandra
@@ -18,7 +20,7 @@ except ImportError:
     CassandraModel = object()
 
 
-__all__ = ["ResponseEncodableMixin"]
+__all__ = ["ResponseEncodableMixin", "ResponseConformProtocol"]
 
 logger = logging.getLogger(__name__)
 
@@ -26,17 +28,26 @@ logger = logging.getLogger(__name__)
 _DEFAULT_ATTRIBUTE_NAMES_REGISTRY = {}
 
 
-class ResponseEncodableMixin:
+@runtime_checkable
+class ResponseConformProtocol(Protocol):
     @classmethod
-    def response_attributes(cls) -> list:
+    def response_attributes(cls) -> list[Any] | None:
+        pass
+
+    def response_encode(self, request: LambRequest | None = None) -> Any:
+        pass
+
+
+class ResponseEncodableMixin:
+    # default implementation
+    @classmethod
+    def response_attributes(cls) -> list[Any] | None:
         return None
 
-    def response_encode(self, request=None) -> dict:
+    def response_encode(self, request: LambRequest | None = None) -> Any:
         """Mixin to mark object support JSON serialization with JsonEncoder class
 
-        :type request: lamb.utils.LambRequest
         :return: Encoded representation of object
-        :rtype: dict
         """
 
         # Cassandra model is dict compatible,
@@ -92,8 +103,8 @@ class ResponseEncodableMixin:
                 elif isinstance(orm_descriptor, property):
                     orm_attr_name = orm_descriptor.fget.__name__
                 else:
-                    logger.warning(f"Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}")
-                    raise exc.ServerError("Could not serialize data")
+                    logger.critical(f"Unsupported orm_descriptor type: {orm_descriptor, orm_descriptor.__class__}")
+                    raise exc.ProgrammingError("Could not serialize data")
                 response_attribute_names.append(orm_attr_name)
             logger.debug(f"caching response attribute keys: {self.__class__.__name__} -> {response_attribute_names}")
             _DEFAULT_ATTRIBUTE_NAMES_REGISTRY[self.__class__] = response_attribute_names

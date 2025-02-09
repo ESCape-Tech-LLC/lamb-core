@@ -8,7 +8,7 @@ import lazy_object_proxy
 from django.conf import settings
 from sqlalchemy_utils import PhoneNumber
 
-from lamb.json.mixins import ResponseEncodableMixin
+from lamb.json.mixins import ResponseConformProtocol
 from lamb.utils.core import import_by_name
 
 __all__ = ["JsonEncoder"]
@@ -47,7 +47,7 @@ class JsonEncoder(json.JSONEncoder):
             result = list(obj)
         elif isinstance(obj, PhoneNumber):
             result = obj.e164
-        elif isinstance(obj, ResponseEncodableMixin):
+        elif isinstance(obj, ResponseConformProtocol):
             result = obj.response_encode(self.request)
         else:
             result = json.JSONEncoder.default(self, obj)
