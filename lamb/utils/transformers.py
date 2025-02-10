@@ -29,6 +29,7 @@ __all__ = [
     "transform_datetime_milliseconds_int",
     "transform_datetime_milliseconds_float",
     "transform_datetime_microseconds_int",
+    "transform_datetime_iso",
     "transform_typed_list",
     "tf_list_int",
     "tf_list_string",
@@ -167,6 +168,10 @@ def transform_datetime_milliseconds_float(value: datetime) -> float:
 
 def transform_datetime_microseconds_int(value: datetime) -> int:
     return int(value.timestamp() * 1000000)
+
+
+def transform_datetime_iso(value: datetime, sep: str = "T", timespec="milliseconds") -> str:
+    return value.isoformat(sep=sep, timespec=timespec)
 
 
 # dynamic typed
