@@ -19,6 +19,7 @@ class HandbookMixin(ResponseEncodableMixin):
     """
 
     __attrs__: list[str] | tuple[str] = "id"
+    __handbook_attrs__: list[str] | tuple[str] = None
 
     def response_encode(self, _: LambRequest | None = None) -> Any:
         # as part of object - return id only
@@ -26,7 +27,8 @@ class HandbookMixin(ResponseEncodableMixin):
 
     def handbook_encode(self, _: LambRequest | None = None) -> dict:
         # as part of class itself - return full description
-        return {attr_name: getattr(self, attr_name) for attr_name in self.__attrs__}
+        response_attrs = self.__handbook_attrs__ or self.__attrs__
+        return {attr_name: getattr(self, attr_name) for attr_name in response_attrs}
 
 
 class HandbookEnumMixin(HandbookMixin):
@@ -42,7 +44,9 @@ class HandbookEnumMixin(HandbookMixin):
 
     def __init__(self, *args, **kwargs) -> None:
         if len(args) != len(self.__class__.__attrs__):
-            logger.critical("Expected attributes length not equal to received")
+            logger.critical(
+                f"Expected attributes length not equal to received: __attrs__={self.__attrs__}, args={args}"
+            )
             raise exc.ProgrammingError
         for idx, attr_title in enumerate(self.__attrs__):
             setattr(self, attr_title, args[idx])
