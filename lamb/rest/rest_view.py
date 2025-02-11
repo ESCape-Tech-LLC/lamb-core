@@ -6,6 +6,8 @@ from functools import update_wrapper
 from typing import Union
 
 from django.utils.decorators import classonlymethod
+from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+from sqlalchemy.orm import Session as SASession
 
 from lamb.exc import InvalidBodyStructureError, NotRealizedMethodError
 from lamb.utils import (
@@ -30,6 +32,8 @@ class RestView:
     Attributes:
         request (HttpRequest): Http request of view
     """
+
+    __default_db__ = "default"
 
     def __init__(self, **kwargs):
         """
@@ -95,6 +99,10 @@ class RestView:
             result = parse_body_as_json(self.request)
 
         return result
+
+    @lazy
+    def db_session(self) -> SASession | SAAsyncSession:
+        return self.request.lamb_db_session_map[self.__default_db__]
 
     @staticmethod
     def http_method_not_realized(request, *args, **kwargs):

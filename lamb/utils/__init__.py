@@ -122,6 +122,7 @@ logger = logging.getLogger(__name__)
 
 class LambRequest(HttpRequest):
     """Class used only for proper type hinting in pycharm, does not guarantee that properties will exist
+    :type lamb_db_session_map: dict[str, sqlalchemy.orm.Session | sqlalchemy.ext.asyncio.AsyncSession] | None
     :type lamb_db_session: sqlalchemy.orm.Session | sqlalchemy.ext.asyncio.AsyncSession | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     :type lamb_device_info: lamb.types.DeviceInfo | None
@@ -132,6 +133,7 @@ class LambRequest(HttpRequest):
 
     def __init__(self):
         super().__init__()
+        self.lamb_db_session_map = None
         self.lamb_db_session = None
         self.lamb_execution_meter = None
         self.lamb_device_info = None

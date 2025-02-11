@@ -32,6 +32,7 @@ __all__ = [
     "AuthCredentialsInvalidError",
     "RequestRangeError",
     "ProgrammingError",
+    "BusinessLogicError",
 ]
 
 
@@ -67,7 +68,8 @@ class LambExceptionCodes(IntEnum):
     UpdateRequired = 201
     HumanFriendly = 202
     HumanFriendlyMultiple = 203
-    UserBlocked = 211  # new in 3.0.0
+    UserBlocked = 211
+    BusinessLogic = 221
 
 
 class ApiError(Exception):
@@ -259,7 +261,7 @@ class ThrottlingError(ClientError):
 
 
 class UserBlockedError(ClientError):
-    """Client side error for ser profile blocked kind of errors"""
+    """Client side error for user profile blocked kind of errors"""
 
     _app_error_code = LambExceptionCodes.UserBlocked
     _status_code = 403
@@ -335,3 +337,11 @@ class RequestRangeError(ClientError):
     _app_error_code = LambExceptionCodes.RequestRange
     _status_code = 416
     _message = "Requested Range Not Satisfiable"
+
+
+class BusinessLogicError(ClientError):
+    """Client side error for action prohibited from business logic point of view"""
+
+    _app_error_code = LambExceptionCodes.BusinessLogic
+    _status_code = 400
+    _message = "Requested action/resource is illegal for business logic"

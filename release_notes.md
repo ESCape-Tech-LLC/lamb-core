@@ -1,3 +1,52 @@
+# 3.5.6
+
+**Features:**
+- `lamb.exc.BusinessLogicError` - new exception for actions prohibited from business logic point of view with `error_code=221` and `status_code=400`
+
+**Database processing changed:**
+
+- `LambRequest.lamb_db_session_map` - new field that contains session makers for all known databases (from LAMB_DB_CONFIG settings)
+  - `dict[str, sqlalchemy.orm.Session]` in sync mode 
+  - `dict[str, sqlalchemy.ext.asyncio.AsyncSession]` in async mode
+- `lamb.middleware.db.LambSQLAlchemyMiddleware` modified to act as complex contextmanager with connections to all known databases
+- `lamb.rest.RestView` modified in two ways:
+  - `__default_db__` - class level dunder variable declaring database default db_key on view (default value is "default" - oO)
+  - `db_session` - lazy attribute of view that provides access to db_session with key from `__default_db__`
+  
+_Example:_
+```python
+# old style
+@a_rest_allowed_http_methods(["GET"])
+class SomeView(RestView):
+    async def get(self, request: LambRequest):
+        async with lamb_db_context(db_key='pythia', pooled=True) as db_session:
+            db_session = request.lamb_db_session_map['pythia']
+            result = await db_session.execute(select(Area))
+            response = result.scalars().all()
+            return response
+
+# access db_session from mapping
+@a_rest_allowed_http_methods(["GET"])
+class SomeView(RestView):
+    async def get(self, request: LambRequest):
+        db_session = request.lamb_db_session_map['pythia']
+        result = await db_session.execute(select(Area))
+        response = result.scalars().all()
+        return response
+    
+# access db_session by default on view
+class PythiaView(RestView):
+    __default_db__ = 'pythia'
+    
+@a_rest_allowed_http_methods(["GET"])
+class SomeView(PythiaView):
+    async def get(self, request: LambRequest):
+        result = await self.db_session.execute(select(Area))
+        response = result.scalars().all()
+        return response
+```
+
+
 # 3.5.3
 
 **Features:**
