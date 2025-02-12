@@ -1,3 +1,11 @@
+# 3.5.8
+
+**Features**
+- `lamb.filters.DatetimeFilter` - bug fixed to act as datetime transformer, default format changed to `iso`
+- `lamb.filters.DateFilter` - actual date filter
+- `lamb.utils.response_sorted` - supports sqlalchemy 2 `Select` object with proper typehints
+- `lamb.utils.response_filtered` - supports sqlalchemy 2 `Select` object with proper typehints
+
 # 3.5.6
 
 **Features:**

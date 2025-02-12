@@ -490,11 +490,11 @@ def response_sorted(
 
 
 def response_filtered(
-    query: Query,
+    query: SV,
     filters: list[object],
     request: LambRequest = None,
     params: dict = None,
-) -> Query:
+) -> SV:
     # TODO: fix typing for filters
     # TODO: auto discover request params if not provided
     # import lamb.utils.filters
@@ -508,7 +508,7 @@ def response_filtered(
 
     from lamb.utils.filters import Filter
 
-    if not isinstance(query, Query):
+    if not isinstance(query, Query | Select):
         logger.warning(f"Invalid query data type: {query}")
         raise ServerError("Improperly configured query item for filtering")
 

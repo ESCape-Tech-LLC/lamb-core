@@ -28,6 +28,7 @@ from lamb.utils.core import compact
 from lamb.utils.transformers import (
     transform_boolean,
     transform_date,
+    transform_datetime,
     transform_string_enum,
 )
 
@@ -35,6 +36,7 @@ __all__ = [
     "Filter",
     "FieldValueFilter",
     "ColumnValueFilter",
+    "DateFilter",
     "DatetimeFilter",
     "EnumFilter",
     "PostgresqlFastTextSearchFilter",
@@ -248,6 +250,9 @@ class FieldValueFilter(Filter):
 
         return query
 
+    def __str__(self):
+        return f"<{self.__class__.__name__}: arg={self.arg_name}, type={self.req_type}, field={self.comparing_field}, tf={self.req_type_transformer}, compares={self.allowed_compares}>"
+
 
 class ColumnValueFilter(FieldValueFilter):
     """Syntax sugar for column based simple filter"""
@@ -267,9 +272,26 @@ class ColumnValueFilter(FieldValueFilter):
 
 
 # special syntax sugars
-class DatetimeFilter(ColumnValueFilter):
+class DateFilter(ColumnValueFilter):
     def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):
         super().__init__(*args, req_type=str, req_type_transformer=partial(transform_date, format=fmt), **kwargs)
+
+    def vary_param_value_min(self, value: datetime | date) -> datetime:
+        if isinstance(value, datetime):
+            return value
+        else:
+            return datetime_begin(value)
+
+    def vary_param_value_max(self, value: datetime | date) -> datetime:
+        if isinstance(value, datetime):
+            return value
+        else:
+            return datetime_end(value)
+
+
+class DatetimeFilter(ColumnValueFilter):
+    def __init__(self, *args, fmt="iso", **kwargs):
+        super().__init__(*args, req_type=str, req_type_transformer=partial(transform_datetime, format=fmt), **kwargs)
 
     def vary_param_value_min(self, value: datetime | date) -> datetime:
         if isinstance(value, datetime):
