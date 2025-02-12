@@ -29,7 +29,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpRequest
 from django.utils import timezone as d_timezone
 from PIL import Image as PILImage
-from sqlalchemy import Column, asc, desc
+from sqlalchemy import Column, Select, asc, desc
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.inspection import inspect
@@ -414,13 +414,16 @@ def _sorting_apply_sorters(
     return query
 
 
+SV = TypeVar("SV", Query, Select)
+
+
 def response_sorted(
-    query: Query,
+    query: SV,
     model_class: DeclarativeMeta,
     params: dict,
     default_sorting: str = None,
     **kwargs,
-) -> Query:
+) -> SV:
     """Apply order by sortings to sqlalchemy query instance from params dictionary
 
     :param query: SQLAlchemy query instance to be sorted
@@ -433,11 +436,12 @@ def response_sorted(
         to query before all other descriptors.
     """
     # check params
+    logger.warning(f"query: {query} [{query.__class__.__name__}]")
     if not isinstance(params, dict):
         raise ServerError("Improperly configured sorting params dictionary")
     if not isinstance(model_class, DeclarativeMeta):
         raise ServerError("Improperly configured model class meta-data for sorting introspection")
-    if not isinstance(query, Query):
+    if not isinstance(query, Query | Select):
         raise ServerError("Improperly configured query item for sorting")
 
     # prepare inspection and container
