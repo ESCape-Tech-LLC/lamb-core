@@ -436,7 +436,6 @@ def response_sorted(
         to query before all other descriptors.
     """
     # check params
-    logger.warning(f"query: {query} [{query.__class__.__name__}]")
     if not isinstance(params, dict):
         raise ServerError("Improperly configured sorting params dictionary")
     if not isinstance(model_class, DeclarativeMeta):
