@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import dataclasses
 import enum
 import functools
 import io
@@ -16,7 +17,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from inspect import isclass
-from typing import Any, BinaryIO, TypeVar
+from typing import Any, BinaryIO, TypedDict, TypeVar
 from urllib.parse import unquote
 from xml.etree import cElementTree
 
@@ -36,6 +37,8 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import ColumnProperty, Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 
+from lamb.utils.core import lazy
+
 try:
     import cassandra
     from cassandra.cqlengine.query import ModelQuerySet
@@ -44,6 +47,9 @@ except ImportError:
     ModelQuerySet = None
 
 
+import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+
 from lamb.exc import (
     ApiError,
     ExternalServiceError,
@@ -51,6 +57,7 @@ from lamb.exc import (
     InvalidBodyStructureError,
     InvalidParamTypeError,
     InvalidParamValueError,
+    ProgrammingError,
     RequestBodyTooBigError,
     ServerError,
 )
@@ -82,6 +89,7 @@ __all__ = [
     "LambRequest",
     "parse_body_as_json",
     "dpath_value",
+    "a_response_paginated",
     "response_paginated",
     "response_sorted",
     "response_filtered",
@@ -169,7 +177,158 @@ def parse_body_as_json(request: HttpRequest) -> dict | list:
 
 
 # response utilities
-PV = TypeVar("PV", list, Query, ModelQuerySet)
+
+PV = TypeVar("PV", list, Query, ModelQuerySet, Select)
+_T = TypeVar("_T", bound=Any)
+
+# TODO: move in external module
+# TODO: support for different kind of paginations - naive(offset/limit), min value based, token based
+# TODO: implement extended as paginator subclass
+# TODO: remove result key variations - should be realized on project level base
+# TODO: provide ability to override total calculator for known cases
+
+
+@dataclasses.dataclass(frozen=True)
+class _PaginationParams:
+    offset: int
+    limit: int
+    total_omit: bool
+    extend_include: bool
+    extend_offset: int
+    extend_limit: int
+
+
+class PaginationResult(TypedDict):
+    total_count: int | None
+    offset: int
+    limit: int
+    items: list[_T]
+
+
+def _response_pagination_params(
+    request: LambRequest | None = None,
+    params: dict | None = None,
+    extend_include: bool = False,
+) -> _PaginationParams:
+    # TODO: move outside of utils to omit cycle loading
+    from lamb.utils.transformers import transform_boolean
+    from lamb.utils.validators import validate_range
+
+    # extract params
+    if request is None and params is None:
+        logger.error("Either request or params should be provided")
+        raise ProgrammingError
+    if request is not None and params is None:
+        params = request.GET
+
+    # total omit
+    total_omit = dpath_value(
+        params,
+        settings.LAMB_PAGINATION_KEY_OMIT_TOTAL,
+        str,
+        transform=transform_boolean,
+        default=False,
+    )
+
+    # offset
+    # TODO: customize validators error raising to provide message and details within from dpath_value
+    offset = dpath_value(params, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
+    if offset < 0:
+        raise InvalidParamValueError(
+            "Invalid offset value for pagination", error_details={"key": settings.LAMB_PAGINATION_KEY_OFFSET}
+        )
+
+    # limit
+    limit = dpath_value(params, settings.LAMB_PAGINATION_KEY_LIMIT, int, default=settings.LAMB_PAGINATION_LIMIT_DEFAULT)
+    if limit < -1:
+        raise InvalidParamValueError(
+            "Invalid limit value for pagination", error_details={"key": settings.LAMB_PAGINATION_KEY_LIMIT}
+        )
+    if limit > settings.LAMB_PAGINATION_LIMIT_MAX:
+        raise InvalidParamValueError(
+            "Invalid limit value for pagination - exceed max available",
+            error_details={"key": settings.LAMB_PAGINATION_KEY_LIMIT},
+        )
+
+    # calculate extended values
+    extended_additional_count = 0
+    if offset > 0:
+        extended_offset = offset - 1
+        extended_additional_count = extended_additional_count + 1
+    else:
+        extended_offset = offset
+
+    if limit != -1:
+        extended_additional_count = extended_additional_count + 1
+        extended_limit = limit + extended_additional_count
+    else:
+        extended_limit = limit
+
+    return _PaginationParams(
+        total_omit=total_omit,
+        offset=offset,
+        limit=limit if limit != -1 else None,
+        extend_offset=extended_offset,
+        extend_limit=extended_limit,
+        extend_include=extend_include,
+    )
+
+
+async def a_response_paginated(
+    collection: PV,
+    params: dict = None,
+    db_session: SAAsyncSession = None,  # alchemy session
+) -> PaginationResult:
+    # prepare
+    _p = _response_pagination_params(params=params)
+    offset = _p.offset
+    limit = _p.limit
+    total_omit = _p.total_omit
+
+    # prepare result container
+    result = {
+        settings.LAMB_PAGINATION_KEY_TOTAL: None,
+        settings.LAMB_PAGINATION_KEY_OFFSET: offset,
+        settings.LAMB_PAGINATION_KEY_LIMIT: limit,
+        settings.LAMB_PAGINATION_KEY_ITEMS: [],
+    }
+
+    if isinstance(collection, Select):
+        # alchemy 2.0
+        if db_session is None:
+            logger.error("db_session cannot be None for Select pagination")
+            raise ProgrammingError
+
+        if not total_omit:
+            result[settings.LAMB_PAGINATION_KEY_TOTAL] = await db_session.scalar(
+                sa.select(sa.func.count()).select_from(collection)
+            )
+
+        collection = collection.offset(offset)
+        if limit:
+            collection = collection.limit(limit)
+
+        result[settings.LAMB_PAGINATION_KEY_ITEMS] = (await db_session.scalars(collection)).all()
+    elif isinstance(collection, list):
+        result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(collection) if not total_omit else None
+
+        if limit:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = collection[offset : offset + limit]
+        else:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = collection[offset:]
+    # elif cassandra is not None and isinstance(collection, ModelQuerySet):
+    #     # Cassandra
+    #     # NOTE: not checked - uncomment and check in case of usage
+    #     result[settings.LAMB_PAGINATION_KEY_TOTAL] = await collection.count() if not total_omit else None
+    #     if limit == -1:
+    #         result[settings.LAMB_PAGINATION_KEY_ITEMS] = await collection.all()[offset:]
+    #     else:
+    #         result[settings.LAMB_PAGINATION_KEY_ITEMS] = await collection.all()[offset: offset + limit]
+    else:
+        logger.error(f"Unsupported collection type for async pagination: {collection.__class__}={collection}")
+        raise NotImplementedError
+
+    return result
 
 
 def response_paginated(
@@ -177,7 +336,7 @@ def response_paginated(
     request: LambRequest = None,
     params: dict = None,
     add_extended_query: bool = False,
-) -> dict:
+) -> PaginationResult:
     """Pagination utility
 
     Will search for limit/offset params in `request.GET` object and apply it to data, returning
@@ -189,13 +348,11 @@ def response_paginated(
     :param add_extended_query: Flag to add to result extended version of data slice
         (including one more item from begin and and of slice)
     """
-    # check params override
+    # extract params
+    from lamb.utils.transformers import transform_boolean
+
     if request is not None and params is None:
         params = request.GET
-
-    # parse omit total
-
-    from lamb.utils.transformers import transform_boolean
 
     total_omit = dpath_value(
         params,
@@ -205,14 +362,12 @@ def response_paginated(
         default=False,
     )
 
-    # parse and check offset
     offset = dpath_value(params, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
     if offset < 0:
         raise InvalidParamValueError(
             "Invalid offset value for pagination", error_details=settings.LAMB_PAGINATION_KEY_OFFSET
         )
 
-    # parse and check limit
     limit = dpath_value(params, settings.LAMB_PAGINATION_KEY_LIMIT, int, default=settings.LAMB_PAGINATION_LIMIT_DEFAULT)
     if limit < -1:
         raise InvalidParamValueError(
@@ -245,15 +400,6 @@ def response_paginated(
 
     if isinstance(data, Query):
         # SQL
-
-        # def get_count(q):
-        #     # TODO: Add dynamic count function choose based on any join presented in query
-        #     # TODO: modify query - returns invalid count in case of join with one-to-many objects
-        #     count_q = q.statement.with_only_columns([func.count()]).order_by(None)
-        #     count = q.session.execute(count_q).scalar()
-        #     return count
-        #
-        # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
         if not total_omit:
             result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
         else:
@@ -501,12 +647,10 @@ def response_filtered(
     # from lamb.utils.filters import Filter
     # filters: List[Filter] = filters
     # check params override
+    from lamb.utils.filters import Filter
+
     if request is not None and params is None:
         params = request.GET
-
-    # check params
-
-    from lamb.utils.filters import Filter
 
     if not isinstance(query, Query | Select):
         logger.warning(f"Invalid query data type: {query}")
@@ -805,9 +949,9 @@ def timed_lru_cache(**timedelta_kwargs):
 
 
 def timed_lru_cache_clear():
-    for func, wrapped_func in _timed_lru_cache_functions.items():
+    for _func, wrapped_func in _timed_lru_cache_functions.items():
         wrapped_func.cache_clear()
-        logger.warning(f"time_lru_cache cleared for: {func} -> {wrapped_func}")
+        logger.warning(f"time_lru_cache cleared for: {_func} -> {wrapped_func}")
 
 
 # async downloads

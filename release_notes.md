@@ -1,3 +1,9 @@
+# 3.5.9
+
+**Features:**
+
+- `lamb.utils.a_response_paginated` - initial version of agnostic paginator
+
 # 3.5.8
 
 **Features**
