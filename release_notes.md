@@ -1,3 +1,9 @@
+# 3.5.10
+
+**Bug fixes:**
+
+- `lamb.utils.filters.DateFilter` - vary min/max produce date instances
+
 # 3.5.9
 
 **Features:**

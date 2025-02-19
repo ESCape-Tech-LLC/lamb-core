@@ -276,17 +276,15 @@ class DateFilter(ColumnValueFilter):
     def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):
         super().__init__(*args, req_type=str, req_type_transformer=partial(transform_date, format=fmt), **kwargs)
 
-    def vary_param_value_min(self, value: datetime | date) -> datetime:
+    def vary_param_value_min(self, value: datetime | date) -> date:
         if isinstance(value, datetime):
-            return value
-        else:
-            return datetime_begin(value)
+            return value.date()
+        return value
 
-    def vary_param_value_max(self, value: datetime | date) -> datetime:
+    def vary_param_value_max(self, value: datetime | date) -> date:
         if isinstance(value, datetime):
-            return value
-        else:
-            return datetime_end(value)
+            return value.date()
+        return value
 
 
 class DatetimeFilter(ColumnValueFilter):
