@@ -5,7 +5,7 @@ from sqlalchemy import BIGINT, Column, ForeignKey
 
 # Lamb Framework
 from lamb.service.image.model import AbstractImage
-from lamb.service.image.uploaders import ImageUploadMode, ImageUploadSlice
+from lamb.types.image_type import Mode, SliceRule
 
 
 @enum.unique
@@ -26,9 +26,9 @@ class SimpleImage(Image):
     )
 
     __slicing__ = [
-        ImageUploadSlice("origin", -1, ImageUploadMode.NoAction, ""),
-        ImageUploadSlice("small", 100, ImageUploadMode.Resize, "small"),
-        ImageUploadSlice("thumb", 50, ImageUploadMode.Crop, "thumb"),
+        SliceRule(title="origin", side=-1, mode=Mode.NoAction, suffix=""),
+        SliceRule(title="small", side=100, mode=Mode.Resize, suffix="small"),
+        SliceRule(title="thumb", side=50, mode=Mode.Crop, suffix="thumb"),
     ]
 
     # meta

@@ -1,7 +1,7 @@
-from django.conf.urls import url, include
+from django.urls import re_path, include
 
 urlpatterns = [
-    url(r"^", include("tests.images.test_urls", namespace="images")),
+    re_path(r"^", include("tests.images.test_urls", namespace="images")),
 ]
 
 handler404 = "lamb.utils.default_views.page_not_found"

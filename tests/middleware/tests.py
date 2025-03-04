@@ -8,9 +8,9 @@ class MiddlewareTest(SimpleTestCase):
     def test_invalid_param(self):
         client = Client()
         result = client.get("/invalid_param/")
-        self.assertEquals(result.status_code, 400)
+        self.assertEqual(result.status_code, 400)
 
     def test_unknown(self):
         client = Client()
         result = client.get("/unknown/")
-        self.assertEquals(result.status_code, 500)
+        self.assertEqual(result.status_code, 500)
