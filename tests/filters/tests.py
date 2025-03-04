@@ -31,7 +31,6 @@ class FieldValueFilterTestCase(LambTestCase):
             with self.subTest(compare):
                 value_filter = FieldValueFilter("actor_id", str, Actor.actor_id, allowed_compares=[compare])
                 result = value_filter.apply_to_query(Query(Actor), {param: 0})
-                print(str(result))
                 assert f"WHERE actor.actor_id {operator} %(actor_id_1)s" in str(result)
 
     def test_null_argument(self):
