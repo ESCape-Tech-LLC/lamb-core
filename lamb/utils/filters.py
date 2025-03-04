@@ -23,13 +23,13 @@ from lamb.exc import (
     InvalidParamValueError,
     ServerError,
 )
-from lamb.utils import datetime_begin, datetime_end, dpath_value
+from lamb.utils import datetime_begin, datetime_end, dpath_value, TZ_MSK
 from lamb.utils.core import compact
 from lamb.utils.transformers import (
     transform_boolean,
-    transform_date,
-    transform_datetime,
-    transform_string_enum,
+    transform_date_tz,
+    transform_datetime_tz,
+    transform_string_enum
 )
 
 __all__ = [
@@ -146,12 +146,12 @@ class FieldValueFilter(Filter):
     allowed_compares: list[str]
 
     def __init__(
-        self,
-        arg_name: str,
-        req_type: type,
-        comparing_field: QueryableAttribute,
-        req_type_transformer: Callable = None,
-        allowed_compares: list[str] | None = None,
+            self,
+            arg_name: str,
+            req_type: type,
+            comparing_field: QueryableAttribute,
+            req_type_transformer: Callable = None,
+            allowed_compares: list[str] | None = None,
     ):
         allowed_compares = allowed_compares or ["__eq__", "__ne__", "__ge__", "__le__"]
         super().__init__(arg_name, req_type, req_type_transformer)
@@ -173,7 +173,7 @@ class FieldValueFilter(Filter):
         self.allowed_compares = allowed_compares
 
     # def apply_to_query(self, query: Query, request: LambRequest = None, params: Dict = None) -> Query:
-    def apply_to_query(self, query: Query, params, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params=None, **kwargs) -> Query:
         # check for equality
         if "__eq__" in self.allowed_compares:
             param_value = self.get_param_value(params, key_path=self.arg_name)
@@ -251,7 +251,10 @@ class FieldValueFilter(Filter):
         return query
 
     def __str__(self):
-        return f"<{self.__class__.__name__}: arg={self.arg_name}, type={self.req_type}, field={self.comparing_field}, tf={self.req_type_transformer}, compares={self.allowed_compares}>"
+        return (
+            f"<{self.__class__.__name__}: arg={self.arg_name}, type={self.req_type}, field={self.comparing_field}, "
+            f"tf={self.req_type_transformer}, compares={self.allowed_compares}>"
+        )
 
 
 class ColumnValueFilter(FieldValueFilter):
@@ -271,10 +274,68 @@ class ColumnValueFilter(FieldValueFilter):
         super().__init__(arg_name=arg_name, req_type=req_type, comparing_field=column, **kwargs)
 
 
+class DefaultDateFilter(ColumnValueFilter):
+    """Syntax sugar for column with date/datetime type based simple filter"""
+
+    def __init__(self, *args, fmt=None, transform_func=None, tz_info=None, tz_strict=False, **kwargs):
+        """
+        :param transform_func: Depending on the column type used ->  date: transform_date_tz;
+        datetime: transform_datetime_tz.
+        :param tz_info: Defaults to None. The value timezone if needed to be specified.
+        :param tz_strict: Defaults to False. Triggers an error if set to False with wrong given
+        values.
+
+        Example: tz_info is set for a column that doesn't require a timezone. If tz_strict is True,
+        an error is raised, else a warning is given with tz_info set to None.
+
+        >>> from lamb.db import DeclarativeBase
+        >>> from sqlalchemy.orm import Mapped, mapped_column
+        >>> from sqlalchemy.sql.sqltypes import TIMESTAMP
+
+        >>> class RandomModel(DeclarativeBase):
+        >>>     time_created: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+        >>> a = RandomModel()
+
+        If we are filtering by the following logic:
+        >>> DefaultDateFilter(a.time_created, tz_strict=True)
+        We get a ServerError
+
+        While if we filter by the following logic:
+        >>> DefaultDateFilter(a.time_created)
+        Only a warning is triggered in console and tz_info is set automatically to Europe/Moscow.
+        """
+        if fmt is None:
+            raise ServerError("Date/Datetime format must be specified")
+
+        # Check if the inspected column uses timezone
+        ins = sa.inspect(args[0])
+        is_time_zoned = ins.type.timezone
+
+        error_message = None
+        warning_message = None
+        if is_time_zoned and tz_info is None:
+            tz_info = TZ_MSK
+            error_message = "No timezone info provided for time-zoned column"
+            warning_message = f"{error_message}, using Europe/Moscow by default"
+        elif not is_time_zoned and tz_info is not None:
+            tz_info = None
+            error_message = "Timezone info provided for non time-zoned column"
+            warning_message = f"{error_message}, setting timezone to None"
+
+        if not tz_strict and warning_message is not None:
+            logger.warning(warning_message)
+        elif tz_strict and error_message is not None:
+            raise ServerError(error_message)
+
+        super().__init__(*args, req_type=str, req_type_transformer=partial(transform_func, fmt=fmt, tz_info=tz_info),
+                         **kwargs)
+
+
 # special syntax sugars
-class DateFilter(ColumnValueFilter):
-    def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):
-        super().__init__(*args, req_type=str, req_type_transformer=partial(transform_date, format=fmt), **kwargs)
+class DateFilter(DefaultDateFilter):
+    def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, transform_func=transform_date_tz, tz_info=None,
+                 tz_strict=False, **kwargs):
+        super().__init__(*args, fmt=fmt, transform_func=transform_func, tz_info=tz_info, tz_strict=tz_strict, **kwargs)
 
     def vary_param_value_min(self, value: datetime | date) -> date:
         if isinstance(value, datetime):
@@ -287,9 +348,9 @@ class DateFilter(ColumnValueFilter):
         return value
 
 
-class DatetimeFilter(ColumnValueFilter):
-    def __init__(self, *args, fmt="iso", **kwargs):
-        super().__init__(*args, req_type=str, req_type_transformer=partial(transform_datetime, format=fmt), **kwargs)
+class DatetimeFilter(DefaultDateFilter):
+    def __init__(self, *args, fmt="iso", transform_func=transform_datetime_tz, tz_info=None, tz_strict=False, **kwargs):
+        super().__init__(*args, fmt=fmt, transform_func=transform_func, tz_info=tz_info, tz_strict=tz_strict, **kwargs)
 
     def vary_param_value_min(self, value: datetime | date) -> datetime:
         if isinstance(value, datetime):
@@ -349,12 +410,12 @@ class PostgresqlFastTextSearchFilter(Filter):
     _reconfig: str
 
     def __init__(
-        self,
-        columns: QueryableAttribute | list[QueryableAttribute] | None = None,
-        tsvector_expr: Any | None = None,
-        tsquery_func: Callable[[str], Function] = None,
-        reconfig="russian",
-        arg_name="search_text",
+            self,
+            columns: QueryableAttribute | list[QueryableAttribute] | None = None,
+            tsvector_expr: Any | None = None,
+            tsquery_func: Callable[[str], Function] = None,
+            reconfig="russian",
+            arg_name="search_text",
     ):
         super().__init__(arg_name=arg_name, req_type=str, req_type_transformer=None)
 
@@ -385,9 +446,9 @@ class PostgresqlFastTextSearchFilter(Filter):
         else:
             self._tsquery_func = tsquery_func
 
-    def apply_to_query(self, query: Query, params: dict, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: dict = None, **kwargs) -> Query:
         # extract param
-        param_value = self.get_param_value(params=params)
+        param_value: str | list = self.get_param_value(params=params)
         if param_value is None:
             return query
 
@@ -479,7 +540,7 @@ class JsonDataFilter(ColumnValueFilter):
         return result
 
     # def apply_to_query(self, query, request):
-    def apply_to_query(self, query: Query, params: dict, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: dict = None, **kwargs) -> Query:
         # early return
         param_value = self.get_param_value(params, key_path=self.arg_name)
         if param_value is None:

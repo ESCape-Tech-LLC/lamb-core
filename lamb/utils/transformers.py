@@ -21,7 +21,9 @@ from lamb.exc import (
 __all__ = [
     "transform_boolean",
     "transform_date",
+    "transform_date_tz",
     "transform_datetime",
+    "transform_datetime_tz",
     "transform_string_enum",
     "transform_uuid",
     "transform_prefixed_tsquery",
@@ -43,6 +45,8 @@ logger = logging.getLogger(__name__)
 Transformer - is any callable that accepts `value` as first positional argument and converts it to another value
 
 """
+
+_ISO_MSEC_REGEX = r"(?P<prefix>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?P<seconds>\.\d{1,3})(?P<suffix>\+\d{2}:\d{2})"
 
 
 def transform_boolean(value) -> bool:
@@ -66,7 +70,17 @@ def transform_date(value: datetime | date | str, **kwargs) -> datetime.date:
     return transform_datetime(value, **kwargs).date()
 
 
-_ISO_MSEC_REGEX = r"(?P<prefix>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?P<seconds>\.\d{1,3})(?P<suffix>\+\d{2}:\d{2})"
+def transform_date_tz(value: datetime | date | str, **kwargs) -> datetime.date:
+    return transform_datetime_tz(value, **kwargs).date()
+
+
+def transform_datetime_tz(value: datetime | date | str, tz_info=None, **kwargs) -> datetime:
+    result = transform_datetime(value, **kwargs)
+    if result.tzinfo is None:
+        result = result.replace(tzinfo=tz_info)
+    else:
+        result = result.astimezone(tz_info)
+    return result
 
 
 def transform_datetime(value: datetime | date | str | int | float, __format=None, **kwargs) -> datetime:
