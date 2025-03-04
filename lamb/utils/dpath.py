@@ -6,12 +6,11 @@ import logging
 from collections.abc import Callable, Mapping
 from functools import reduce
 from operator import getitem
-from typing import Any, Union
+from typing import Any
 
-# import dpath.util
 import dpath
 import lxml.etree as etree
-from django.conf import Settings
+from django.conf import Settings, LazySettings
 from django.http.request import QueryDict
 from lxml.etree import _Element as EtreeElement
 from lxml.etree import _ElementTree as Etree
@@ -81,7 +80,7 @@ def dpath_value(
         try:
             if isinstance(dict_object, dict):
                 result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
-            elif isinstance(dict_object, Settings):
+            elif isinstance(dict_object, (Settings, LazySettings)):
                 result = _impl_django_conf(dict_object, key_path=_key_path, **kwargs)
             elif isinstance(dict_object, QueryDict):
                 result = _impl_query_dict(dict_object, key_path=_key_path, **kwargs)

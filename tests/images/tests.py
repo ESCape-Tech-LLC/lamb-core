@@ -4,7 +4,7 @@ from django.test.client import Client
 # Lamb Framework
 from lamb.db.context import lamb_db_context
 
-from moto import mock_s3
+from moto import mock_aws
 from boto3 import Session
 from tests.testcases import LambTestCase
 
@@ -21,7 +21,7 @@ class ImagesDiskTest(LambTestCase):
     def test_retrieve(self):
         client = Client()
         result = client.get("/simple_images/")
-        self.assertEquals(result.status_code, 200)
+        self.assertEqual(result.status_code, 200)
         data = self.get_json(result)
         self.assertEqual(len(data), 0)
 
@@ -31,16 +31,16 @@ class ImagesDiskTest(LambTestCase):
         f2 = open("tests/images/files/image_square.jpeg", "rb")
         f3 = open("tests/images/files/image_landscape.jpg", "rb")
         result = client.post("/simple_images/", {"attachment": f1, "attachment2": f2, "attachment3": f3})
-        self.assertEquals(result.status_code, 201)
+        self.assertEqual(result.status_code, 201)
         result = client.get("/simple_images/")
-        self.assertEquals(result.status_code, 200)
+        self.assertEqual(result.status_code, 200)
         data = self.get_json(result)
         self.assertEqual(len(data), 3)
 
 
 @override_settings(ROOT_URLCONF="tests.images.urls")
 @override_settings(LAMB_IMAGE_UPLOAD_ENGINE="lamb.service.image.uploaders.ImageUploadServiceAmazonS3")
-@mock_s3
+@mock_aws
 class ImagesAwsTest(LambTestCase):
     def setUp(self):
         from django.conf import settings
@@ -56,7 +56,7 @@ class ImagesAwsTest(LambTestCase):
     def test_retrieve(self):
         client = Client()
         result = client.get("/simple_images/")
-        self.assertEquals(result.status_code, 200)
+        self.assertEqual(result.status_code, 200)
         data = self.get_json(result)
         self.assertEqual(len(data), 0)
 
@@ -65,9 +65,9 @@ class ImagesAwsTest(LambTestCase):
         f1 = open("tests/images/files/test.png", "rb")
         f2 = open("tests/images/files/image_square.jpeg", "rb")
         result = client.post("/simple_images/", {"attachment": f1, "attachment2": f2})
-        self.assertEquals(result.status_code, 201)
+        self.assertEqual(result.status_code, 201)
         result = client.get("/simple_images/")
-        self.assertEquals(result.status_code, 200)
+        self.assertEqual(result.status_code, 200)
         data = self.get_json(result)
         self.assertEqual(len(data), 2)  # Check uploaded 2 images
         self.assertEqual(len(data[0]["slices_info"]), 3)  # And have 3 slices

@@ -1,9 +1,9 @@
-from django.conf.urls import url
+from django.urls import re_path
 
 from .views import SimpleImageListView
 
 urlpatterns = [
-    url(r"^simple_images/?$", SimpleImageListView, name="simple_images_list"),
+    re_path(r"^simple_images/?$", SimpleImageListView, name="simple_images_list"),
 ]
 
 app_name = "tests"

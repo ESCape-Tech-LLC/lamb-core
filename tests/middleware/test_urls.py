@@ -1,10 +1,10 @@
-from django.conf.urls import url
+from django.urls import re_path
 
 from . import views
 
 urlpatterns = [
-    url(r"^invalid_param/?$", views.InvalidParam, name="invalid_param"),
-    url(r"^unknown/?$", views.unknown, name="unknown"),
+    re_path(r"^invalid_param/?$", views.InvalidParam, name="invalid_param"),
+    re_path(r"^unknown/?$", views.unknown, name="unknown"),
 ]
 
 app_name = "tests"
