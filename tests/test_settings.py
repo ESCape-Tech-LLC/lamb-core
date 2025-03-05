@@ -54,7 +54,6 @@ DATABASES = {
 LAMB_DB_CONFIG = {
     "default": dict(
         driver="postgresql",
-        async_driver="postgresql",
         host="localhost",
         db_name="test_db",
         username="postgres",

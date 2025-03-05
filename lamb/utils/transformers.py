@@ -75,8 +75,8 @@ def transform_date_tz(value: datetime | date | str, **kwargs) -> datetime.date:
 
 
 def transform_datetime_tz(value: datetime | date | str, tz_info=None, **kwargs) -> datetime:
-    result = transform_datetime(value, **kwargs)
-    if result.tzinfo is None:
+    result = transform_datetime(value, __format=kwargs.get("fmt"), **kwargs)
+    if result.tzinfo is None or (result.tzinfo is not None and tz_info is None):
         result = result.replace(tzinfo=tz_info)
     else:
         result = result.astimezone(tz_info)
