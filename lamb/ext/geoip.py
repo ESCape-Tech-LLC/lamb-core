@@ -5,13 +5,13 @@ from typing import NewType
 
 import geoip2
 import lazy_object_proxy
+from django.conf import settings
 from django.http import HttpRequest
 from geoip2 import models
 from geoip2.database import Reader
 from geoip2.errors import AddressNotFoundError
 from ipware import get_client_ip
 
-from lamb.lamb_settings import settings
 from lamb.utils import LambRequest
 
 logger = logging.getLogger(__name__)

@@ -8,15 +8,20 @@ from typing import IO, Any, BinaryIO
 
 import botocore.exceptions
 from botocore.config import Config
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from furl import furl
 
 from lamb import exc
-from lamb.lamb_settings import settings
+from lamb.lamb_settings import settings, settings_config
 from lamb.json.mixins import ResponseEncodableMixin
 
 from ...utils.core import compact
 from .base import AWSBase
+
+if settings_config == "django":
+    from django.core.files.uploadedfile import InMemoryUploadedFile
+else:
+    from fastapi import UploadFile as InMemoryUploadedFile
+
 
 logger = logging.getLogger(__name__)
 

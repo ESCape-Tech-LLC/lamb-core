@@ -1,4 +1,3 @@
-# core level utils - should not depend on any other lamb modules to omit circular references
 from __future__ import annotations
 
 import copy
@@ -9,6 +8,7 @@ import string
 import types
 import urllib.parse
 import warnings
+
 from collections.abc import Generator
 from types import GenericAlias
 from typing import Any, TypeVar
