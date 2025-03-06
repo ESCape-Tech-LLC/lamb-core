@@ -5,7 +5,6 @@ import enum
 import json
 import logging
 
-from django.conf import settings
 from django.core.cache import cache
 from sqlalchemy import TEXT, VARCHAR, Column
 
@@ -14,6 +13,7 @@ from lamb.db.context import lamb_db_context
 from lamb.db.patterns import DbEnum
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.lamb_settings import settings
 from lamb.utils.transformers import transform_boolean
 
 __all__ = [

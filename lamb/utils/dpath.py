@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable, Mapping
 from functools import reduce
 from operator import getitem
-from typing import Any, Union
+from typing import Any
 
 # import dpath.util
 import dpath

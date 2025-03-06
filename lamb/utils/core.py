@@ -6,7 +6,6 @@ import functools
 import importlib
 import random
 import string
-import sys
 import types
 import urllib.parse
 import warnings

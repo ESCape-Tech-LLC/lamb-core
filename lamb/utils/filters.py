@@ -8,7 +8,6 @@ from functools import partial
 from typing import Any, TypeVar
 
 import sqlalchemy as sa
-from django.conf import settings
 from django.http import QueryDict
 from sqlalchemy import Float, func
 from sqlalchemy.dialects.postgresql import DOMAIN
@@ -23,6 +22,7 @@ from lamb.exc import (
     InvalidParamValueError,
     ServerError,
 )
+from lamb.lamb_settings import settings
 from lamb.utils import datetime_begin, datetime_end, dpath_value
 from lamb.utils.core import compact
 from lamb.utils.transformers import (

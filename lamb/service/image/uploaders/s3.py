@@ -5,9 +5,9 @@ import tempfile
 from typing import BinaryIO
 
 from boto3.session import Session as AWSSession
-from django.conf import settings
 
 from lamb import exc
+from lamb.lamb_settings import settings
 from lamb.service.aws.s3 import S3BucketConfig, S3Uploader
 from lamb.utils import LambRequest
 

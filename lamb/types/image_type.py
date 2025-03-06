@@ -9,13 +9,13 @@ from typing import TypeVar
 
 import sqlalchemy as sa
 from botocore.exceptions import BotoCoreError
-from django.conf import settings
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
 
 from lamb import exc
 from lamb.json import JsonEncoder
 from lamb.json.mixins import ResponseEncodableMixin
+from lamb.lamb_settings import settings
 from lamb.service.aws.s3 import S3Uploader
 
 __all__ = [

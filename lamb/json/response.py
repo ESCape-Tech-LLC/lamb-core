@@ -6,7 +6,6 @@ from collections.abc import Callable
 from typing import Any
 
 import lazy_object_proxy
-from django.conf import settings
 from django.http import HttpResponse
 
 try:
@@ -16,6 +15,7 @@ except ImportError:
 
 
 from lamb import exc
+from lamb.lamb_settings import settings
 from lamb.utils import dpath_value
 from lamb.utils.core import import_by_name
 

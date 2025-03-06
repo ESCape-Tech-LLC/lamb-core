@@ -4,9 +4,9 @@ import os
 from typing import BinaryIO
 
 import furl
-from django.conf import settings
 
 from lamb import exc
+from lamb.lamb_settings import settings
 from lamb.utils import LambRequest
 
 from .base import BaseUploader, PILImage

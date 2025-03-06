@@ -2,9 +2,8 @@ import json
 import logging
 from functools import wraps
 
-from django.conf import settings
-
 from lamb.json import JsonResponse
+from lamb.lamb_settings import settings
 from lamb.service.redis.config import RedisConfig
 
 logger = logging.getLogger(__name__)

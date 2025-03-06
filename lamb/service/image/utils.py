@@ -4,9 +4,8 @@ import logging
 import os
 from urllib.parse import urljoin
 
-from django.conf import settings
-
 from lamb.exc import ServerError
+from lamb.lamb_settings import settings
 from lamb.service.aws.s3 import S3Uploader
 from lamb.types import IT, SliceRule
 from lamb.utils import LambRequest

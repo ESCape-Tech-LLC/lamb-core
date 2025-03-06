@@ -8,11 +8,11 @@ from typing import IO, Any, BinaryIO
 
 import botocore.exceptions
 from botocore.config import Config
-from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from furl import furl
 
 from lamb import exc
+from lamb.lamb_settings import settings
 from lamb.json.mixins import ResponseEncodableMixin
 
 from ...utils.core import compact

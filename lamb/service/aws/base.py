@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from boto3.session import Session as AWSSession
-from django.conf import settings
+
+from lamb.lamb_settings import settings
 
 __all__ = ["AWSBase"]
 

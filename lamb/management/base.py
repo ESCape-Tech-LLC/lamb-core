@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 
 import sqlalchemy.orm
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from lamb.db.session import get_metadata, lamb_db_session_maker
+from lamb.lamb_settings import settings
 from lamb.utils import dpath_value
 from lamb.utils.core import lazy
 from lamb.utils.validators import validate_not_empty

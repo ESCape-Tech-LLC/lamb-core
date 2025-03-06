@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Union
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account as google_service_account

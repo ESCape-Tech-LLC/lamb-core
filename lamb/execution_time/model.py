@@ -4,7 +4,6 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from django.conf import settings
 from sqlalchemy import (
     BIGINT,
     FLOAT,
@@ -26,8 +25,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from lamb.db.session import DeclarativeBase
 from lamb.exc import ImproperlyConfiguredError
 from lamb.json.mixins import ResponseEncodableMixin
-
-# from lamb.types import DeviceInfo, DeviceInfoType
+from lamb.lamb_settings import settings
 from lamb.types.device_info_type import DeviceInfo, DeviceInfoType
 from lamb.utils import tz_now
 

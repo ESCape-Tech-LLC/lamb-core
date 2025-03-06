@@ -5,10 +5,10 @@ import uuid
 from decimal import Decimal
 
 import lazy_object_proxy
-from django.conf import settings
 from sqlalchemy_utils import PhoneNumber
 
 from lamb.json.mixins import ResponseConformProtocol
+from lamb.lamb_settings import settings
 from lamb.utils.core import import_by_name
 
 __all__ = ["JsonEncoder"]

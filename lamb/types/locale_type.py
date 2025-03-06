@@ -1,11 +1,11 @@
 import logging
 
 import babel
-from django.conf import settings
 from sqlalchemy import types
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
 from lamb.exc import InvalidParamValueError, ServerError
+from lamb.lamb_settings import settings
 from lamb.json.mixins import ResponseEncodableMixin
 
 __all__ = ["LambLocale", "LambLocaleType"]
