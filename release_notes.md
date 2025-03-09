@@ -1,3 +1,10 @@
+# 3.5.11
+
+**Features:**
+
+- `lamb.json.encoder.JsonEncoder` now supports dataclasses out-of-the-box
+- `lamb.utils.transformers.transform_typed_list` now supports dataclasses for elements creation if income item is dict
+
 # 3.5.10
 
 **Bug fixes:**
