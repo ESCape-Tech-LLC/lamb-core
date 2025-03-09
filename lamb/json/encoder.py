@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import json
 import logging
@@ -47,6 +48,8 @@ class JsonEncoder(json.JSONEncoder):
             result = list(obj)
         elif isinstance(obj, PhoneNumber):
             result = obj.e164
+        elif dataclasses.is_dataclass(obj) and not isinstance(obj, ResponseConformProtocol):
+            result = dataclasses.asdict(obj)
         elif isinstance(obj, ResponseConformProtocol):
             result = obj.response_encode(self.request)
         else:
