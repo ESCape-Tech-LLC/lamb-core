@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import enum
 import logging
 import re
@@ -11,12 +12,7 @@ from typing import TypeVar
 
 import dateutil
 
-from lamb.exc import (
-    ApiError,
-    InvalidParamTypeError,
-    InvalidParamValueError,
-    ServerError,
-)
+from lamb.exc import ApiError, InvalidParamTypeError, InvalidParamValueError, ProgrammingError
 
 __all__ = [
     "transform_boolean",
@@ -178,7 +174,7 @@ def transform_datetime_iso(value: datetime, sep: str = "T", timespec="millisecon
 ET = TypeVar("ET")
 
 
-def transform_string_enum(value: str, enum_class: type[ET]) -> ET:
+def transform_string_enum(value: str, enum_class: type[ET], key: str | None = None) -> ET:
     """Transforms string version into string based Enum"""
     if isinstance(value, enum_class):
         return value
@@ -186,10 +182,10 @@ def transform_string_enum(value: str, enum_class: type[ET]) -> ET:
     # check data types
     if not issubclass(enum_class, enum.Enum) and not issubclass(enum_class, str):
         logger.warning(f"transform_string_enum received object of class {enum_class} as enum_class arg")
-        raise ServerError("Invalid class type for enum converting")
+        raise ProgrammingError("Invalid class type for enum converting", error_details=key)
     if not isinstance(value, str):
         logger.warning(f"transform_string_enum received object of class {value.__class__.__name__} as value arg")
-        raise ServerError("Invalid class type for enum converting")
+        raise ProgrammingError("Invalid class type for enum converting", error_details=key)
 
     # try to convert
     try:
@@ -198,11 +194,11 @@ def transform_string_enum(value: str, enum_class: type[ET]) -> ET:
                 return enum_class(enum_candidate)
 
         # not found - raise
-        raise InvalidParamValueError(f"Could not cast {value} as valid {enum_class.__name__}")
+        raise InvalidParamValueError(f"Could not cast '{value}' as valid {enum_class.__name__}", error_details=key)
     except ApiError:
         raise
     except Exception as e:
-        raise InvalidParamValueError(f"Failed to convert enum value {value}") from e
+        raise InvalidParamValueError(f"Failed to convert enum value {value}", error_details=key) from e
 
 
 @singledispatch
@@ -217,7 +213,20 @@ def transform_typed_list(
 
     if convert:
         try:
-            value = [cls(i) for i in value]
+            if dataclasses.is_dataclass(cls):
+                buffer = []
+                for i in value:
+                    if isinstance(i, dict):
+                        buffer.append(cls(**i))
+                    elif isinstance(i, cls):
+                        buffer.append(i)
+                    else:
+                        buffer.append(cls(i))
+                value = buffer
+            else:
+                value = [cls(i) for i in value]
+        except ApiError:
+            raise
         except Exception as e:
             raise InvalidParamTypeError(f"Invalid type for {cls.__name__}-list: {value}", error_details=key) from e
     else:
