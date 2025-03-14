@@ -1,3 +1,11 @@
+# 3.5.12
+
+**Features:**
+
+- `lamb.management.base.LambCommandMixin`
+  - now supports async database connections with `--db-async` flag
+  - database key argument renamed to `-D/--db-key`
+
 # 3.5.11
 
 **Features:**

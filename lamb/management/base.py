@@ -19,14 +19,15 @@ logger = logging.getLogger(__name__)
 class LambCommandMixin:
     log_level: str | None = None
     db_key: str | None = None
+    db_async: bool = False
 
     @lazy
     def db_session(self) -> sqlalchemy.orm.Session:
-        return lamb_db_session_maker(db_key=self.db_key, pooled=True, sync=True)
+        return lamb_db_session_maker(db_key=self.db_key, pooled=True, sync=not self.db_async)
 
     @lazy
     def db_metadata(self) -> sqlalchemy.schema.MetaData:
-        return get_metadata(db_key=self.db_key, pooled=True, sync=True)
+        return get_metadata(db_key=self.db_key, pooled=True, sync=not self.db_async)
 
     def add_arguments(self: BaseCommand, parser):
         # noinspection PyUnresolvedReferences
@@ -42,12 +43,19 @@ class LambCommandMixin:
         )
         parser.add_argument(
             "-D",
-            "--database",
+            "--db-key",
             action="store",
             dest="db_key",
             default="default",
             help="Database to use",
             type=str,
+        )
+        parser.add_argument(
+            "--db-async",
+            action="store_true",
+            dest="db_async",
+            default=False,
+            help="Use asynchronously database session and metadata",
         )
 
     def execute(self, *args, **options):
@@ -64,6 +72,11 @@ class LambCommandMixin:
         if _db_key not in settings.LAMB_DB_CONFIG:
             raise CommandError(f"Unknown db key: {_db_key}")
         self.db_key = _db_key
+
+        self.db_async = dpath_value(options, "db_async", bool)
+
+        logger.info(f"LambCommandMixin. db key: {self.db_key}")
+        logger.info(f"LambCommandMixin. db_async: {self.db_async}")
 
         # noinspection PyUnresolvedReferences
         super().execute(*args, **options)
