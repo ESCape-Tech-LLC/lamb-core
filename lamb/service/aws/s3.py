@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import logging
 import re
 import warnings
@@ -14,9 +15,8 @@ from furl import furl
 
 from lamb import exc
 from lamb.json.mixins import ResponseEncodableMixin
-
-from ...utils.core import compact
-from .base import AWSBase
+from lamb.service.aws.base import AWSBase
+from lamb.utils.core import compact, masked_dict
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,15 @@ class S3BucketConfig(ResponseEncodableMixin):
     read_timeout: float | None = None
 
     def response_encode(self, request=None) -> dict:
-        return dataclasses.asdict(self)
+        result = dataclasses.asdict(self)
+        result = masked_dict(result, "access_key", "secret_key")
+        return result
+
+    def __str__(self):
+        return json.dumps(self.response_encode())
+
+    def __repr__(self):
+        return json.dumps(self.response_encode())
 
 
 class S3Uploader(AWSBase):

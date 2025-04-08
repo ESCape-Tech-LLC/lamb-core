@@ -1,3 +1,9 @@
+# 3.5.13
+
+**Fixes:**
+
+- `lamb.services.aws.s3.S3BucketConfig` - `__str__` and `__repr__` use masked form of dict
+
 # 3.5.12
 
 **Features:**
