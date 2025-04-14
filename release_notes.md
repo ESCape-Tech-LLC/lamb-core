@@ -1,3 +1,18 @@
+# 3.5.14
+
+**Features:**
+- `lamb.utils.dpath_value` - for `os.environ` supports `_FILE` like lookup for integration with Docker Secrets or similar solutions
+
+```python
+import os
+from lamb.utils import dpath_value
+from lamb.utils.validators import validate_not_empty
+
+result = dpath_value(os.environ, 'SOME_KEY', str, transform=validate_not_empty)
+# in case environment contains SOME_KEY variable - corresponding value would be extracted and validated
+# in case SOME_KEY not exist but SOME_KEY_FILE exists - value would be extracted from file and validated
+```
+
 # 3.5.13
 
 **Fixes:**

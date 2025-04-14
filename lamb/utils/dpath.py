@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import copy
 import logging
+import os
 from collections.abc import Callable, Mapping
 from functools import reduce
 from operator import getitem
@@ -79,7 +80,9 @@ def dpath_value(
     try:
         # custom dispatch
         try:
-            if isinstance(dict_object, dict):
+            if isinstance(dict_object, os._Environ):
+                result = _impl_environ(dict_object, key_path=_key_path, **kwargs)
+            elif isinstance(dict_object, dict):
                 result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
             elif isinstance(dict_object, Settings):
                 result = _impl_django_conf(dict_object, key_path=_key_path, **kwargs)
@@ -230,3 +233,26 @@ def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
 def _impl_query_dict(dict_object: QueryDict, key_path: str | list[str] = None, **kwargs) -> Any:
     # TODO: support for multiple values
     return _impl_dict(dict_object.dict(), key_path, **kwargs)
+
+
+def _impl_environ(env: os._Environ, key_path: str | list[str] = None, **kwargs) -> Any:
+    if not isinstance(key_path, str):
+        logger.critical("Environment variable name must be a string")
+        raise exc.ProgrammingError
+
+    if key_path.endswith("_FILE"):
+        # early return - seems not like patch required
+        return _impl_dict(dict_object=env, key_path=key_path, **kwargs)
+
+    key_path_secret = key_path + "_FILE"
+    if key_path not in env and key_path_secret in env:
+        try:
+            file_path = env[key_path_secret]
+            with open(file_path, "r") as f:
+                result = f.read().strip()
+                env[key_path] = result
+                logger.warning(f"env variable {key_path} monkey patch from _FILE like version: {key_path_secret}")
+        except Exception as e:
+            raise exc.InvalidBodyStructureError("Could not adapt _FILE like env variable") from e
+
+    return _impl_dict(dict_object=env, key_path=key_path, **kwargs)
