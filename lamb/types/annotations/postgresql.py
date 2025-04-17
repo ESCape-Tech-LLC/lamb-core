@@ -41,7 +41,9 @@ int_i = Annotated[int, mapped_column(INTEGER)]
 bool_f = Annotated[bool, mapped_column(BOOLEAN, server_default=text("FALSE"))]
 bool_t = Annotated[bool, mapped_column(BOOLEAN, server_default=text("TRUE"))]
 
-uuid_pk = Annotated[uuid.UUID, mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())]
+uuid_pk = Annotated[
+    uuid.UUID, mapped_column(UUID, primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid())
+]
 
 str_v = Annotated[str, mapped_column(VARCHAR)]
 str_ci = Annotated[str, mapped_column(CITEXT)]

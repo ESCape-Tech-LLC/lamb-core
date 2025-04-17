@@ -1,3 +1,9 @@
+# 3.5.15
+
+**Changes:**
+
+- `lamb.types.annotations.postgresql` - `uuid_pk` revert to logic `default=uuid.uuid4` for compatibility with `sentinel` like logic
+
 # 3.5.14
 
 **Features:**
