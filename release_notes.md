@@ -1,3 +1,17 @@
+# 3.5.16
+
+**Changes:**
+
+- `lamb.exc.ProgrammingError` - logging logic changed. If `message` exist and flag `message_override==True` (default) then actual message would printed with `CRITICAL` level, but API response would be replaced with default message
+
+| exc                                                          | message_override | message        | logging   | API: error_message                      |
+|--------------------------------------------------------------|------------------|----------------|-----------|-----------------------------------------|
+| `raise ProgrammingError`                                     | `TRUE`           | `None`         | -         | Improperly implemented server side call |
+| `raise ProgrammingError('SomeError')`                        | `TRUE`           | `'SomeError'`  | SomeError | Improperly implemented server side call |
+| `raise ProgrammingError(message_override=False)`             | `FALSE`          | `None`         | -         | Improperly implemented server side call |
+| `raise ProgrammingError('SomeError',message_override=False)` | `FALSE`          | `'SomeError'`  | -         | SomeError                                        |
+
+
 # 3.5.15
 
 **Changes:**

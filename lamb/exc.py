@@ -158,6 +158,19 @@ class ProgrammingError(ServerError):
     _status_code = 500
     _message = "Improperly implemented server side call"
 
+    def __init__(
+        self, message=None, status_code=None, app_error_code=None, error_details=None, message_override: bool = True
+    ):
+        if message_override and message is not None:
+            logger.critical(f"{self.__class__.__name__} reason: {message}")
+            message = self._message
+        super().__init__(
+            message=message,
+            status_code=status_code,
+            app_error_code=app_error_code,
+            error_details=error_details,
+        )
+
 
 # client errors
 class NotAllowedMethodError(ClientError):
