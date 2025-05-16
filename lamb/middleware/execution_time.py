@@ -64,12 +64,11 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             logger.warning(f"could not determine LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL value: {result}")
             raise ValueError
 
-        logger.critical(f"<{self.__class__.__name__}>. settings_log_total_level: {result}")
+        logger.debug(f"<{self.__class__.__name__}>. settings_log_total_level: {result}")
         return result
 
     @lazy_default_ro(default=None)
     def _settings_log_markers_level(self) -> int | None:
-        logger.critical("looking for: _settings_log_markers_level")
         result = settings.LAMB_EXECUTION_TIME_LOG_MARKERS_LEVEL
         if isinstance(result, str):
             result = logging.getLevelName(result.upper())
@@ -81,7 +80,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             logger.warning(f"could not determine LAMB_EXECUTION_TIME_LOG_MARKERS_LEVEL value: {result}")
             raise ValueError
 
-        logger.critical(f"<{self.__class__.__name__}>. settings_log_markers_level: {result}")
+        logger.debug(f"<{self.__class__.__name__}>. settings_log_markers_level: {result}")
         return result
 
     # utils
@@ -172,7 +171,6 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                 }
             logger.log(level_total, msg, extra=extra)
 
-        logger.critical(f"before check: {self._settings_log_markers_level=} and {time_measure=}")
         if level_markers := self._settings_log_markers_level:
             if time_measure is not None:
                 for index, m in enumerate(time_measure.get_log_list()):
