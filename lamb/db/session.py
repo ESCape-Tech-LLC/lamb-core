@@ -21,6 +21,7 @@ __all__ = [
     "declarative_base",
     "create_engine",
     "create_async_engine",
+    "get_engine",
     "get_declarative_base",
     "get_metadata",
 ]
@@ -35,7 +36,9 @@ _LAMB_DB_CONFIG = get_settings_value("LAMB_DB_CONFIG", req_type=dict, default=No
 _configs_registry: dict[str, Config] = {}
 if _LAMB_DB_CONFIG is None:
     warnings.warn(
-        "parsing old style django DATABASE config, should migrate to LAMB_DB_CONFIG", DeprecationWarning, stacklevel=2
+        "parsing old style django DATABASE config, should migrate to LAMB_DB_CONFIG",
+        DeprecationWarning,
+        stacklevel=2,
     )
     _configs_registry = parse_django_config()
 else:

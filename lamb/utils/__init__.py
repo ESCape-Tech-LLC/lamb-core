@@ -17,7 +17,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from inspect import isclass
-from typing import Any, BinaryIO, TypedDict, TypeVar
+from typing import Any, Awaitable, BinaryIO, TypedDict, TypeVar
 from urllib.parse import unquote
 from xml.etree import cElementTree
 
@@ -278,6 +278,7 @@ async def a_response_paginated(
     collection: PV,
     params: dict = None,
     db_session: SAAsyncSession = None,  # alchemy session
+    count_expr: Callable[[PV], Awaitable[int]] | None = None,
 ) -> PaginationResult:
     # prepare
     _p = _response_pagination_params(params=params)
@@ -300,9 +301,19 @@ async def a_response_paginated(
             raise ProgrammingError
 
         if not total_omit:
-            result[settings.LAMB_PAGINATION_KEY_TOTAL] = await db_session.scalar(
-                sa.select(sa.func.count()).select_from(collection)
-            )
+            # # previous
+            # result[settings.LAMB_PAGINATION_KEY_TOTAL] = await db_session.scalar(
+            #     sa.select(sa.func.count()).select_from(collection)
+            # )
+            # new
+            # - use subquery version for sqlalchemy deprecation compatibility
+            # - removes order_by to omit sorting step not required in count
+            if count_expr is None:
+                result[settings.LAMB_PAGINATION_KEY_TOTAL] = await db_session.scalar(
+                    sa.select(sa.func.count()).select_from(collection.order_by(None).subquery())
+                )
+            else:
+                result[settings.LAMB_PAGINATION_KEY_TOTAL] = await count_expr(collection)
 
         collection = collection.offset(offset)
         if limit:

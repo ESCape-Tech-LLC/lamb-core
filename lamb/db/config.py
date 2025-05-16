@@ -152,6 +152,8 @@ class Config:
     # engine options
     def engine_options_(self, sync: bool, pooled: bool) -> dict[str, Any]:
         # early returns
+        # TODO: support merging strategy with default implementation
+        # TODO: remove dict support as not required
         _options = self.engine_options if sync else self.aengine_options
 
         if _options is None:
@@ -191,7 +193,7 @@ class Config:
                     }
                 )
                 if pooled:
-                    result.update({"pool_size": 50, "max_overflow": 100})
+                    result.update({"pool_size": 100, "max_overflow": 100})
                     if self.multi_host:
                         result.update({"pool_pre_ping": True})
             logger.debug(

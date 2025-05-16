@@ -237,8 +237,7 @@ def _impl_query_dict(dict_object: QueryDict, key_path: str | list[str] = None, *
 
 def _impl_environ(env: os._Environ, key_path: str | list[str] = None, **kwargs) -> Any:
     if not isinstance(key_path, str):
-        logger.critical("Environment variable name must be a string")
-        raise exc.ProgrammingError
+        raise exc.ProgrammingError("Environment variable name must be a string")
 
     if key_path.endswith("_FILE"):
         # early return - seems not like patch required
@@ -251,7 +250,7 @@ def _impl_environ(env: os._Environ, key_path: str | list[str] = None, **kwargs) 
             with open(file_path, "r") as f:
                 result = f.read().strip()
                 env[key_path] = result
-                logger.warning(f"env variable {key_path} monkey patch from _FILE like version: {key_path_secret}")
+                logger.warning(f"env variable monkey patching from _FILE version: {key_path} << {key_path_secret}")
         except Exception as e:
             raise exc.InvalidBodyStructureError("Could not adapt _FILE like env variable") from e
 

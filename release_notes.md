@@ -1,3 +1,12 @@
+# 3.5.17
+
+**Changes:**
+
+- increase default pool size for db connections in async mode to `pool_size=100, overflow=100`
+- `LAMB_EXECUTION_TIME_LOG_MARKERS_LEVEL` independent config for printing ETM markers at end of `LambExecutionTimeMiddleware` - default is `None` (not print)
+- `LambExecutionTimeMiddleware` refactoring
+- `lamb.utils.a_response_paginated` supports `count_expr` argument (callable to calculate total size of pagination) and refactoring default implementation
+
 # 3.5.16
 
 **Changes:**
