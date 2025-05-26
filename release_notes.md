@@ -1,3 +1,10 @@
+# 3.5.19
+
+**Features:**
+
+- `lamb.utils.a_response_paginated` support `db_as_rows` flag to return core-level rows instead of scalars
+- `lamb.utils.filters.FieldValueFilter` support `sa.ColumnClause` as source fields for filtering on core-level statements
+
 # 3.5.17
 
 **Changes:**

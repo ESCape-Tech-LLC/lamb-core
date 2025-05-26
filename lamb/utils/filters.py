@@ -157,7 +157,7 @@ class FieldValueFilter(Filter):
         super().__init__(arg_name, req_type, req_type_transformer)
 
         # check params
-        if not isinstance(comparing_field, QueryableAttribute):
+        if not isinstance(comparing_field, (QueryableAttribute, sa.ColumnClause)):
             logger.warning(
                 f"Filter comparing_field invalid data type: {comparing_field} {comparing_field.__class__.__name__}"
             )

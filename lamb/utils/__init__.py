@@ -279,6 +279,7 @@ async def a_response_paginated(
     params: dict = None,
     db_session: SAAsyncSession = None,  # alchemy session
     count_expr: Callable[[PV], Awaitable[int]] | None = None,
+    db_as_rows: bool = False,
 ) -> PaginationResult:
     # prepare
     _p = _response_pagination_params(params=params)
@@ -319,7 +320,10 @@ async def a_response_paginated(
         if limit:
             collection = collection.limit(limit)
 
-        result[settings.LAMB_PAGINATION_KEY_ITEMS] = (await db_session.scalars(collection)).all()
+        if not db_as_rows:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = (await db_session.scalars(collection)).all()
+        else:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = (await db_session.execute(collection)).all()
     elif isinstance(collection, list):
         result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(collection) if not total_omit else None
 
