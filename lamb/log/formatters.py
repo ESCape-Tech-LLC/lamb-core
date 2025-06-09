@@ -333,11 +333,14 @@ class RequestJsonFormatter(_BaseJsonFormatter):
         request = get_current_request()
 
         if request is not None:
-            request_attrs = {
-                json_name: request.__dict__[attr_name]
-                for attr_name, json_name in HTTP_REQUEST_ATTRS.items()
-                if attr_name in request.__dict__
-            }
+            request_attrs = {}
+            for attr_name, json_name in HTTP_REQUEST_ATTRS.items():
+                if attr_name in request.__dict__:
+                    request_attrs[json_name] = request.__dict__[attr_name]
+                elif hasattr(request, attr_name):
+                    request_attrs[json_name] = getattr(request, attr_name)
+                else:
+                    pass
             result.update(request_attrs)
 
             try:

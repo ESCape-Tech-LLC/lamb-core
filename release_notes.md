@@ -1,3 +1,9 @@
+# 3.5.20
+
+**Fixes:**
+
+- `lamb.log.formatters.RequestJsonFormatter` fixed to discover fields not only from `__dict__` of request, but also with `hasattr` logic - support for descriptors for example.
+
 # 3.5.19
 
 **Features:**
