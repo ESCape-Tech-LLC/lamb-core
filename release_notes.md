@@ -1,3 +1,9 @@
+# 3.5.21
+
+**Features:**
+
+- `lamb.service.aws.s3` - noew support `signature_host` arg 
+
 # 3.5.20
 
 **Fixes:**

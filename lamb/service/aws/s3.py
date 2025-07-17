@@ -25,15 +25,25 @@ __all__ = ["S3Uploader", "S3BucketConfig"]
 
 @dataclasses.dataclass
 class S3BucketConfig(ResponseEncodableMixin):
+    """
+    Notes:
+        - arg `bucket_url` desired for calculating external link to file.
+        - arg `signature_host` desired for cases when app->S3 communication endpoint url differs from balancer->S3 host
+    """
+
+    # S3 params
     bucket_name: str | None = None
     region_name: str | None = None
     access_key: str | None = None
     secret_key: str | None = None
     endpoint_url: str | None = None
-    bucket_url: str | None = None
     check_buckets_list: bool = True
     connect_timeout: float | None = None
     read_timeout: float | None = None
+
+    # wrapper params
+    bucket_url: str | None = None
+    signature_host: str | None = None
 
     def response_encode(self, request=None) -> dict:
         result = dataclasses.asdict(self)
