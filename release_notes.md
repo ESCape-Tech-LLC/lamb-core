@@ -1,3 +1,8 @@
+# 3.5.22
+
+**Fixes:**
+- `lamb.management.commands.lamb_apply_migration` - fixed to not conflict with parent `--db-key` arg
+
 # 3.5.21
 
 **Features:**

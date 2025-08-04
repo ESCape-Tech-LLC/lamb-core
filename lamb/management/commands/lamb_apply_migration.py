@@ -46,15 +46,6 @@ class Command(LambCommand):
             default=False,
         )
         parser.add_argument(
-            "--db-key",
-            action="store",
-            dest="db_key",
-            help="Database key to process query",
-            required=False,
-            type=str,
-            default="default",
-        )
-        parser.add_argument(
             "--env-bust",
             action="store_true",
             dest="env_bust",
@@ -63,8 +54,6 @@ class Command(LambCommand):
         )
 
     def handle(self, *args, **options):
-        db_key = dpath_value(options, "db_key", str, transform=validate_not_empty)
-        self.db_session = lamb_db_session_maker(db_key=db_key)
         migration_file_path: pathlib.Path = pathlib.Path(options["migration_file"])
         if not migration_file_path.exists():
             raise CommandError(f"File not exist: {migration_file_path}")
