@@ -1,3 +1,10 @@
+# 3.5.23
+
+**Logging:**
+JSON logging improved and modified:
+- `statusCode` field rnamed to `status_code` for unification purpose
+- `http_host`, `http_origin` and `http_referer` fields if presented in request META data would be included in logs
+
 # 3.5.22
 
 **Fixes:**

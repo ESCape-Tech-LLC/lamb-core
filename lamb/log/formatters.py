@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import zoneinfo
-from typing import Any
+from typing import Any, Mapping
 
 try:
     from gunicorn.glogging import SafeAtoms
@@ -22,6 +22,7 @@ from lamb.utils.core import lazy_default, masked_dict
 __all__ = ["MultilineFormatter", "CeleryMultilineFormatter", "RequestJsonFormatter", "CeleryJsonFormatter"]
 
 # constants
+# BUILTIN_ATTRS - would be removed from extra
 BUILTIN_ATTRS = {
     "args",
     "asctime",
@@ -55,6 +56,7 @@ BUILTIN_ATTRS = {
     "status_code",
 }
 
+# would be appended to JSON log as first level fields
 HTTP_REQUEST_ATTRS = {
     "method": "http_method",
     "path": "http_url",
@@ -62,7 +64,14 @@ HTTP_REQUEST_ATTRS = {
     "xray": "xray",
     "xline": "xline",
     "app_user_id": "user_id",
-    "status_code": "statusCode",
+    "status_code": "status_code",
+}
+
+# would be appended to JSON log as first level fields
+HTTP_REQUEST_META_ATTRS = {
+    "HTTP_HOST": "http_host",
+    "HTTP_ORIGIN": "http_origin",
+    "HTTP_REFERER": "http_referer",
 }
 
 
@@ -333,6 +342,7 @@ class RequestJsonFormatter(_BaseJsonFormatter):
         request = get_current_request()
 
         if request is not None:
+            # append request attributes
             request_attrs = {}
             for attr_name, json_name in HTTP_REQUEST_ATTRS.items():
                 if attr_name in request.__dict__:
@@ -343,6 +353,15 @@ class RequestJsonFormatter(_BaseJsonFormatter):
                     pass
             result.update(request_attrs)
 
+            # append meta attributes of WSGI/ASGI
+            meta_attrs = {}
+            if hasattr(request, "META") and isinstance(request.META, Mapping):
+                for attr_name, json_name in HTTP_REQUEST_META_ATTRS.items():
+                    if attr_name in request.META:
+                        meta_attrs[json_name] = request.META[attr_name]
+            result.update(meta_attrs)
+
+            # append other
             try:
                 etm = request.lamb_execution_meter
                 result["elapsed_time"] = round((record.created - etm.start_time) * 1000, 3)
