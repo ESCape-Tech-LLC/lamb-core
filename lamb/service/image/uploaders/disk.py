@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import os
-from typing import Union, BinaryIO, Optional
+from typing import BinaryIO
 
+import furl
 from django.conf import settings
 
-# Lamb Framework
 from lamb import exc
 from lamb.utils import LambRequest
 
-import furl
-
-from .base import PILImage, BaseUploader
+from .base import BaseUploader, PILImage
 
 __all__ = ["ImageUploadServiceDisk"]
 
@@ -25,10 +23,10 @@ class ImageUploadServiceDisk(BaseUploader):
 
     def store_image(
         self,
-        image: Union[PILImage.Image, BinaryIO],
+        image: PILImage.Image | BinaryIO,
         proposed_file_name: str,
         request: LambRequest,
-        image_format: Optional[str] = None,
+        image_format: str | None = None,
     ) -> str:
         """
         Implements specific storage logic

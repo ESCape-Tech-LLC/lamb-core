@@ -1,61 +1,96 @@
 from __future__ import annotations
 
-import logging
+import contextlib
 import datetime
-from typing import Dict, List, Tuple, Optional
+import logging
 
 from django.conf import settings
 from django.http import HttpResponse
 from django.urls import resolve
 from django.utils.deprecation import MiddlewareMixin
 
-# Lamb Framework
-from lamb.utils import LambRequest, dpath_value
 from lamb.db.context import lamb_db_context
-from lamb.utils.core import lazy_default_ro
 from lamb.execution_time import ExecutionTimeMeter
-from lamb.utils.transformers import tf_list_string, transform_boolean
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
+from lamb.utils import LambRequest, dpath_value
+from lamb.utils.core import lazy_default_ro
+from lamb.utils.transformers import tf_list_string, transform_boolean
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["LambExecutionTimeMiddleware"]
+
+# TODO: modify to act like StatsD daemon
+# TODO: migrate to async/sync version
 
 
 class LambExecutionTimeMiddleware(MiddlewareMixin):
     @classmethod
     def append_mark(cls, request: LambRequest, message: str):
         """Appends new marker to request"""
-        try:
+        with contextlib.suppress(Exception):
             request.lamb_execution_meter.append_marker(message)
-        except Exception:
-            pass
 
+    # settings: memoize
     @lazy_default_ro(default=[])
-    def settings_skip_methods(self) -> List[str]:
+    def _settings_skip_methods(self) -> list[str]:
         result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_METHODS", str, transform=tf_list_string, default=[])
         result = [r.upper() for r in result]
         logger.debug(f"<{self.__class__.__name__}>. settings_skip_methods: {result}")
         return result
 
     @lazy_default_ro(default=False)
-    def settings_should_store(self) -> bool:
+    def _settings_should_store(self) -> bool:
         result = dpath_value(settings, "LAMB_EXECUTION_TIME_STORE", str, transform=transform_boolean)
         logger.debug(f"<{self.__class__.__name__}>. settings_should_store: {result}")
         return result
 
     @lazy_default_ro(default={})
-    def settings_store_rates(self) -> Dict[Tuple[str, str], float]:
+    def _settings_store_rates(self) -> dict[tuple[str, str], float]:
         result = settings.LAMB_EXECUTION_TIME_STORE_RATES
         logger.debug(f"<{self.__class__.__name__}>. settings_store_rates: {result}")
         return result
 
+    @lazy_default_ro(default=None)
+    def _settings_log_total_level(self) -> int | None:
+        result = settings.LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL
+        if isinstance(result, str):
+            result = logging.getLevelName(result.upper())
+        elif isinstance(result, int):
+            pass
+        elif result is None:
+            return None
+        else:
+            logger.warning(f"could not determine LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL value: {result}")
+            raise ValueError
+
+        logger.debug(f"<{self.__class__.__name__}>. settings_log_total_level: {result}")
+        return result
+
+    @lazy_default_ro(default=None)
+    def _settings_log_markers_level(self) -> int | None:
+        result = settings.LAMB_EXECUTION_TIME_LOG_MARKERS_LEVEL
+        if isinstance(result, str):
+            result = logging.getLevelName(result.upper())
+        elif isinstance(result, int):
+            pass
+        elif result is None:
+            return None
+        else:
+            logger.warning(f"could not determine LAMB_EXECUTION_TIME_LOG_MARKERS_LEVEL value: {result}")
+            raise ValueError
+
+        logger.debug(f"<{self.__class__.__name__}>. settings_log_markers_level: {result}")
+        return result
+
+    # utils
     def _start(self, request):
         """Appends metric object to request"""
         request.lamb_execution_meter = ExecutionTimeMeter()
 
-    def _finish(self, request: LambRequest, response: Optional[HttpResponse], exception: Optional[Exception]):
-        """Stores collected data in database"""
+    def _finish(self, request: LambRequest, response: HttpResponse | None, exception: Exception | None):
+        """Stores collected data in database and logs"""
+        # prepare base container and record
         metric = LambExecutionTimeMetric()
         metric.http_method = request.method
         metric.headers = dict(request.headers)
@@ -63,12 +98,21 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         metric.device_info = request.lamb_device_info
         metric.status_code = response.status_code if response else None
 
-        # get context and execution time
+        # append app_name and url_name
+        try:
+            resolved = resolve(request.path)
+            metric.app_name = resolved.app_name
+            metric.url_name = resolved.url_name
+        except Exception:
+            pass
+
+        # finalize meter, collect markers and append context
+        time_measure = None
         try:
             time_measure = request.lamb_execution_meter
 
             if time_measure.context:
-                if isinstance(time_measure.context, (list, tuple, set, dict)):
+                if isinstance(time_measure.context, list | tuple | set | dict):
                     metric.context = time_measure.context
                 else:
                     logger.warning(
@@ -91,16 +135,8 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         except Exception:
             pass
 
-        # get app name and url name
-        try:
-            resolved = resolve(request.path)
-            metric.app_name = resolved.app_name
-            metric.url_name = resolved.url_name
-        except Exception:
-            pass
-
-        # store
-        if request.method not in self.settings_skip_methods and self.settings_should_store:
+        # store: database
+        if request.method not in self._settings_skip_methods and self._settings_should_store:
             try:
                 # logger.warning(f'analyze store rate: {self.store_rates}')
                 # database
@@ -112,12 +148,8 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                 logger.error(f"<{self.__class__.__name__}>. metrics store failed: {e}")
                 pass
 
-        # log total
-        level = settings.LAMB_EXECUTION_TIME_LOG_TOTAL_LEVEL
-        if level:
-            if isinstance(level, str):
-                # TODO: fix and migrate to mapping - can produce wrong levels if not found
-                level = logging.getLevelName(level.upper())
+        # store: logging
+        if level_total := self._settings_log_total_level:
             msg = (
                 f'"{request.method} {request.get_full_path()}" {request.lamb_execution_meter.get_total_time():.6f} sec.'
             )
@@ -137,8 +169,14 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                     "streaming": None,
                     "content_length": None,
                 }
-            logger.log(level, msg, extra=extra)
+            logger.log(level_total, msg, extra=extra)
 
+        if level_markers := self._settings_log_markers_level:
+            if time_measure is not None:
+                for index, m in enumerate(time_measure.get_log_list()):
+                    logger.log(level_markers, f"<{self.__class__.__name__}>. [{index}] {m}")
+
+    # lifecycle
     def process_request(self, request: LambRequest):
         logger.debug(f"<{self.__class__.__name__}>: Start - attaching etm")
         self._start(request=request)

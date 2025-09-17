@@ -1,13 +1,11 @@
-# TODO: fix docstrings to pass flake8 with reStructuredText format
 import enum
 
 from django.conf import settings
 
-# Lamb Framework
-from lamb.exc import ServerError
-from lamb.utils import get_primary_keys
 from lamb.db.context import lamb_db_context
 from lamb.db.session import DeclarativeBase
+from lamb.exc import ServerError
+from lamb.utils import get_primary_keys
 
 __all__ = ["DbEnum", "ConfigEnum"]
 
@@ -79,7 +77,7 @@ class DbEnum(enum.Enum):
             return self.__class__.__table_class__
         else:
             raise ServerError(
-                "Improperly configured class %s. Could not locate table class name" % self.__class__.__name__
+                f"Improperly configured class {self.__class__.__name__}. Could not locate table class name"
             )
 
     def _setup_db_item(self, item):
@@ -149,7 +147,7 @@ class DbEnum(enum.Enum):
 
     def __dir__(self):
         if isinstance(self.__class__.__attrib_mapping__, dict):
-            return super().__dir__() + [str(k) for k in self.__class__.__attrib_mapping__.keys()]
+            return super().__dir__() + [str(k) for k in self.__class__.__attrib_mapping__]
         else:
             return super().__dir__()
 

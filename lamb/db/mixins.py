@@ -1,15 +1,14 @@
 import re
 from datetime import datetime
 
-# SQLAlchemy
 from sqlalchemy import TIMESTAMP, func
-from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import Mapped, mapped_column
 
 __all__ = ["TableConfigMixin", "TimeMarksMixin", "TimeMarksMixinTZ"]
 
 
-class TableConfigMixin(object):
+class TableConfigMixin:
     @declared_attr
     def __tablename__(cls):
         class_name = cls.__name__

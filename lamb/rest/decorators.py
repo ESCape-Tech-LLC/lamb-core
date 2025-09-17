@@ -2,7 +2,6 @@ from functools import wraps
 
 from django.http import HttpResponse
 
-# Lamb Framework
 from lamb.exc import NotAllowedMethodError
 from lamb.rest.rest_view import RestView
 
@@ -28,7 +27,7 @@ def rest_allowed_http_methods(method_list):
 
             # check allowed HTTP methods
             if request.method not in m_list:
-                message = "HTTP method %s is not allowed for path=%s. Allowed methods (%s)" % (
+                message = "HTTP method {} is not allowed for path={}. Allowed methods ({})".format(
                     request.method,
                     request.path_info,
                     ",".join(m_list),

@@ -1,14 +1,11 @@
-import uuid
 import logging
+import uuid
 
-from django.http import HttpResponse
-
-# Lamb Framework
-from lamb import exc
+from lamb.middleware.base import LambMiddlewareMixin
 from lamb.utils import dpath_value, get_settings_value
 from lamb.utils.core import lazy
 from lamb.utils.transformers import transform_uuid
-from lamb.middleware.async_mixin import AsyncMiddlewareMixin
+from lamb.utils.validators import validate_not_empty
 
 __all__ = ["LambXRayMiddleware"]
 
@@ -16,42 +13,42 @@ __all__ = ["LambXRayMiddleware"]
 logger = logging.getLogger(__name__)
 
 
-class LambXRayMiddleware(AsyncMiddlewareMixin):
-    """Simple middleware that will generate and attach to request trace_id - formatted uuid string"""
+class LambXRayMiddleware(LambMiddlewareMixin):
+    """
+    Simple middleware that will generate and attach to request x-attributes:
+    - xray - received from request header or random uuid, aimed to be unique within one web request
+    - xline - received from request header or None, aimed to combine several requests under one logical unit
+    """
 
     @lazy
-    def _xray_header(cls):
-        logger.info(f"<{cls.__class__.__name__}>. xray header requested")
-        try:
-            result = get_settings_value(
-                "LAMB_LOGGING_HEADER_XRAY", "LAMB_EVENT_LOGGING_HEADER_TRACKID", req_type=str, allow_none=False
-            )
-            return result
-        except exc.ApiError as e:
-            raise exc.ImproperlyConfiguredError("X-Ray header config invalid") from e
+    def settings_header_xray(self):
+        result = get_settings_value(
+            "LAMB_LOG_HEADER_XRAY",
+            "LAMB_LOGGING_HEADER_XRAY",
+            req_type=str,
+            allow_none=False,
+            transform=validate_not_empty,
+        )
+        return result
 
-    @classmethod
-    def _xray(self, request) -> str:
-        if self._xray_header in request.META:
-            try:
-                xray = dpath_value(request.META, self._xray_header, str, transform=transform_uuid)
-                logger.debug(f"<{self.__class__.__name__}>. xray inherited from request header: {xray}")
-            except Exception as e:
-                logger.warning(f"<{self.__class__.__name__}>. xray extract failed: {e}")
-                xray = uuid.uuid4()
-        else:
-            xray = uuid.uuid4()
+    @lazy
+    def settings_header_xline(self):
+        result = get_settings_value(
+            "LAMB_LOG_HEADER_XLINE",
+            "LAMB_EVENT_LOGGING_HEADER_TRACKID",
+            req_type=str,
+            allow_none=False,
+            transform=validate_not_empty,
+        )
+        return result
 
-        return xray
-
-    def _call(self, request) -> HttpResponse:
-        request.xray = LambXRayMiddleware._xray(request)
-        logger.debug(f"<{self.__class__.__name__}>. request xray attached: {request.xray}")
-        response = self.get_response(request)
-        return response
-
-    async def _acall(self, request) -> HttpResponse:
-        request.xray = LambXRayMiddleware._xray(request)
-        logger.debug(f"<{self.__class__.__name__}>. request xray attached: {request.xray}")
-        response = await self.get_response(request)
-        return response
+    def before_request(self, request):
+        request.xray = dpath_value(
+            request.META, self.settings_header_xray, str, transform=transform_uuid, default=uuid.uuid4()
+        )
+        request.xline = dpath_value(
+            request.META, self.settings_header_xline, str, transform=transform_uuid, default=None
+        )
+        logger.debug(
+            f"<{self.__class__.__name__}>: Did attach x-fields to request: xray={request.xray}, xline={request.xline}"
+        )

@@ -1,6 +1,5 @@
 import enum
 
-# Lamb Framework
 from lamb.exc import ClientError
 
 

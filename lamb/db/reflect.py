@@ -1,10 +1,8 @@
 import logging
 
-# SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy.inspection import inspect
 
-# Lamb Framework
 from lamb.exc import ServerError
 from lamb.utils.core import lazy
 
@@ -14,7 +12,7 @@ __all__ = ["ModelInspector"]
 logger = logging.getLogger(__name__)
 
 
-class ModelInspector(object):
+class ModelInspector:
     def __init__(self, model_class):
         self.model_class = model_class
 
@@ -28,11 +26,11 @@ class ModelInspector(object):
         """Model class primary key column"""
         model_primary_key = self.inspect.primary_key
         if len(model_primary_key) == 0:
-            raise ServerError("Model class %s doesn't have any primary key" % self.model_class.__name__)
+            raise ServerError(f"Model class {self.model_class.__name__} doesn't have any primary key")
         if len(model_primary_key) > 1:
             raise ServerError(
-                "Model inspector auto model primary key field introspection "
-                "doesn't support multiple columns primary key. Model class is %s" % self.model_class.__name__
+                f"Model inspector auto model primary key field introspection "
+                f"doesn't support multiple columns primary key. Model class is {self.model_class.__name__}"
             )
         return model_primary_key[0]
 

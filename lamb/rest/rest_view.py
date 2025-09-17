@@ -2,19 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Union
 from functools import update_wrapper
+from typing import Union
 
 from django.utils.decorators import classonlymethod
+from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+from sqlalchemy.orm import Session as SASession
 
-# Lamb Framework
-from lamb.exc import NotRealizedMethodError, InvalidBodyStructureError
+from lamb.exc import InvalidBodyStructureError, NotRealizedMethodError
 from lamb.utils import (
     CONTENT_ENCODING_MULTIPART,
     dpath_value,
-    parse_body_as_json,
-    get_request_body_encoding,
     get_request_accept_encoding,
+    get_request_body_encoding,
+    parse_body_as_json,
 )
 from lamb.utils.core import lazy
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["RestView"]
 
 
-class RestView(object):
+class RestView:
     """Abstract class for dispatching url requests in REST logic
 
     Class works in a similar way to django class based views to dispatch http methods.
@@ -31,6 +32,8 @@ class RestView(object):
     Attributes:
         request (HttpRequest): Http request of view
     """
+
+    __default_db__ = "default"
 
     def __init__(self, **kwargs):
         """
@@ -77,7 +80,7 @@ class RestView(object):
         return get_request_accept_encoding(self.request)
 
     @lazy
-    def parsed_body(self) -> Union[dict, list]:
+    def parsed_body(self) -> dict | list:
         content_type = self.request_content_type
         logger.debug(f"Lamb:RestView. Request body encoding discovered: {content_type}")
 
@@ -85,7 +88,7 @@ class RestView(object):
             payload = dpath_value(self.request.POST, "payload", str)
             try:
                 result = json.loads(payload)
-                if not isinstance(result, (dict, list)):
+                if not isinstance(result, dict | list):
                     raise InvalidBodyStructureError(
                         "JSON payload part of request should be represented in a form of dictionary/array"
                     )
@@ -97,8 +100,12 @@ class RestView(object):
 
         return result
 
+    @lazy
+    def db_session(self) -> SASession | SAAsyncSession:
+        return self.request.lamb_db_session_map[self.__default_db__]
+
     @staticmethod
     def http_method_not_realized(request, *args, **kwargs):
         # print 'Required HTTP method is not realized. Error request path = %s' % request.path_info
-        message = "Backend problem, required HTTP method %s is not exist on processing view class" % request.method
+        message = f"Backend problem, required HTTP method {request.method} is not exist on processing view class"
         raise NotRealizedMethodError(message)

@@ -1,42 +1,43 @@
 from __future__ import annotations
 
+import asyncio
+import base64
+import dataclasses
+import enum
+import functools
 import io
+import json
+import logging
 import re
 import sys
-import enum
-import json
-import base64
-import asyncio
-import logging
 import tempfile
 import warnings
 import zoneinfo
-import functools
-from typing import Any, Dict, List, Tuple, Union, TypeVar, BinaryIO, Callable, Optional
-from inspect import isclass
-from datetime import date, datetime, timezone, timedelta
-from xml.etree import cElementTree
 from collections import OrderedDict
+from collections.abc import Callable
+from datetime import UTC, date, datetime, timedelta
+from inspect import isclass
+from typing import Any, Awaitable, BinaryIO, TypedDict, TypeVar
 from urllib.parse import unquote
-
-from django.conf import settings
-from django.http import HttpRequest
-from django.utils import timezone as d_timezone
-from django.core.exceptions import RequestDataTooBig
-from django.core.files.uploadedfile import UploadedFile
-
-# SQLAlchemy
-import sqlalchemy
-from sqlalchemy import Column, asc, desc
-from sqlalchemy.orm import Query, ColumnProperty
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.inspection import inspect
-from sqlalchemy.orm.attributes import QueryableAttribute, InstrumentedAttribute
-from sqlalchemy.ext.declarative import DeclarativeMeta
+from xml.etree import cElementTree
 
 import requests
-from PIL import Image as PILImage
+import sqlalchemy
 from asgiref.sync import sync_to_async
+from django.conf import settings
+from django.core.exceptions import RequestDataTooBig
+from django.core.files.uploadedfile import UploadedFile
+from django.http import HttpRequest
+from django.utils import timezone as d_timezone
+from PIL import Image as PILImage
+from sqlalchemy import Column, Select, asc, desc
+from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import ColumnProperty, Query
+from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
+
+from lamb.utils.core import lazy
 
 try:
     import cassandra
@@ -45,29 +46,33 @@ except ImportError:
     cassandra = None
     ModelQuerySet = None
 
-# Lamb Framework
+
+import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+
 from lamb.exc import (
     ApiError,
-    ServerError,
     ExternalServiceError,
-    InvalidParamTypeError,
-    InvalidParamValueError,
-    RequestBodyTooBigError,
     ImproperlyConfiguredError,
     InvalidBodyStructureError,
-)
-from lamb.utils.core import (
-    DeprecationClassMixin,
-    DeprecationClassHelper,
-    compact,
-    masked_url,
-    list_chunks,
-    masked_dict,
-    get_redis_url,
-    random_string,
-    import_by_name,
+    InvalidParamTypeError,
+    InvalidParamValueError,
+    ProgrammingError,
+    RequestBodyTooBigError,
+    ServerError,
 )
 from lamb.middleware.grequest import LambGRequestMiddleware
+from lamb.utils.core import (
+    DeprecationClassHelper,
+    DeprecationClassMixin,
+    compact,
+    get_redis_url,
+    import_by_name,
+    list_chunks,
+    masked_dict,
+    masked_url,
+    random_string,
+)
 
 from .dpath import dpath_value
 
@@ -84,6 +89,7 @@ __all__ = [
     "LambRequest",
     "parse_body_as_json",
     "dpath_value",
+    "a_response_paginated",
     "response_paginated",
     "response_sorted",
     "response_filtered",
@@ -114,6 +120,8 @@ __all__ = [
     "tz_now",
     "TZ_MSK",
     "TZ_UTC",
+    "humanize_bytes",
+    "bank_card_type_parse",
 ]
 
 
@@ -122,26 +130,28 @@ logger = logging.getLogger(__name__)
 
 class LambRequest(HttpRequest):
     """Class used only for proper type hinting in pycharm, does not guarantee that properties will exist
-    :type lamb_db_session: sqlalchemy.orm.Session | None
+    :type lamb_db_session_map: dict[str, sqlalchemy.orm.Session | sqlalchemy.ext.asyncio.AsyncSession] | None
+    :type lamb_db_session: sqlalchemy.orm.Session | sqlalchemy.ext.asyncio.AsyncSession | None
     :type lamb_execution_meter: lamb.execution_time.ExecutionTimeMeter | None
     :type lamb_device_info: lamb.types.DeviceInfo | None
-    :type lamb_trace_id: str | None
     :type lamb_locale: lamb.types.LambLocale | None
-    :type lamb_track_id: str | None
+    :type xray: uuid.UUID | None
+    :type xline: uuid.UUID | None
     """
 
     def __init__(self):
-        super(LambRequest, self).__init__()
+        super().__init__()
+        self.lamb_db_session_map = None
         self.lamb_db_session = None
         self.lamb_execution_meter = None
         self.lamb_device_info = None
-        self.lamb_trace_id = None
         self.lamb_locale = None
-        self.lamb_track_id = None
+        self.xray = None
+        self.xline = None
 
 
 # parsing
-def parse_body_as_json(request: HttpRequest) -> Union[dict, list]:
+def parse_body_as_json(request: HttpRequest) -> dict | list:
     """Parse request object to dictionary as JSON
 
     :param request: Request object
@@ -159,7 +169,7 @@ def parse_body_as_json(request: HttpRequest) -> Union[dict, list]:
 
     try:
         data = json.loads(body)
-        if not isinstance(data, (dict, list)):
+        if not isinstance(data, (dict | list)):
             raise InvalidBodyStructureError("JSON body of request should be represented in a form of dictionary/array")
         return data
     except ValueError as e:
@@ -167,15 +177,181 @@ def parse_body_as_json(request: HttpRequest) -> Union[dict, list]:
 
 
 # response utilities
-PV = TypeVar("PV", list, Query, ModelQuerySet)
+
+PV = TypeVar("PV", list, Query, ModelQuerySet, Select)
+_T = TypeVar("_T", bound=Any)
+
+# TODO: move in external module
+# TODO: support for different kind of paginations - naive(offset/limit), min value based, token based
+# TODO: implement extended as paginator subclass
+# TODO: remove result key variations - should be realized on project level base
+# TODO: provide ability to override total calculator for known cases
+
+
+@dataclasses.dataclass(frozen=True)
+class _PaginationParams:
+    offset: int
+    limit: int
+    total_omit: bool
+    extend_include: bool
+    extend_offset: int
+    extend_limit: int
+
+
+class PaginationResult(TypedDict):
+    total_count: int | None
+    offset: int
+    limit: int
+    items: list[_T]
+
+
+def _response_pagination_params(
+    request: LambRequest | None = None,
+    params: dict | None = None,
+    extend_include: bool = False,
+) -> _PaginationParams:
+    # TODO: move outside of utils to omit cycle loading
+    from lamb.utils.transformers import transform_boolean
+    from lamb.utils.validators import validate_range
+
+    # extract params
+    if request is None and params is None:
+        logger.error("Either request or params should be provided")
+        raise ProgrammingError
+    if request is not None and params is None:
+        params = request.GET
+
+    # total omit
+    total_omit = dpath_value(
+        params,
+        settings.LAMB_PAGINATION_KEY_OMIT_TOTAL,
+        str,
+        transform=transform_boolean,
+        default=False,
+    )
+
+    # offset
+    # TODO: customize validators error raising to provide message and details within from dpath_value
+    offset = dpath_value(params, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
+    if offset < 0:
+        raise InvalidParamValueError(
+            "Invalid offset value for pagination", error_details={"key": settings.LAMB_PAGINATION_KEY_OFFSET}
+        )
+
+    # limit
+    limit = dpath_value(params, settings.LAMB_PAGINATION_KEY_LIMIT, int, default=settings.LAMB_PAGINATION_LIMIT_DEFAULT)
+    if limit < -1:
+        raise InvalidParamValueError(
+            "Invalid limit value for pagination", error_details={"key": settings.LAMB_PAGINATION_KEY_LIMIT}
+        )
+    if limit > settings.LAMB_PAGINATION_LIMIT_MAX:
+        raise InvalidParamValueError(
+            "Invalid limit value for pagination - exceed max available",
+            error_details={"key": settings.LAMB_PAGINATION_KEY_LIMIT},
+        )
+
+    # calculate extended values
+    extended_additional_count = 0
+    if offset > 0:
+        extended_offset = offset - 1
+        extended_additional_count = extended_additional_count + 1
+    else:
+        extended_offset = offset
+
+    if limit != -1:
+        extended_additional_count = extended_additional_count + 1
+        extended_limit = limit + extended_additional_count
+    else:
+        extended_limit = limit
+
+    return _PaginationParams(
+        total_omit=total_omit,
+        offset=offset,
+        limit=limit if limit != -1 else None,
+        extend_offset=extended_offset,
+        extend_limit=extended_limit,
+        extend_include=extend_include,
+    )
+
+
+async def a_response_paginated(
+    collection: PV,
+    params: dict = None,
+    db_session: SAAsyncSession = None,  # alchemy session
+    count_expr: Callable[[PV], Awaitable[int]] | None = None,
+    db_as_rows: bool = False,
+) -> PaginationResult:
+    # prepare
+    _p = _response_pagination_params(params=params)
+    offset = _p.offset
+    limit = _p.limit
+    total_omit = _p.total_omit
+
+    # prepare result container
+    result = {
+        settings.LAMB_PAGINATION_KEY_TOTAL: None,
+        settings.LAMB_PAGINATION_KEY_OFFSET: offset,
+        settings.LAMB_PAGINATION_KEY_LIMIT: limit,
+        settings.LAMB_PAGINATION_KEY_ITEMS: [],
+    }
+
+    if isinstance(collection, Select):
+        # alchemy 2.0
+        if db_session is None:
+            logger.error("db_session cannot be None for Select pagination")
+            raise ProgrammingError
+
+        if not total_omit:
+            # # previous
+            # result[settings.LAMB_PAGINATION_KEY_TOTAL] = await db_session.scalar(
+            #     sa.select(sa.func.count()).select_from(collection)
+            # )
+            # new
+            # - use subquery version for sqlalchemy deprecation compatibility
+            # - removes order_by to omit sorting step not required in count
+            if count_expr is None:
+                result[settings.LAMB_PAGINATION_KEY_TOTAL] = await db_session.scalar(
+                    sa.select(sa.func.count()).select_from(collection.order_by(None).subquery())
+                )
+            else:
+                result[settings.LAMB_PAGINATION_KEY_TOTAL] = await count_expr(collection)
+
+        collection = collection.offset(offset)
+        if limit:
+            collection = collection.limit(limit)
+
+        if not db_as_rows:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = (await db_session.scalars(collection)).all()
+        else:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = (await db_session.execute(collection)).all()
+    elif isinstance(collection, list):
+        result[settings.LAMB_PAGINATION_KEY_TOTAL] = len(collection) if not total_omit else None
+
+        if limit:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = collection[offset : offset + limit]
+        else:
+            result[settings.LAMB_PAGINATION_KEY_ITEMS] = collection[offset:]
+    # elif cassandra is not None and isinstance(collection, ModelQuerySet):
+    #     # Cassandra
+    #     # NOTE: not checked - uncomment and check in case of usage
+    #     result[settings.LAMB_PAGINATION_KEY_TOTAL] = await collection.count() if not total_omit else None
+    #     if limit == -1:
+    #         result[settings.LAMB_PAGINATION_KEY_ITEMS] = await collection.all()[offset:]
+    #     else:
+    #         result[settings.LAMB_PAGINATION_KEY_ITEMS] = await collection.all()[offset: offset + limit]
+    else:
+        logger.error(f"Unsupported collection type for async pagination: {collection.__class__}={collection}")
+        raise NotImplementedError
+
+    return result
 
 
 def response_paginated(
     data: PV,
     request: LambRequest = None,
-    params: Dict = None,
+    params: dict = None,
     add_extended_query: bool = False,
-) -> dict:
+) -> PaginationResult:
     """Pagination utility
 
     Will search for limit/offset params in `request.GET` object and apply it to data, returning
@@ -187,13 +363,11 @@ def response_paginated(
     :param add_extended_query: Flag to add to result extended version of data slice
         (including one more item from begin and and of slice)
     """
-    # check params override
+    # extract params
+    from lamb.utils.transformers import transform_boolean
+
     if request is not None and params is None:
         params = request.GET
-
-    # parse omit total
-    # Lamb Framework
-    from lamb.utils.transformers import transform_boolean
 
     total_omit = dpath_value(
         params,
@@ -203,14 +377,12 @@ def response_paginated(
         default=False,
     )
 
-    # parse and check offset
     offset = dpath_value(params, settings.LAMB_PAGINATION_KEY_OFFSET, int, default=0)
     if offset < 0:
         raise InvalidParamValueError(
             "Invalid offset value for pagination", error_details=settings.LAMB_PAGINATION_KEY_OFFSET
         )
 
-    # parse and check limit
     limit = dpath_value(params, settings.LAMB_PAGINATION_KEY_LIMIT, int, default=settings.LAMB_PAGINATION_LIMIT_DEFAULT)
     if limit < -1:
         raise InvalidParamValueError(
@@ -243,15 +415,6 @@ def response_paginated(
 
     if isinstance(data, Query):
         # SQL
-
-        # def get_count(q):
-        #     # TODO: Add dynamic count function choose based on any join presented in query
-        #     # TODO: modify query - returns invalid count in case of join with one-to-many objects
-        #     count_q = q.statement.with_only_columns([func.count()]).order_by(None)
-        #     count = q.session.execute(count_q).scalar()
-        #     return count
-        #
-        # result[settings.LAMB_PAGINATION_KEY_TOTAL] = get_count(data)
         if not total_omit:
             result[settings.LAMB_PAGINATION_KEY_TOTAL] = data.count()
         else:
@@ -303,10 +466,10 @@ def response_paginated(
     return result
 
 
-Sorter = Tuple[str, Callable]
+Sorter = tuple[str, Callable]
 
 
-def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
+def _get_instance_sorting_attribute_names(ins: object) -> list[str]:
     # TODO: add support for instance and model class params
     # TODO: cache results
     # discover sortable attributes
@@ -324,7 +487,7 @@ def _get_instance_sorting_attribute_names(ins: object) -> List[str]:
     for ormd in sortable_attributes:
         if isinstance(ormd, Column):
             orm_attr_name = ormd.name
-        elif isinstance(ormd, (ColumnProperty, QueryableAttribute)):
+        elif isinstance(ormd, ColumnProperty | QueryableAttribute):
             orm_attr_name = ormd.key
         elif isinstance(ormd, hybrid_property):
             orm_attr_name = ormd.__name__
@@ -350,7 +513,7 @@ def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sort
         sort_functor = "desc"
     else:
         raise InvalidParamValueError(
-            "Invalid sorting descriptor format %s" % raw_sorting_descriptor,
+            f"Invalid sorting descriptor format {raw_sorting_descriptor}",
             error_details={"key_path": "sorting", "descriptor": raw_sorting_descriptor},
         )
 
@@ -359,14 +522,14 @@ def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sort
     field = field.lower()
     if field not in sortable_attributes:
         raise InvalidParamValueError(
-            "Invalid sorting_field value for descriptor %s. Not found in model" % raw_sorting_descriptor,
+            f"Invalid sorting_field value for descriptor {raw_sorting_descriptor}. Not found in model",
             error_details={"key_path": "sorting", "descriptor": raw_sorting_descriptor, "field": field},
         )
 
     sort_functor = sort_functor.lower()
     if sort_functor not in ["asc", "desc"]:
         raise InvalidParamValueError(
-            "Invalid sorting_direction value for descriptor %s. Should be one [asc or desc]" % raw_sorting_descriptor,
+            f"Invalid sorting_direction value for descriptor {raw_sorting_descriptor}. Should be one [asc or desc]",
             error_details={"key_path": "sorting", "descriptor": raw_sorting_descriptor},
         )
 
@@ -375,7 +538,7 @@ def _sorting_parse_sorter(raw_sorting_descriptor: str, model_inspection) -> Sort
     return field, sort_functor
 
 
-def _sorting_parse_descriptors(raw_sorting_descriptors: Optional[str], model_inspection) -> List[Sorter]:
+def _sorting_parse_descriptors(raw_sorting_descriptors: str | None, model_inspection) -> list[Sorter]:
     """Parse list of sorting descriptors"""
     # early return and check params
     if raw_sorting_descriptors is None:
@@ -396,12 +559,12 @@ def _sorting_parse_descriptors(raw_sorting_descriptors: Optional[str], model_ins
 
 
 def _sorting_apply_sorters(
-    sorters: List[Sorter],
+    sorters: list[Sorter],
     query: Query,
     model_class: DeclarativeMeta,
     check_duplicate: bool = True,
 ) -> Query:
-    applied_sort_fields: List[str] = list()
+    applied_sort_fields: list[str] = list()
     for _sorting_field, _sorting_functor in sorters:
         if _sorting_field in applied_sort_fields and check_duplicate:
             logger.debug(f"skip duplicate sorting field: {_sorting_field}")
@@ -412,13 +575,16 @@ def _sorting_apply_sorters(
     return query
 
 
+SV = TypeVar("SV", Query, Select)
+
+
 def response_sorted(
-    query: Query,
+    query: SV,
     model_class: DeclarativeMeta,
     params: dict,
     default_sorting: str = None,
     **kwargs,
-) -> Query:
+) -> SV:
     """Apply order by sortings to sqlalchemy query instance from params dictionary
 
     :param query: SQLAlchemy query instance to be sorted
@@ -435,16 +601,16 @@ def response_sorted(
         raise ServerError("Improperly configured sorting params dictionary")
     if not isinstance(model_class, DeclarativeMeta):
         raise ServerError("Improperly configured model class meta-data for sorting introspection")
-    if not isinstance(query, Query):
+    if not isinstance(query, Query | Select):
         raise ServerError("Improperly configured query item for sorting")
 
     # prepare inspection and container
     model_inspection = inspect(model_class)
 
     # discover and apply start sorters
-    all_sorters: List[Sorter] = []
+    all_sorters: list[Sorter] = []
     start_sorters = _sorting_parse_descriptors(
-        raw_sorting_descriptors=kwargs.get("start_sorting", None), model_inspection=model_inspection
+        raw_sorting_descriptors=kwargs.get("start_sorting"), model_inspection=model_inspection
     )
     logger.debug(f"sorters parsed start_sorting: {start_sorters}")
     all_sorters.extend(start_sorters)
@@ -459,7 +625,7 @@ def response_sorted(
 
     # discover and apply final sorters
     final_sorters = []
-    if "final_sorting" in kwargs.keys():
+    if "final_sorting" in kwargs:
         # final_sorting exist - should parse and apply descriptors
         final_sorting_descriptors = kwargs["final_sorting"]
         if final_sorting_descriptors is not None:
@@ -485,31 +651,29 @@ def response_sorted(
 
 
 def response_filtered(
-    query: Query,
-    filters: List[object],
+    query: SV,
+    filters: list[object],
     request: LambRequest = None,
-    params: Dict = None,
-) -> Query:
+    params: dict = None,
+) -> SV:
     # TODO: fix typing for filters
     # TODO: auto discover request params if not provided
     # import lamb.utils.filters
     # from lamb.utils.filters import Filter
     # filters: List[Filter] = filters
     # check params override
+    from lamb.utils.filters import Filter
+
     if request is not None and params is None:
         params = request.GET
 
-    # check params
-    # Lamb Framework
-    from lamb.utils.filters import Filter
-
-    if not isinstance(query, Query):
-        logger.warning("Invalid query data type: %s" % query)
+    if not isinstance(query, Query | Select):
+        logger.warning(f"Invalid query data type: {query}")
         raise ServerError("Improperly configured query item for filtering")
 
     for f in filters:
         if not isinstance(f, Filter):
-            logger.warning("Invalid filters item data type: %s" % f)
+            logger.warning(f"Invalid filters item data type: {f}")
             raise ServerError("Improperly configured filters for filtering")
 
     # apply filters
@@ -567,13 +731,13 @@ def get_request_accept_encoding(request: HttpRequest) -> str:
     return _get_encoding_for_header(request, "HTTP_ACCEPT")
 
 
-def get_current_request() -> Optional[LambRequest]:
+def get_current_request() -> LambRequest | None:
     return LambGRequestMiddleware.get_request(None)
 
 
 # datetime
-def datetime_end(value: Union[date, datetime]) -> datetime:
-    if not isinstance(value, (date, datetime)):
+def datetime_end(value: date | datetime) -> datetime:
+    if not isinstance(value, (date | datetime)):
         raise InvalidParamTypeError("Invalid data type for date/datetime convert")
 
     return datetime(
@@ -588,8 +752,8 @@ def datetime_end(value: Union[date, datetime]) -> datetime:
     )
 
 
-def datetime_begin(value: Union[date, datetime]) -> datetime:
-    if not isinstance(value, (date, datetime)):
+def datetime_begin(value: date | datetime) -> datetime:
+    if not isinstance(value, (date | datetime)):
         raise InvalidParamTypeError("Invalid data type for date/datetime convert")
 
     return datetime(
@@ -607,20 +771,36 @@ def datetime_begin(value: Union[date, datetime]) -> datetime:
 # other
 
 
-def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: bool = True, **kwargs):
+def get_settings_value(*names, req_type: Callable | None = None, allow_none: bool = True, **kwargs):
     if len(names) == 0:
         raise InvalidParamValueError("At least one setting name required")
     elif len(names) == 1:
         names_msg = names[0]
     else:
-        names_msg = f'{names[0]} ({"/".join(names[1:])})'
+        names_msg = f"{names[0]} ({'/'.join(names[1:])})"
 
+    # check deprecations
+    if len(names) > 1:
+        target_setting_name = names[0]
+        for name in names[1:]:
+            try:
+                _ = dpath_value(settings, key_path=name, req_type=req_type, allow_none=allow_none, **kwargs)
+                warnings.warn(
+                    f"Usage of deprecated settings name discovered {name}, use {target_setting_name} instead. "
+                    f"If default or explicit value exist - value under {name} would be ignored",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            except (ImportError, AttributeError, InvalidBodyStructureError):
+                continue
+
+    # extract value
     for index, name in enumerate(names):
         try:
             result = dpath_value(settings, key_path=name, req_type=req_type, allow_none=allow_none, **kwargs)
             if index > 0:
                 warnings.warn(
-                    "Use of deprecated settings param %s, use %s instead" % (name, names[0]), DeprecationWarning
+                    f"Use of deprecated settings param {name}, use {names[0]} instead", DeprecationWarning, stacklevel=2
                 )
             return result
         except (ImportError, AttributeError, InvalidBodyStructureError):
@@ -636,11 +816,11 @@ def get_settings_value(*names, req_type: Optional[Callable] = None, allow_none: 
 def inject_app_defaults(application: str):
     """Inject an application's default settings"""
     try:
-        __import__("%s.settings" % application)
+        __import__(f"{application}.settings")
         import sys
 
         # Import our defaults, project defaults, and project settings
-        _app_settings = sys.modules["%s.settings" % application]
+        _app_settings = sys.modules[f"{application}.settings"]
         _def_settings = sys.modules["django.conf.global_settings"]
         _settings = sys.modules["django.conf"].settings
 
@@ -654,7 +834,6 @@ def inject_app_defaults(application: str):
                 if not hasattr(_settings, _k):
                     setattr(_settings, _k, getattr(_app_settings, _k))
 
-        # Lamb Framework
         from lamb.utils.dpath import adapt_dict_impl
 
         adapt_dict_impl()
@@ -665,7 +844,7 @@ def inject_app_defaults(application: str):
 
 def check_device_info_versions_above(
     source: Any,
-    versions: List[Tuple[str, int]],
+    versions: list[tuple[str, int]],
     default: bool,
     skip_options: bool = True,
 ) -> bool:
@@ -675,8 +854,8 @@ def check_device_info_versions_above(
     - `default` value used in case of device_info version missing
     - for matched platforms compare app_build field and returns True/False depends on result
     """
-    # Lamb Framework
-    from lamb.types.device_info import DeviceInfo
+
+    from lamb.types.device_info_type import DeviceInfo
 
     # prepare params
     if isinstance(source, HttpRequest):
@@ -686,7 +865,7 @@ def check_device_info_versions_above(
     else:
         _source = source
 
-    if not isinstance(_source, (DeviceInfo, None.__class__)):
+    if not isinstance(_source, DeviceInfo | None.__class__):
         logger.warning(f"received object: {source, source.__class__}")
         raise ServerError("Invalid object received for version checking")
 
@@ -701,7 +880,7 @@ def check_device_info_versions_above(
     for min_v in versions:
         try:
             _platform = min_v[0].lower()
-            _min_app_build = int(min_v[1]) if not isinstance(min_v[1], (int, float)) else min_v[1]
+            _min_app_build = int(min_v[1]) if not isinstance(min_v[1], int | float) else min_v[1]
             if _source.device_platform.lower() == _platform and _min_app_build > _source.app_build:
                 return False
         except Exception as e:
@@ -711,14 +890,56 @@ def check_device_info_versions_above(
     return True
 
 
+def humanize_bytes(num, suffix="b"):
+    for unit in ("", "K", "M", "G", "T", "P", "E", "Z"):
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Y{suffix}"
+
+
+BANK_CARDS_REGEX_MAPPING = {
+    "VISA": re.compile(r"^4[0-9]{12}(?:[0-9]{3})?$"),
+    "MASTER CARD": re.compile(r"^(?:5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}$"),
+    "AMERICAN EXPRESS": re.compile(r"^3[47][0-9]{13}$"),
+    "JCB": re.compile(r"^(?:2131|1800|35\d{3})\d{11}$"),
+    "DINERS CLUB": re.compile(r"^3(?:0[0-5]|[68][0-9])[0-9]{11}$"),
+    "DISCOVER": re.compile(r"^6(?:011|5[0-9]{2})[0-9]{12}$"),
+    "MIR": re.compile(r"^220[0-4][0-9]{12}$"),
+}
+
+
+def bank_card_type_parse(masked_pan: str) -> str | None:
+    # replace masking symbols
+    _pan = masked_pan
+    _pan = _pan.replace("-", "")
+    _pan = _pan.replace(" ", "")
+    _pan = _pan.replace("X", "*")
+
+    # padding from last unknown symbol
+    if len(_pan) < 16 and "*" in _pan:
+        last_index = _pan.rindex("*")
+        _pan = _pan[:last_index] + "*" * (16 - len(_pan)) + _pan[last_index:]
+
+    # finally replace
+    _pan = _pan.replace("*", "0")
+    card_type = None
+    for result, regex in BANK_CARDS_REGEX_MAPPING.items():
+        if regex.match(_pan) is not None:
+            card_type = result
+            break
+
+    return card_type
+
+
 # time cached
-_timed_lru_cache_functions: Dict[Callable, Callable] = {}
+_timed_lru_cache_functions: dict[Callable, Callable] = {}
 
 
 def timed_lru_cache(**timedelta_kwargs):
     def _wrapper(func):
         update_delta = timedelta(**timedelta_kwargs)
-        next_update = datetime.utcnow() + update_delta
+        next_update = datetime.now(tz=TZ_UTC) + update_delta
         func_full_name = f"{sys.modules[func.__module__].__name__}.{func.__name__}"
         logger.debug(f"timed_lru_cache initial update calculated: {func_full_name} -> {next_update}")
         # Apply @lru_cache to func with no cache size limit
@@ -730,7 +951,7 @@ def timed_lru_cache(**timedelta_kwargs):
         @functools.wraps(func_lru_cached)
         def _wrapped(*args, **kwargs):
             nonlocal next_update
-            now = datetime.utcnow()
+            now = datetime.now(tz=TZ_UTC)
             if now >= next_update:
                 func_lru_cached.cache_clear()
                 next_update = now + update_delta
@@ -743,9 +964,9 @@ def timed_lru_cache(**timedelta_kwargs):
 
 
 def timed_lru_cache_clear():
-    for func, wrapped_func in _timed_lru_cache_functions.items():
+    for _func, wrapped_func in _timed_lru_cache_functions.items():
         wrapped_func.cache_clear()
-        logger.warning(f"time_lru_cache cleared for: {func} -> {wrapped_func}")
+        logger.warning(f"time_lru_cache cleared for: {_func} -> {wrapped_func}")
 
 
 # async downloads
@@ -770,8 +991,8 @@ def _handle_async_fall(e: Exception, fall_strategy: AsyncFallStrategy):
 
 @sync_to_async
 def _async_request_url(
-    url: Optional[str], timeout, fall_strategy: AsyncFallStrategy, headers: Optional[Dict[str, Any]] = None
-) -> Optional[Union[requests.Response, Exception]]:
+    url: str | None, timeout, fall_strategy: AsyncFallStrategy, headers: dict[str, Any] | None = None
+) -> requests.Response | Exception | None:
     logger.debug(f"downloading resource from url: {url}, timeout={timeout}, headers={headers}")
     if url is None:
         return None
@@ -787,8 +1008,8 @@ def _async_request_url(
 
 
 async def _async_request_resources(
-    urls: List[Optional[str]], timeout: int, fall_strategy: AsyncFallStrategy, headers: Optional[Dict[str, Any]] = None
-) -> List[Optional[Union[requests.Response, Exception]]]:
+    urls: list[str | None], timeout: int, fall_strategy: AsyncFallStrategy, headers: dict[str, Any] | None = None
+) -> list[requests.Response | Exception | None]:
     tasks = []
     for url in urls:
         tasks.append(_async_request_url(url=url, timeout=timeout, headers=headers, fall_strategy=fall_strategy))
@@ -798,11 +1019,11 @@ async def _async_request_resources(
 
 
 def async_request_urls(
-    urls: List[Optional[str]],
+    urls: list[str | None],
     timeout=30,
-    headers: Optional[Dict[str, Any]] = None,
+    headers: dict[str, Any] | None = None,
     fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING,
-) -> List[Optional[Union[requests.Response, Exception]]]:
+) -> list[requests.Response | Exception | None]:
     loop = asyncio.new_event_loop()
     try:
         asyncio.set_event_loop(loop)
@@ -815,25 +1036,25 @@ def async_request_urls(
 
 
 def async_download_resources(
-    urls: List[Optional[str]],
+    urls: list[str | None],
     timeout=30,
-    headers: Optional[Dict[str, Any]] = None,
+    headers: dict[str, Any] | None = None,
     fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING,
-) -> List[Optional[bytes]]:
+) -> list[bytes | None]:
     result = async_request_urls(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
     result = [res.content if isinstance(res, requests.Response) else res for res in result]
     return result
 
 
 def async_download_images(
-    urls: List[Optional[str]],
+    urls: list[str | None],
     timeout=30,
-    headers: Optional[Dict[str, Any]] = None,
+    headers: dict[str, Any] | None = None,
     fall_strategy: AsyncFallStrategy = AsyncFallStrategy.RAISING,
-) -> List[Optional[PILImage.Image]]:
+) -> list[PILImage.Image | None]:
     result = async_download_resources(urls=urls, timeout=timeout, headers=headers, fall_strategy=fall_strategy)
     buffer = []
-    for index, res in enumerate(result):
+    for res in result:
         try:
             if res is None:
                 buffer.append(None)
@@ -906,7 +1127,7 @@ def image_convert_to_rgb(image: PILImage.Image) -> PILImage.Image:
         return image.convert("RGB")
 
 
-def file_is_svg(file: Union[str, BinaryIO]) -> bool:
+def file_is_svg(file: str | BinaryIO) -> bool:
     try:
         tag = next(cElementTree.iterparse(file, ("start",)))[1].tag
     except cElementTree.ParseError:
@@ -926,7 +1147,7 @@ def image_decode_base64(b64image: str, verify: bool = False) -> PILImage:
     return image
 
 
-def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
+def get_file_mime_type(src_file: str | bytes | UploadedFile) -> str:
     import magic
 
     try:
@@ -964,7 +1185,7 @@ def get_file_mime_type(src_file: Union[str, bytes, UploadedFile]) -> str:
 
 # timezones
 TZ_MSK = zoneinfo.ZoneInfo("Europe/Moscow")
-TZ_UTC = timezone.utc
+TZ_UTC = UTC
 
 
 def tz_now() -> datetime:

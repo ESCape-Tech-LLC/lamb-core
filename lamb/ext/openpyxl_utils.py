@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Union, Callable, Optional, Generator
-
-# Lamb Framework
-from lamb.exc import (
-    ApiError,
-    InvalidParamTypeError,
-    InvalidParamValueError,
-    InvalidBodyStructureError,
-)
-from lamb.utils.core import lazy, compact
+from collections.abc import Callable, Generator
 
 import openpyxl
-from openpyxl.workbook import Workbook as OpenpyxlWorkbook
 from openpyxl.cell.cell import Cell as OpenpyxlCell
+from openpyxl.workbook import Workbook as OpenpyxlWorkbook
 from openpyxl.worksheet.worksheet import Worksheet as OpenpyxlWorksheet
+
+from lamb.exc import (
+    ApiError,
+    InvalidBodyStructureError,
+    InvalidParamTypeError,
+    InvalidParamValueError,
+)
+from lamb.utils.core import compact, lazy
 
 __all__ = ["Worksheet", "Workbook", "Cell", "Row", "Column"]
 
@@ -27,8 +26,8 @@ logger = logging.getLogger(__name__)
 # - use zero-based indexes instead of default openpyxl mode
 
 
-class Workbook(object):
-    def __init__(self, filename: Optional[str] = None, create_columns: bool = True, read_only: bool = False):
+class Workbook:
+    def __init__(self, filename: str | None = None, create_columns: bool = True, read_only: bool = False):
         if filename is not None:
             self._workbook = openpyxl.load_workbook(filename, data_only=True, read_only=read_only)
         else:
@@ -37,22 +36,22 @@ class Workbook(object):
         self._filename = filename
 
     @property
-    def worksheets(self) -> List["Worksheet"]:
+    def worksheets(self) -> list[Worksheet]:
         return [Worksheet(wrapped_worskheet=w, create_columns=self._create_columns) for w in self._workbook.worksheets]
 
     @property
-    def worksheets_dict(self) -> Dict[str, "Worksheet"]:
+    def worksheets_dict(self) -> dict[str, Worksheet]:
         return {
             w.title: Worksheet(wrapped_worskheet=w, create_columns=self._create_columns)
             for w in self._workbook.worksheets
         }
 
-    def remove_sheet(self, sheet: Union[str, "Worksheet"]):
+    def remove_sheet(self, sheet: str | Worksheet):
         if isinstance(sheet, str):
             sheet = self.worksheets_dict[sheet]
         self._workbook.remove(sheet.openpyxl_worksheet)
 
-    def create_sheet(self, title: str = None, index: int = None) -> "Worksheet":
+    def create_sheet(self, title: str = None, index: int = None) -> Worksheet:
         return Worksheet(self._workbook.create_sheet(title=title, index=index), create_columns=self._create_columns)
 
     # excel general
@@ -65,7 +64,7 @@ class Workbook(object):
         return self._workbook
 
     # iterators
-    def iter_rows(self) -> Generator[Generator["Cell", None, None], None, None]:
+    def iter_rows(self) -> Generator[Generator[Cell, None, None], None, None]:
         max_row = self._worksheet.max_row - 1
         for row in range(0, max_row):
             yield self.cells(row=row)
@@ -83,11 +82,11 @@ class Workbook(object):
 
         # clean
         ws = self.worksheets_dict[sheet_name]
-        columns: List[List[Optional[str]]] = []
+        columns: list[list[str | None]] = []
 
         removed_count = 0
         for column in ws.columns:
-            values: List[Optional[str]] = [cell.value for cell in column.cells]
+            values: list[str | None] = [cell.value for cell in column.cells]
             if len(compact(values)) > 0:
                 columns.append(values)
             else:
@@ -110,11 +109,11 @@ class Workbook(object):
 
         # clean
         ws = self.worksheets_dict[sheet_name]
-        rows: List[List[Optional[str]]] = []
+        rows: list[list[str | None]] = []
 
         removed_count = 0
         for row in ws.rows:
-            values: List[Optional[str]] = [cell.value for cell in row.cells]
+            values: list[str | None] = [cell.value for cell in row.cells]
             if len(compact(values)) > 0:
                 rows.append(values)
             else:
@@ -130,7 +129,7 @@ class Workbook(object):
         logger.info(f"rows cleaning: {sheet_name} -> removed rows count {removed_count}")
 
 
-class Worksheet(object):
+class Worksheet:
     _wrapped_worksheet: OpenpyxlWorksheet
     _create_columns: bool
 
@@ -143,29 +142,29 @@ class Worksheet(object):
         return self._wrapped_worksheet
 
     @lazy
-    def headers(self) -> List[Optional[str]]:
+    def headers(self) -> list[str | None]:
         return [cell.typed_value(req_type=str, default=None) for cell in self.cells(0)]
 
     @property
-    def rows(self) -> Generator["Row", None, None]:
+    def rows(self) -> Generator[Row, None, None]:
         max_row = self._wrapped_worksheet.max_row
         for row_index in range(0, max_row):
             yield Row(worksheet=self, row_index=row_index)
 
     @property
-    def columns(self) -> Generator["Column", None, None]:
+    def columns(self) -> Generator[Column, None, None]:
         max_column = self._wrapped_worksheet.max_column
         for column_index in range(0, max_column):
             yield Column(worksheet=self, column_index=column_index)
 
     # cell access
-    def cells(self, row: int) -> Generator["Cell", None, None]:
+    def cells(self, row: int) -> Generator[Cell, None, None]:
         max_column = self._wrapped_worksheet.max_column
         for column in range(1, max_column + 1):
             result_cell = Cell(self._wrapped_worksheet.cell(row=row + 1, column=column))
             yield result_cell
 
-    def cell(self, row: int, column: Union[int, str]) -> "Cell":
+    def cell(self, row: int, column: int | str) -> Cell:
         # check params
         if isinstance(column, str):
             column_index = self.column_index(column)
@@ -192,14 +191,14 @@ class Worksheet(object):
         return Cell(cell=openpyxl_cell)
 
     # utilities
-    def column_name(self, column_index) -> Optional[str]:
+    def column_name(self, column_index) -> str | None:
         _headers = self.headers
         if column_index < len(_headers):
             return _headers[column_index]
         else:
             return None
 
-    def column_index(self, column_name: str) -> Optional[int]:
+    def column_index(self, column_name: str) -> int | None:
         _headers = self.headers
         if column_name in _headers:
             return _headers.index(column_name)
@@ -207,19 +206,19 @@ class Worksheet(object):
             return None
 
 
-class Row(object):
+class Row:
     def __init__(self, worksheet: Worksheet, row_index: int):
         self._worksheet = worksheet
         self._row_index = row_index
 
-    def __getitem__(self, column_name) -> "Cell":
+    def __getitem__(self, column_name) -> Cell:
         return self._worksheet.cell(row=self._row_index, column=column_name)
 
     def __setitem__(self, column_name, value):
         self._worksheet.cell(row=self._row_index, column=column_name).value = value
 
     @property
-    def cells(self) -> Generator["Cell", None, None]:
+    def cells(self) -> Generator[Cell, None, None]:
         _row = next(
             self._worksheet.openpyxl_worksheet.iter_rows(
                 min_row=self._row_index + 1,
@@ -232,19 +231,19 @@ class Row(object):
             yield Cell(_cell)
 
 
-class Column(object):
+class Column:
     def __init__(self, worksheet: Worksheet, column_index: int):
         self._worksheet = worksheet
         self._column_index = column_index
 
     @property
-    def cells(self) -> Generator["Cell", None, None]:
+    def cells(self) -> Generator[Cell, None, None]:
         max_row = self._worksheet.openpyxl_worksheet.max_row
         for row_index in range(0, max_row):
             yield self._worksheet.cell(row=row_index, column=self._column_index)
 
 
-class Cell(object):
+class Cell:
     def __init__(self, cell: OpenpyxlCell):
         self._cell = cell
 
@@ -282,7 +281,7 @@ class Cell(object):
 
             return result
         except Exception as e:
-            if "default" in kwargs.keys():
+            if "default" in kwargs:
                 return kwargs["default"]
             elif isinstance(e, ApiError):
                 raise

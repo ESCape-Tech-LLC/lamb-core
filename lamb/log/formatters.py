@@ -1,25 +1,28 @@
 from __future__ import annotations
 
-import os
+import datetime
 import json
 import logging
-import datetime
+import os
 import zoneinfo
-from typing import Any, List, Optional
+from typing import Any, Mapping
 
 try:
     from gunicorn.glogging import SafeAtoms
 except ImportError:
     SafeAtoms = object()
 
-# Lamb Framework
-from lamb.utils.core import masked_dict, lazy_default
+
+import contextlib
+
 from lamb.json.encoder import JsonEncoder
 from lamb.log.constants import LAMB_LOG_FORMAT_SIMPLE
+from lamb.utils.core import lazy_default, masked_dict
 
 __all__ = ["MultilineFormatter", "CeleryMultilineFormatter", "RequestJsonFormatter", "CeleryJsonFormatter"]
 
 # constants
+# BUILTIN_ATTRS - would be removed from extra
 BUILTIN_ATTRS = {
     "args",
     "asctime",
@@ -48,18 +51,27 @@ BUILTIN_ATTRS = {
     "request",  # django log appends JSON unencodable request object
     # lamb - hide from extra
     "xray",
+    "xline",
     "app_user_id",
     "status_code",
 }
 
+# would be appended to JSON log as first level fields
 HTTP_REQUEST_ATTRS = {
-    "method": "httpMethod",
-    "path": "httpUrl",
+    "method": "http_method",
+    "path": "http_url",
     # lamb - add to plain
     "xray": "xray",
-    "app_user_id": "userId",
-    "lamb_track_id": "trackId",
-    "status_code": "statusCode",
+    "xline": "xline",
+    "app_user_id": "user_id",
+    "status_code": "status_code",
+}
+
+# would be appended to JSON log as first level fields
+HTTP_REQUEST_META_ATTRS = {
+    "HTTP_HOST": "http_host",
+    "HTTP_ORIGIN": "http_origin",
+    "HTTP_REFERER": "http_referer",
 }
 
 
@@ -92,7 +104,7 @@ class _BaseFormatter(logging.Formatter):
         return settings.LAMB_LOG_FORMAT_TIME_SPEC
 
     @lazy_default(None)
-    def tzinfo(self) -> Optional[datetime.tzinfo]:
+    def tzinfo(self) -> datetime.tzinfo | None:
         from django.conf import settings
 
         timezone_name = settings.LAMB_LOG_FORMAT_TIME_ZONE
@@ -106,12 +118,9 @@ class _BaseFormatter(logging.Formatter):
             return None
 
     # contract
-    def formatTime(self, record, datefmt: Optional[str] = ...) -> str:
+    def formatTime(self, record, datefmt: str | None = ...) -> str:
         ct = datetime.datetime.fromtimestamp(record.created, tz=self.tzinfo)
-        if datefmt:
-            s = ct.strftime(datefmt)
-        else:
-            s = ct.isoformat(sep=self.sep, timespec=self.timespec)
+        s = ct.strftime(datefmt) if datefmt else ct.isoformat(sep=self.sep, timespec=self.timespec)
 
         return s
 
@@ -127,16 +136,22 @@ class _BaseJsonFormatter(_BaseFormatter):
     json_lib = json
 
     @lazy_default(list())
-    def json_hiding_fields(self) -> List[str]:
+    def settings_json_hiding_fields(self) -> list[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_HIDE
 
     @lazy_default(list())
-    def extra_masking_keys(self) -> List[str]:
+    def settings_extra_masking_keys(self) -> list[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_EXTRA_MASKING
+
+    @lazy_default(dict())
+    def settings_severity_mapping(self):
+        from django.conf import settings
+
+        return settings.LAMB_LOG_LEVEL_SEVERITY
 
     def to_json(self, record):
         try:
@@ -178,7 +193,7 @@ class _BaseJsonFormatter(_BaseFormatter):
             attr_name: record.__dict__[attr_name] for attr_name in record.__dict__ if attr_name not in BUILTIN_ATTRS
         }
         result = {k: _json_valid(v) for k, v in result.items()}
-        result = masked_dict(result, *self.extra_masking_keys)
+        result = masked_dict(result, *self.settings_extra_masking_keys)
 
         return result
 
@@ -187,12 +202,20 @@ class _BaseJsonFormatter(_BaseFormatter):
         result = {
             "ts": self.formatTime(record=record, datefmt=self.datefmt),
             "level": record.levelname,
+            "level_value": self.settings_severity_mapping.get(record.levelno, 4),  # default 4 - Warning
             "pid": os.getpid(),  # TODO: cache ???
             "msg": message,
-            "moduleName": record.module,
-            "fileName": record.filename,
-            "lineNo": record.lineno,
+            "line_no": record.lineno,
+            "file_name": record.pathname,
         }
+
+        # path_name = record.pathname
+        # if path_name is not None and (components := path_name.split(os.path.sep)) and len(components) > 3:
+        #     components = components[-3:]
+        #     components.insert(0, '...')
+        #     path_name = os.sep.join(components)
+        #
+        # result['file_name'] = path_name
 
         if record.exc_info:
             result["stack_trace"] = self.formatException(record.exc_info)
@@ -202,7 +225,7 @@ class _BaseJsonFormatter(_BaseFormatter):
         if len(_extra) > 0:
             result["extra"] = _extra
 
-        for k in self.json_hiding_fields:
+        for k in self.settings_json_hiding_fields:
             result.pop(k, None)
 
         return result
@@ -214,7 +237,6 @@ class _BaseJsonFormatter(_BaseFormatter):
 
 
 class CeleryMixin:
-
     @lazy_default(lambda: None)
     def get_current_task(self):
         from celery._state import get_current_task
@@ -258,11 +280,10 @@ class MultilineFormatter(_BaseFormatter):
 
     def _collect_message(self, record: logging.LogRecord):
         message = record.getMessage()
-        if record.exc_info:
+        if record.exc_info and not record.exc_text:
             # Cache the traceback text to avoid converting it multiple times
             # (it's constant anyway)
-            if not record.exc_text:
-                record.exc_text = self.formatException(record.exc_info)
+            record.exc_text = self.formatException(record.exc_info)
         if record.exc_text:
             if message[-1:] != "\n":
                 message = message + "\n"
@@ -309,36 +330,47 @@ class RequestJsonFormatter(_BaseJsonFormatter):
             status_code = record.status_code
         except AttributeError:
             if isinstance(record.args, SafeAtoms):
-                try:
+                with contextlib.suppress(Exception):
                     status_code = int(record.args["s"])
-                except Exception:
-                    pass
         if status_code is not None:
-            result["statusCode"] = status_code
+            result["status_code"] = status_code
 
         # request info
-        # Lamb Framework
+
         from lamb.utils import get_current_request
 
         request = get_current_request()
 
         if request is not None:
-            request_attrs = {
-                json_name: request.__dict__[attr_name]
-                for attr_name, json_name in HTTP_REQUEST_ATTRS.items()
-                if attr_name in request.__dict__
-            }
+            # append request attributes
+            request_attrs = {}
+            for attr_name, json_name in HTTP_REQUEST_ATTRS.items():
+                if attr_name in request.__dict__:
+                    request_attrs[json_name] = request.__dict__[attr_name]
+                elif hasattr(request, attr_name):
+                    request_attrs[json_name] = getattr(request, attr_name)
+                else:
+                    pass
             result.update(request_attrs)
 
+            # append meta attributes of WSGI/ASGI
+            meta_attrs = {}
+            if hasattr(request, "META") and isinstance(request.META, Mapping):
+                for attr_name, json_name in HTTP_REQUEST_META_ATTRS.items():
+                    if attr_name in request.META:
+                        meta_attrs[json_name] = request.META[attr_name]
+            result.update(meta_attrs)
+
+            # append other
             try:
                 etm = request.lamb_execution_meter
-                result["elapsedTimeMs"] = round((record.created - etm.start_time) * 1000, 3)
+                result["elapsed_time"] = round((record.created - etm.start_time) * 1000, 3)
             except AttributeError:
                 pass
 
             try:
                 resolved = resolve(request.path)
-                result["urlName"] = resolved.url_name
+                result["url_name"] = resolved.url_name
             except Exception:
                 pass
 

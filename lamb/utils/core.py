@@ -1,21 +1,20 @@
 # core level utils - should not depend on any other lamb modules to omit circular references
 from __future__ import annotations
 
-import sys
 import copy
-import types
-import random
-import string
-import warnings
 import functools
 import importlib
+import random
+import string
+import sys
+import types
 import urllib.parse
-from typing import Any, Dict, List, Union, TypeVar, Optional, Generator
+import warnings
+from collections.abc import Generator
+from types import GenericAlias
+from typing import Any, TypeVar
 
 import furl
-
-if sys.version_info >= (3, 9):
-    from types import GenericAlias
 
 __all__ = [
     "DeprecationClassHelper",
@@ -32,10 +31,11 @@ __all__ = [
     "lazy_ro",
     "lazy_default",
     "lazy_default_ro",
+    "class_or_instance_method",
 ]
 
 
-class DeprecationClassHelper(object):
+class DeprecationClassHelper:
     # WARN: actually or work as expected - use mixin
     def __init__(self, new_target):
         self.new_target = new_target
@@ -53,7 +53,6 @@ class DeprecationClassHelper(object):
 
 
 class DeprecationClassMixin:
-
     def __init__(self, *args, **kwargs):
         try:
             target_cls = self.__class__.__bases__[-1]
@@ -66,20 +65,17 @@ class DeprecationClassMixin:
         super().__init__(*args, **kwargs)
 
 
-def compact(*args, traverse: bool = False, collapse: bool = False) -> Union[list, dict, tuple]:
+def compact(*args, traverse: bool = False, collapse: bool = False) -> list | dict | tuple:
     """Compact version of container
     :param traverse: Boolean flag for recursive container lookup
     :param collapse: Boolean flag for remove child containers in traverse mode if length is 0
     """
     # check variadic
-    if len(args) == 1:
-        obj = args[0]
-    else:
-        obj = tuple(args)
+    obj = args[0] if len(args) == 1 else tuple(args)
 
     # recursive traverse
     def _traverse(_o):
-        if not traverse or not isinstance(_o, (list, tuple, dict)):
+        if not traverse or not isinstance(_o, list | tuple | dict):
             return _o
         else:
             _o = compact(_o, traverse=traverse, collapse=collapse)
@@ -106,7 +102,7 @@ def compact(*args, traverse: bool = False, collapse: bool = False) -> Union[list
 
 def import_by_name(name: str):
     # try to import as module
-    def _import_module(_name) -> Optional[types.ModuleType]:
+    def _import_module(_name) -> types.ModuleType | None:
         try:
             return importlib.import_module(_name)
         except ImportError:
@@ -136,14 +132,43 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
     return result
 
 
-def masked_dict(dct: Optional[Dict[Any, Any]], *masking_keys) -> Optional[Dict[Any, Any]]:
+CT = TypeVar("CT")
+
+
+def list_chunks(lst: list[CT], n: int) -> Generator[list[CT], None, None]:
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
+
+
+def get_redis_url(
+    host: str = "localhost",
+    port: int = 6379,
+    password: str = None,
+    db: int = 0,
+    username: str | None = None,
+) -> str:
+    result = furl.furl()
+    result.scheme = "redis"
+    result.host = host
+    result.port = port
+    if password is not None and len(password) > 0:
+        result.password = password
+    if username is not None and len(username) > 0:
+        result.username = username
+    result.path.add(str(db))
+    return result.url
+
+
+# maskers
+def masked_dict(dct: dict[Any, Any] | None, *masking_keys) -> dict[Any, Any] | None:
     if dct is None:
         return None
     masking_keys = [mk.lower() if isinstance(mk, str) else mk for mk in masking_keys]
     return {k: v if (k.lower() if isinstance(k, str) else k) not in masking_keys else "*****" for k, v in dct.items()}
 
 
-def masked_url(u: Union[furl.furl, str], hide_none_pass: bool = False) -> str:
+def masked_url(u: furl.furl | str, hide_none_pass: bool = False) -> str:
     if u is None:
         return None
 
@@ -157,39 +182,18 @@ def masked_url(u: Union[furl.furl, str], hide_none_pass: bool = False) -> str:
     return urllib.parse.unquote(_u.url)
 
 
-def masked_string(v: Optional[str]) -> Optional[str]:
+def masked_string(v: str | None) -> str | None:
     if v is None:
         return None
 
     return "*****"
 
 
-CT = TypeVar("CT")
-
-
-def list_chunks(lst: List[CT], n: int) -> Generator[List[CT], None, None]:
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]
-
-
-def get_redis_url(
-    host: str = "localhost",
-    port: int = 6379,
-    password: str = None,
-    db: int = 0,
-    username: Optional[str] = None,
-) -> str:
-    result = furl.furl()
-    result.scheme = "redis"
-    result.host = host
-    result.port = port
-    if password is not None and len(password) > 0:
-        result.password = password
-    if username is not None and len(username) > 0:
-        result.username = username
-    result.path.add(str(db))
-    return result.url
+# descriptors
+class class_or_instance_method(classmethod):
+    def __get__(self, instance, type_):
+        descr_get = super().__get__ if instance is None else self.__func__.__get__
+        return descr_get(instance, type_)
 
 
 # lazy utils
@@ -243,8 +247,7 @@ class lazy:
         self.__func = func
         functools.wraps(self.__func)(self)
 
-    if sys.version_info >= (3, 9):
-        __class_getitem__ = classmethod(GenericAlias)
+    __class_getitem__ = classmethod(GenericAlias)
 
     def __set_name__(self, owner, name):
         self.__name__ = name
@@ -382,9 +385,7 @@ def lazy_default(default):
     """
 
     def wrap(func):
-
         class _lazy(lazy):
-
             def __get__(self, inst, owner):
                 """Get lazy attribute or return default on exception"""
                 if inst is None:
@@ -455,9 +456,7 @@ def lazy_default_ro(default):
     """
 
     def wrap(func):
-
         class _lazy(lazy_ro):
-
             def __get__(self, inst, owner):
                 """Get lazy attribute or return default on exception"""
                 if inst is None:

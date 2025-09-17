@@ -1,19 +1,18 @@
 from __future__ import annotations
 
+import dataclasses
 import enum
 import logging
-import dataclasses
-from typing import Any, Dict, List, Type, Union, TypeVar, Optional
-
-# Lamb Framework
-from lamb.exc import ImproperlyConfiguredError
-from lamb.utils.core import lazy
-from lamb.utils.validators import v_opt_string, validate_range
-from lamb.utils.transformers import tf_list_int, tf_list_string, transform_string_enum
+from typing import Any, TypeVar
 
 import furl
 import redis
 import redis.asyncio as redis_asyncio
+
+from lamb.exc import ImproperlyConfiguredError
+from lamb.utils.core import lazy
+from lamb.utils.transformers import tf_list_int, tf_list_string, transform_string_enum
+from lamb.utils.validators import v_opt_string, validate_range
 
 logger = logging.getLogger(__name__)
 
@@ -42,49 +41,57 @@ class RedisConfig:
         from lamb.service.redis.config import Config, Mode
 
         LAMB_REDIS_CONFIG = {
-            'generic': Config(host='valkey', port=6379, mode=Mode.GENERIC, username=None,
-                password='12345', default_db=3),
-            'sentinel': Config(host='sentinel', port=26379, mode=Mode.SENTINEL, password='12345',
-                sentinel_service_name='avroid',default_db=4),
-            'cluster': Config(host='valkey-c-1,valkey-c-2', port=[6379,6379], mode=Mode.CLUSTER_101,
-                username=None, password='12345')
+            "generic": Config(
+                host="valkey", port=6379, mode=Mode.GENERIC, username=None, password="12345", default_db=3
+            ),
+            "sentinel": Config(
+                host="sentinel",
+                port=26379,
+                mode=Mode.SENTINEL,
+                password="12345",
+                sentinel_service_name="avroid",
+                default_db=4,
+            ),
+            "cluster": Config(
+                host="valkey-c-1,valkey-c-2", port=[6379, 6379], mode=Mode.CLUSTER_101, username=None, password="12345"
+            ),
         }
 
         # generic
-        gr = LAMB_REDIS_CONFIG['generic'].redis()
-        gr.set('test_key', 100)
-        gr.get('test_key')
+        gr = LAMB_REDIS_CONFIG["generic"].redis()
+        gr.set("test_key", 100)
+        gr.get("test_key")
 
         # sentinel master
-        m = LAMB_REDIS_CONFIG['sentinel'].redis()
-        m.set('test_key_s', 100)
-        m.get('test_key_s')
+        m = LAMB_REDIS_CONFIG["sentinel"].redis()
+        m.set("test_key_s", 100)
+        m.get("test_key_s")
 
         # sentinel slave node
-        s = LAMB_REDIS_CONFIG['sentinel'].redis(sentinel_slave=True)
-        s.get('test_key_s')
+        s = LAMB_REDIS_CONFIG["sentinel"].redis(sentinel_slave=True)
+        s.get("test_key_s")
 
         # cluster
-        c = LAMB_REDIS_CONFIG['cluster'].redis()
-        c.set('test_key', 1000)
-        c.get('test_key')
+        c = LAMB_REDIS_CONFIG["cluster"].redis()
+        c.set("test_key", 1000)
+        c.get("test_key")
 
         # cluster with override params
-        c2 = LAMB_REDIS_CONFIG['cluster'].redis(decode_responses=False)
+        c2 = LAMB_REDIS_CONFIG["cluster"].redis(decode_responses=False)
 
     """
 
     # TODO: support for unix domain connection
     # TODO: support for SSL configs
-    host: Union[str, List[str]]
-    port: Union[int, List[int]] = 6379
-    username: Optional[str] = None
-    password: Optional[str] = None
+    host: str | list[str]
+    port: int | list[int] = 6379
+    username: str | None = None
+    password: str | None = None
     default_db: int = 0
     mode: Mode = Mode.GENERIC
     # sentinel specific
-    sentinel_service_name: Optional[str] = None
-    sentinel_password: Optional[str] = auto
+    sentinel_service_name: str | None = None
+    sentinel_password: str | None = auto
 
     def __post_init__(self):
         # normalize formats
@@ -121,9 +128,9 @@ class RedisConfig:
         host: str,
         port: int,
         scheme: str = "redis",
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        db: Optional[int] = None,
+        username: str | None = None,
+        password: str | None = None,
+        db: int | None = None,
     ) -> str:
         u = furl.furl()
         u.scheme = scheme.lower()
@@ -160,8 +167,8 @@ class RedisConfig:
             decode_responses=True,
         )
 
-    def _manager(self, cls: Type[TS]) -> TS:
-        sentinels = list(zip(self.host, self.port))
+    def _manager(self, cls: type[TS]) -> TS:
+        sentinels = list(zip(self.host, self.port, strict=True))
         return cls(
             sentinels=sentinels,
             sentinel_kwargs={"password": self.sentinel_password},
@@ -184,7 +191,7 @@ class RedisConfig:
         return self._get_cluster()
 
     def _get_cluster(self, **connection_kwargs):
-        startup_nodes = list(zip(self.host, self.port))
+        startup_nodes = list(zip(self.host, self.port, strict=True))
         startup_nodes = [redis.cluster.ClusterNode(host=h, port=p) for h, p in startup_nodes]
         if "password" not in connection_kwargs:
             connection_kwargs["password"] = self.password
@@ -197,7 +204,7 @@ class RedisConfig:
             case Mode.GENERIC:
                 return self.url
             case Mode.SENTINEL:
-                sentinels = list(zip(self.host, self.port))
+                sentinels = list(zip(self.host, self.port, strict=True))
                 urls = []
                 for s in sentinels:
                     u = self._url(
@@ -209,7 +216,7 @@ class RedisConfig:
                 raise ImproperlyConfiguredError(f"broker_url is not defined on mode: {self.mode}")
 
     @lazy
-    def broker_transport_options(self) -> Dict[str, Any]:
+    def broker_transport_options(self) -> dict[str, Any]:
         if self.mode != Mode.SENTINEL:
             return {}
         else:
@@ -222,7 +229,7 @@ class RedisConfig:
     def redis(
         self,
         **connection_kwargs,
-    ) -> Union[redis.Redis, redis.RedisCluster]:
+    ) -> redis.Redis | redis.RedisCluster:
         """Returns corresponding for config Redis instance
 
         :param connection_kwargs: extra arguments that would be used with underlying connection
@@ -248,7 +255,7 @@ class RedisConfig:
             case _:
                 raise ImproperlyConfiguredError(f"Unsupported Redis mode: {self.mode}")
 
-    async def aredis(self, **connection_kwargs) -> Union[redis_asyncio.Redis, redis_asyncio.RedisCluster]:
+    async def aredis(self, **connection_kwargs) -> redis_asyncio.Redis | redis_asyncio.RedisCluster:
         match self.mode:
             case Mode.GENERIC:
                 # TODO: discover pool usage in asyncio version

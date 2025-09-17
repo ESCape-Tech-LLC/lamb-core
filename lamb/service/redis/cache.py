@@ -4,7 +4,6 @@ from functools import wraps
 
 from django.conf import settings
 
-# Lamb Framework
 from lamb.json import JsonResponse
 from lamb.service.redis.config import RedisConfig
 
@@ -24,10 +23,10 @@ def json_cached(cache_key: str, ttl: int = 15 * 60, redis_conf_name: str = "cach
         from django.utils.decorators import method_decorator
         from lamb.service.redis.cache import json_cached
 
+
         @rest_allowed_http_methods(["GET"])
         class ConfigListView(RestView):
-
-            @method_decorator(json_cached(cache_key='handbooks', ttl=15*60, redis_conf_name='cache'))
+            @method_decorator(json_cached(cache_key="handbooks", ttl=15 * 60, redis_conf_name="cache"))
             def get(self, _: MessengerRequest):
                 result = JsonResponse.encode_object(get_visible_configs())
                 return json.loads(result)

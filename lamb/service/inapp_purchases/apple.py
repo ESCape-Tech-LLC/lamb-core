@@ -1,13 +1,12 @@
 import json
 from datetime import datetime
 
-# Lamb Framework
-from lamb.exc import ExternalServiceError
-
 import requests
 
+from lamb.exc import ExternalServiceError
+
+from .base import InAppAbstract, PurchaseData, SubscriptionStatus
 from .exc import InAppAppleSandboxError
-from .base import PurchaseData, InAppAbstract, SubscriptionStatus
 
 
 class InAppApple(InAppAbstract):
@@ -51,8 +50,8 @@ class InAppApple(InAppAbstract):
 
         try:
             data = json.loads(response.content)
-        except json.decoder.JSONDecodeError:
-            raise ExternalServiceError("Unable to decode a response for inapp purchase from Apple server")
+        except json.decoder.JSONDecodeError as e:
+            raise ExternalServiceError("Unable to decode a response for inapp purchase from Apple server") from e
 
         if "status" not in data:
             raise ExternalServiceError("Malformed response for inapp purchase from Apple server")
@@ -63,7 +62,7 @@ class InAppApple(InAppAbstract):
                 data = self._make_request(sandbox=True)
         elif data["status"] == 21002:
             raise ExternalServiceError(
-                "The data in the receipt was malformed or the Apple service experienced a " "temporary issue"
+                "The data in the receipt was malformed or the Apple service experienced a temporary issue"
             )
         elif data["status"] != 0:
             raise ExternalServiceError("Unknown error for inapp purchase from Apple server")

@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, Optional
-
-from django.conf import settings
-from django.http import HttpResponse
+from collections.abc import Callable
+from typing import Any
 
 import lazy_object_proxy
+from django.conf import settings
+from django.http import HttpResponse
 
 try:
     import ujson
 except ImportError:
     ujson = None
 
-# Lamb Framework
+
 from lamb import exc
 from lamb.utils import dpath_value
 from lamb.utils.core import import_by_name
@@ -33,7 +33,7 @@ def _get_encoder_class():
     return result
 
 
-def _impl_json(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> Any:
+def _impl_json(data: Any, encoder: json.JSONEncoder, indent: int | None) -> Any:
     if indent is not None:
         return json.dumps(
             data,
@@ -51,7 +51,7 @@ def _impl_json(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> A
         )
 
 
-def _impl_ujson(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> Any:
+def _impl_ujson(data: Any, encoder: json.JSONEncoder, indent: int | None) -> Any:
     if indent is not None:
         return json.dumps(
             data,
@@ -69,8 +69,8 @@ def _impl_ujson(data: Any, encoder: json.JSONEncoder, indent: Optional[int]) -> 
         )
 
 
-def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, Optional[int]], Any]:
-    settings_engine: Optional[str] = dpath_value(
+def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, int | None], Any]:
+    settings_engine: str | None = dpath_value(
         settings,
         "LAMB_RESPONSE_JSON_ENGINE",
         str,
@@ -79,10 +79,7 @@ def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, Optional[int]], Any]:
     logger.debug(f"LAMB_RESPONSE_JSON_ENGINE: settings value -> {settings_engine}")
 
     if settings_engine is None:
-        if ujson is not None:
-            result = _impl_ujson
-        else:
-            result = _impl_json
+        result = _impl_ujson if ujson is not None else _impl_json
     else:
         try:
             # settings enforced
@@ -134,7 +131,7 @@ class JsonResponse(HttpResponse):
             self.content = content
 
     @staticmethod
-    def encode_object(obj, callback: Optional[Callable] = None, request: Optional[object] = None, **kwargs):
+    def encode_object(obj, callback: Callable | None = None, request: object | None = None, **kwargs):
         encoder = _JSON_ENCODER_CLASS(callback, request, **kwargs)
         result = _JSON_DUMP_IMPL(
             data=obj,

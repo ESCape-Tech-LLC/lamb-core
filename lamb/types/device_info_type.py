@@ -1,28 +1,24 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
-import dataclasses
-from typing import Any, Dict, Type, TypeVar, Optional
 from functools import partial
+from typing import Any, TypeVar
 
 from django.conf import settings
-
-# SQLAlchemy
+from ipware import get_client_ip
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
 
-# Lamb Framework
 from lamb import exc
-from lamb.types import LambLocale
-from lamb.utils import LambRequest, dpath_value
 from lamb.ext.geoip import get_asn_info, get_city_info, get_country_info
-from lamb.utils.core import import_by_name
-from lamb.json.mixins import ResponseEncodableMixin
 from lamb.json.encoder import JsonEncoder
+from lamb.json.mixins import ResponseEncodableMixin
+from lamb.types.locale_type import LambLocale
+from lamb.utils import LambRequest, dpath_value
+from lamb.utils.core import import_by_name
 from lamb.utils.validators import validate_length
-
-from ipware import get_client_ip
 
 __all__ = ["DeviceInfo", "DeviceInfoType", "device_info_factory", "get_device_info_class"]
 
@@ -31,19 +27,19 @@ logger = logging.getLogger(__name__)
 
 # info class
 @dataclasses.dataclass()
-class DeviceInfo(ResponseEncodableMixin, object):
+class DeviceInfo(ResponseEncodableMixin):
     """A device info class"""
 
-    device_family: Optional[str] = None
-    device_platform: Optional[str] = None
-    device_os: Optional[str] = None
-    device_locale: Optional[LambLocale] = None
-    app_version: Optional[str] = None
-    app_build: Optional[int] = None
-    app_id: Optional[str] = None
-    ip_address: Optional[str] = None
-    ip_routable: Optional[bool] = None
-    geoip2_info: Optional[Dict[str, Any]] = None
+    device_family: str | None = None
+    device_platform: str | None = None
+    device_os: str | None = None
+    device_locale: LambLocale | None = None
+    app_version: str | None = None
+    app_build: int | None = None
+    app_id: str | None = None
+    ip_address: str | None = None
+    ip_routable: bool | None = None
+    geoip2_info: dict[str, Any] | None = None
 
     # construct
     def __post_init__(self):
@@ -51,7 +47,7 @@ class DeviceInfo(ResponseEncodableMixin, object):
             self.device_locale = LambLocale.parse(self.device_locale)
 
     @classmethod
-    def parse_request(cls, request: LambRequest) -> Dict[str, Any]:
+    def parse_request(cls, request: LambRequest) -> dict[str, Any]:
         try:
             # extract fields
             _transform = partial(validate_length, allow_none=True, empty_as_none=True, trimming=True)
@@ -180,7 +176,7 @@ DT = TypeVar("DT", bound=DeviceInfo)
 _cached_device_info_class = None
 
 
-def get_device_info_class() -> Type[DT]:
+def get_device_info_class() -> type[DT]:
     global _cached_device_info_class
 
     if _cached_device_info_class is None:
@@ -236,10 +232,7 @@ class DeviceInfoType(types.TypeDecorator):
         if value is None:
             return None
 
-        if dialect.name != "postgresql":
-            result = json.loads(value)
-        else:
-            result = value
+        result = json.loads(value) if dialect.name != "postgresql" else value
         result = get_device_info_class()(**result)
         return result
 

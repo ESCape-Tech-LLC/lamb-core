@@ -1,11 +1,10 @@
-__version__ = "3.4.19"
+__version__ = "3.5.23"
 
 
 import logging
 
 from django.apps import AppConfig
 
-# Lamb Framework
 from lamb.utils import inject_app_defaults
 
 logger = logging.getLogger(__name__)

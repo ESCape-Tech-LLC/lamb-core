@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import os
 import logging
-from typing import Any, Dict
+import os
+from typing import Any
 
 __all__ = ["inject_logging_factory", "get_gunicorn_logging_dict"]
 
-# Lamb Framework
+
 from lamb.log.constants import LAMB_LOG_FORMAT_GUNICORN_SIMPLE
 
 
@@ -14,7 +14,6 @@ def inject_logging_factory():
     old_factory = logging.getLogRecordFactory()
 
     def _logging_factory(*args, **kwargs):
-        # Lamb Framework
         from lamb.utils import get_current_request
 
         record = old_factory(*args, **kwargs)
@@ -30,22 +29,19 @@ def inject_logging_factory():
                 setattr(record, field, None)
 
         # attach log prefix number attribute default
-        setattr(record, "prefixno", 1)
+        record.prefixno = 1
 
         # return
         return record
 
     logging.setLogRecordFactory(_logging_factory)
     is_gunicorn = "gunicorn" in os.environ.get("SERVER_SOFTWARE", "")
-    if is_gunicorn:
-        _logger = logging.getLogger("gunicorn.error")
-    else:
-        _logger = logging.getLogger("django")
+    _logger = logging.getLogger("gunicorn.error") if is_gunicorn else logging.getLogger("django")
 
     _logger.info("Lamb logging factory injected")
 
 
-def get_gunicorn_logging_dict(log_formatter_cls: str, fmt: str = LAMB_LOG_FORMAT_GUNICORN_SIMPLE) -> Dict[str, Any]:
+def get_gunicorn_logging_dict(log_formatter_cls: str, fmt: str = LAMB_LOG_FORMAT_GUNICORN_SIMPLE) -> dict[str, Any]:
     return {
         "version": 1,
         "disable_existing_loggers": False,

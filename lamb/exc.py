@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from enum import IntEnum, unique
-from typing import Any, List, Type, Union, Optional
+from typing import Any
 
 __all__ = [
     "LambExceptionCodes",
@@ -30,6 +30,9 @@ __all__ = [
     "AuthTokenExpiredError",
     "AuthForbiddenError",
     "AuthCredentialsInvalidError",
+    "RequestRangeError",
+    "ProgrammingError",
+    "BusinessLogicError",
 ]
 
 
@@ -55,6 +58,8 @@ class LambExceptionCodes(IntEnum):
     AlreadyExist = 13
     RequestBodyTooBig = 14
     AuthCredentialsInvalid = 15
+    RequestRange = 16
+    Programming = 17
 
     # throttling and rate limiters
     Throttling = 101
@@ -63,7 +68,8 @@ class LambExceptionCodes(IntEnum):
     UpdateRequired = 201
     HumanFriendly = 202
     HumanFriendlyMultiple = 203
-    UserBlocked = 211  # new in 3.0.0
+    UserBlocked = 211
+    BusinessLogic = 221
 
 
 class ApiError(Exception):
@@ -78,7 +84,7 @@ class ApiError(Exception):
     message: str
     status_code: int
     app_error_code: int
-    error_details: Optional[Any]
+    error_details: Any | None
 
     def __init__(self, message=None, status_code=None, app_error_code=None, error_details=None):
         status_code = status_code or self._status_code
@@ -143,6 +149,27 @@ class DatabaseError(ServerError):
     _app_error_code = LambExceptionCodes.Database
     _status_code = 500
     _message = "Database error occurred"
+
+
+class ProgrammingError(ServerError):
+    """Programming error wrapper"""
+
+    _app_error_code = LambExceptionCodes.Programming
+    _status_code = 500
+    _message = "Improperly implemented server side call"
+
+    def __init__(
+        self, message=None, status_code=None, app_error_code=None, error_details=None, message_override: bool = True
+    ):
+        if message_override and message is not None:
+            logger.critical(f"{self.__class__.__name__} reason: {message}")
+            message = self._message
+        super().__init__(
+            message=message,
+            status_code=status_code,
+            app_error_code=app_error_code,
+            error_details=error_details,
+        )
 
 
 # client errors
@@ -239,15 +266,15 @@ class ThrottlingError(ClientError):
     _status_code = 429
     _message = "Too many requests"
 
-    limits: Optional[list]
+    limits: list | None
 
     def __init__(self, *args, limits=None, **kwargs):
-        super(ThrottlingError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.limits = limits or []
 
 
 class UserBlockedError(ClientError):
-    """Client side error for ser profile blocked kind of errors"""
+    """Client side error for user profile blocked kind of errors"""
 
     _app_error_code = LambExceptionCodes.UserBlocked
     _status_code = 403
@@ -276,12 +303,12 @@ class HumanFriendlyMultipleError(HumanFriendlyError):
     _app_error_code = LambExceptionCodes.HumanFriendlyMultiple
     _message = None
     _status_code = 400
-    wrapped_errors: List[ApiError]
+    wrapped_errors: list[ApiError]
 
     def __init__(
         self,
         *args,
-        wrapped_errors: List[Union[ApiError, Type[ApiError]]] = None,
+        wrapped_errors: list[ApiError | type[ApiError]] = None,
         header: str = None,
         **kwargs,
     ):
@@ -317,3 +344,17 @@ class RequestBodyTooBigError(ClientError):
     _app_error_code = LambExceptionCodes.RequestBodyTooBig
     _status_code = 400
     _message = "Request data too big"
+
+
+class RequestRangeError(ClientError):
+    _app_error_code = LambExceptionCodes.RequestRange
+    _status_code = 416
+    _message = "Requested Range Not Satisfiable"
+
+
+class BusinessLogicError(ClientError):
+    """Client side error for action prohibited from business logic point of view"""
+
+    _app_error_code = LambExceptionCodes.BusinessLogic
+    _status_code = 400
+    _message = "Requested action/resource is illegal for business logic"

@@ -1,29 +1,33 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
+import sqlalchemy.orm
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-# SQLAlchemy
-import sqlalchemy.orm
+from lamb.db.session import get_metadata, lamb_db_session_maker
+from lamb.utils import dpath_value
+from lamb.utils.core import lazy
+from lamb.utils.validators import validate_not_empty
 
-# Lamb Framework
-from lamb.db.session import lamb_db_session_maker
-
-__all__ = ["LambCommand", "LambLoglevelMixin", "CommandError"]
+__all__ = ["LambCommand", "LambCommandMixin", "CommandError"]
 
 logger = logging.getLogger(__name__)
 
 
-class LambLoglevelMixin:
-    log_level: Optional[str] = None
-    db_session: sqlalchemy.orm.Session
+class LambCommandMixin:
+    log_level: str | None = None
+    db_key: str | None = None
+    db_async: bool = False
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.db_session = lamb_db_session_maker()
+    @lazy
+    def db_session(self) -> sqlalchemy.orm.Session:
+        return lamb_db_session_maker(db_key=self.db_key, pooled=True, sync=not self.db_async)
+
+    @lazy
+    def db_metadata(self) -> sqlalchemy.schema.MetaData:
+        return get_metadata(db_key=self.db_key, pooled=True, sync=not self.db_async)
 
     def add_arguments(self: BaseCommand, parser):
         # noinspection PyUnresolvedReferences
@@ -37,19 +41,48 @@ class LambLoglevelMixin:
             help="Log level",
             type=str,
         )
+        parser.add_argument(
+            "-D",
+            "--db-key",
+            action="store",
+            dest="db_key",
+            default="default",
+            help="Database to use",
+            type=str,
+        )
+        parser.add_argument(
+            "--db-async",
+            action="store_true",
+            dest="db_async",
+            default=False,
+            help="Use asynchronously database session and metadata",
+        )
 
     def execute(self, *args, **options):
+        # parse log level
         log_level = options["log_level"]
         if log_level is not None and "loggers" in settings.LOGGING:
             logger_names = settings.LOGGING["loggers"].keys()
             for logger_name in logger_names:
                 logging.getLogger(logger_name).setLevel(log_level)
         self.log_level = log_level
+
+        # parse db key
+        _db_key = dpath_value(options, "db_key", str, transform=validate_not_empty)
+        if _db_key not in settings.LAMB_DB_CONFIG:
+            raise CommandError(f"Unknown db key: {_db_key}")
+        self.db_key = _db_key
+
+        self.db_async = dpath_value(options, "db_async", bool)
+
+        logger.info(f"LambCommandMixin. db key: {self.db_key}")
+        logger.info(f"LambCommandMixin. db_async: {self.db_async}")
+
         # noinspection PyUnresolvedReferences
         super().execute(*args, **options)
 
 
-class LambCommand(LambLoglevelMixin, BaseCommand):
+class LambCommand(LambCommandMixin, BaseCommand):
     """
     Abstract management command
 

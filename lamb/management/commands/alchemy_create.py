@@ -2,17 +2,13 @@ import logging
 from importlib import import_module
 
 from django.core.management.base import CommandError, LabelCommand
-
-# SQLAlchemy
-from sqlalchemy.exc import DBAPIError, SQLAlchemyError
-from sqlalchemy.schema import DropTable, DropSequence
-from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import DropEnumType
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.schema import DropSequence, DropTable
 
-# Lamb Framework
-from lamb.db.session import metadata
+from lamb.management.base import LambCommandMixin
 from lamb.utils.core import compact
-from lamb.management.base import LambLoglevelMixin
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +28,7 @@ def _compile_drop_type(element, compiler, **_):
     return compiler.visit_drop_enum_type(element) + " CASCADE"
 
 
-class Command(LambLoglevelMixin, LabelCommand):
+class Command(LambCommandMixin, LabelCommand):
     help = "Creates database table for provided modules"  # noqa: A003
 
     def add_arguments(self, parser):
@@ -54,7 +50,9 @@ class Command(LambLoglevelMixin, LabelCommand):
 
     def handle_label(self, label, **options):
         try:
-            import_module(label)
+            metadata = self.db_metadata
+            import_module(label)  # loading models
+
             if options["exclude_tables"] is not None:
                 exclude_tables = options["exclude_tables"].split(",")
                 tables = [v for k, v in metadata.tables.items() if k not in exclude_tables]
@@ -68,8 +66,8 @@ class Command(LambLoglevelMixin, LabelCommand):
 
             metadata.create_all(**kwargs)
         except ImportError as e:
-            logging.warning("Module import failed: %s" % e)
-            raise CommandError('Failed to import module. "%s"' % e)
+            logging.warning(f"Module import failed: {e}")
+            raise CommandError(f'Failed to import module. "{e}"') from e
         except (SQLAlchemyError, DBAPIError) as e:
-            logger.warning("Database commit failed: %s" % e)
-            raise CommandError('Database error occurred. "%s"' % e)
+            logger.warning(f"Database commit failed: {e}")
+            raise CommandError(f'Database error occurred. "{e}"') from e

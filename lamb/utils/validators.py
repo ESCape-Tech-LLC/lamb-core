@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-import uuid
-import logging
 import ipaddress
-from typing import List, Union, AnyStr, TypeVar, Optional
+import logging
+import uuid
+from typing import AnyStr, TypeVar
 
-from django.core.validators import URLValidator, EmailValidator, ValidationError
-
-# SQLAlchemy
+from django.core.validators import EmailValidator, URLValidator, ValidationError
 from sqlalchemy_utils import PhoneNumber
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
-    ServerError,
     InvalidParamTypeError,
     InvalidParamValueError,
+    ServerError,
 )
 from lamb.utils.transformers import transform_uuid
 
@@ -39,12 +36,12 @@ VT = TypeVar("VT")
 
 
 def validate_range(
-    value: Optional[VT],
-    min_value: Optional[VT] = None,
-    max_value: Optional[VT] = None,
+    value: VT | None,
+    min_value: VT | None = None,
+    max_value: VT | None = None,
     key: str = None,
     allow_none: bool = False,
-) -> Optional[VT]:
+) -> VT | None:
     """Value within interval validator
     :param value: Value to be checked
     :param min_value: Interval bottom limit
@@ -70,18 +67,18 @@ def validate_range(
     except InvalidParamValueError:
         raise
     except Exception as e:
-        raise InvalidParamTypeError("Invalid param type for %s" % key, error_details=key) from e
+        raise InvalidParamTypeError(f"Invalid param type for {key}", error_details=key) from e
 
 
 def validate_length(
-    value: Optional[VT],
-    min_length: Optional[int] = None,
-    max_length: Optional[int] = None,
-    key: Optional[str] = None,
+    value: VT | None,
+    min_length: int | None = None,
+    max_length: int | None = None,
+    key: str | None = None,
     allow_none: bool = False,
     trimming: bool = True,
     empty_as_none: bool = True,
-) -> Optional[VT]:
+) -> VT | None:
     """Validate value of Sized datatype for min/max length
     :param value: value to be checked
     :param min_length: minimal length (None - skip check)
@@ -132,11 +129,11 @@ def validate_length(
 
 
 def validate_phone_number(
-    phone_number: Optional[str],
-    region: Optional[str] = None,
+    phone_number: str | None,
+    region: str | None = None,
     allow_none: bool = False,
     check_valid: bool = True,
-) -> Optional[PhoneNumber]:
+) -> PhoneNumber | None:
     """Validate value as valid phone number"""
     # early return
     if isinstance(phone_number, str):
@@ -161,7 +158,7 @@ def validate_phone_number(
         raise InvalidParamValueError("Phone number validation failed") from e
 
 
-def validate_email(value: Optional[str], allow_none: bool = False) -> Optional[str]:
+def validate_email(value: str | None, allow_none: bool = False) -> str | None:
     # early return
     if value is None and allow_none:
         return value
@@ -174,7 +171,7 @@ def validate_email(value: Optional[str], allow_none: bool = False) -> Optional[s
         raise InvalidParamValueError("Invalid email format") from e
 
 
-def validate_url(value: Optional[str], allow_none: bool = False, schemes: List[str] = None) -> Optional[str]:
+def validate_url(value: str | None, allow_none: bool = False, schemes: list[str] = None) -> str | None:
     # early return
     if value is None and allow_none:
         return value
@@ -188,7 +185,7 @@ def validate_url(value: Optional[str], allow_none: bool = False, schemes: List[s
         raise InvalidParamValueError("Invalid URL format") from e
 
 
-def validate_port(value: Optional[Union[int, AnyStr]], allow_none: bool = False) -> Optional[int]:
+def validate_port(value: int | AnyStr | None, allow_none: bool = False) -> int | None:
     # early return
     if value is None and allow_none:
         return value
@@ -202,7 +199,7 @@ def validate_port(value: Optional[Union[int, AnyStr]], allow_none: bool = False)
     return validate_range(value, min_value=0, max_value=65535)
 
 
-def validate_ip_address(value: Optional[str], version: Optional[int] = None, allow_none: bool = False) -> Optional[str]:
+def validate_ip_address(value: str | None, version: int | None = None, allow_none: bool = False) -> str | None:
     # early return
     if value is None and allow_none:
         return value
@@ -213,7 +210,7 @@ def validate_ip_address(value: Optional[str], version: Optional[int] = None, all
         raise InvalidParamValueError("Invalid ip address") from e
     if version is not None and ip.version != version:
         raise InvalidParamValueError(
-            f"Invalid ip address. Version check failed. " f"Actual: {ip.version}, requested: {version}."
+            f"Invalid ip address. Version check failed. Actual: {ip.version}, requested: {version}."
         )
     return value
 
@@ -223,7 +220,7 @@ def validate_timeout(value: float) -> float:
     return validate_range(value, min_value=0.0)
 
 
-def validate_not_empty(value: Optional[VT], min_length=1, **kwargs) -> VT:
+def validate_not_empty(value: VT | None, min_length=1, **kwargs) -> VT:
     if "min_length" not in kwargs:
         kwargs["min_length"] = min_length
     if "value" not in kwargs:
@@ -231,7 +228,7 @@ def validate_not_empty(value: Optional[VT], min_length=1, **kwargs) -> VT:
     return validate_length(**kwargs)
 
 
-def v_opt_uuid(value: Optional[str], key: Optional[str] = None) -> Optional[uuid.UUID]:
+def v_opt_uuid(value: str | None, key: str | None = None) -> uuid.UUID | None:
     if value is None:
         return None
     elif isinstance(value, uuid.UUID):
@@ -249,7 +246,7 @@ def v_opt_uuid(value: Optional[str], key: Optional[str] = None) -> Optional[uuid
     return transform_uuid(value, key=key)
 
 
-def v_opt_string(value: Optional[str], key: Optional[str] = None) -> Optional[str]:
+def v_opt_string(value: str | None, key: str | None = None) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):

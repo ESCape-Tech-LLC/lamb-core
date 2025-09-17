@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import time
 import logging
-from typing import Any, Dict, List, Tuple
+import time
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -10,14 +10,14 @@ logger = logging.getLogger(__name__)
 __all__ = ["ExecutionTimeMeter"]
 
 
-class ExecutionTimeMeter(object):
+class ExecutionTimeMeter:
     """
     :type _markers: list[ExecutionTimeMeter.Marker]
     :type start_time: float
     :type context: Optional[list|tuple|set|dict]
     """
 
-    class Marker(object):
+    class Marker:
         """
         :type message: str
         :type timestamp: float
@@ -46,7 +46,7 @@ class ExecutionTimeMeter(object):
         """Total elapsed time interval"""
         return self._markers[len(self._markers) - 1].timestamp - self.start_time
 
-    def get_measurements(self) -> List[Tuple[str, float, float, float]]:
+    def get_measurements(self) -> list[tuple[str, float, float, float]]:
         """List of measured values - tuple (message, absolute, relative, percentage)"""
 
         total_elapsed = self.get_total_time()
@@ -63,7 +63,7 @@ class ExecutionTimeMeter(object):
             previous_timestamp = marker.timestamp
         return result
 
-    def get_log_list(self) -> List[Dict[str, Any]]:
+    def get_log_list(self) -> list[dict[str, Any]]:
         """
         :return: Returns measurements in list of dict format
         """
@@ -79,10 +79,7 @@ class ExecutionTimeMeter(object):
         measurements = self.get_measurements()
 
         message_elements = list()
-        if isinstance(header, str):
-            final_header = header + " measures: "
-        else:
-            final_header = "Time measures: "
+        final_header = header + " measures: " if isinstance(header, str) else "Time measures: "
         message_elements.append(final_header)
         message_elements.append(f"Total time: {total_elapsed:.6f} sec.")
 

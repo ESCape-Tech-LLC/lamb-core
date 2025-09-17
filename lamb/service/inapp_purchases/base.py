@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import Optional
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 
 
 class SubscriptionStatus(Enum):
@@ -19,7 +18,7 @@ class PurchaseData:
     package_name: str
     product_id: str
     status: SubscriptionStatus
-    active_until: Optional[datetime]
+    active_until: datetime | None
     order_id: str
 
 

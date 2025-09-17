@@ -1,19 +1,16 @@
-import json
-import uuid
-import logging
+import dataclasses
 import datetime
+import json
+import logging
+import uuid
 from decimal import Decimal
 
+import lazy_object_proxy
 from django.conf import settings
-
-# SQLAlchemy
 from sqlalchemy_utils import PhoneNumber
 
-# Lamb Framework
+from lamb.json.mixins import ResponseConformProtocol
 from lamb.utils.core import import_by_name
-from lamb.json.mixins import ResponseEncodableMixin
-
-import lazy_object_proxy
 
 __all__ = ["JsonEncoder"]
 
@@ -51,7 +48,9 @@ class JsonEncoder(json.JSONEncoder):
             result = list(obj)
         elif isinstance(obj, PhoneNumber):
             result = obj.e164
-        elif isinstance(obj, ResponseEncodableMixin):
+        elif dataclasses.is_dataclass(obj) and not isinstance(obj, ResponseConformProtocol):
+            result = dataclasses.asdict(obj)
+        elif isinstance(obj, ResponseConformProtocol):
             result = obj.response_encode(self.request)
         else:
             result = json.JSONEncoder.default(self, obj)

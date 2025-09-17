@@ -1,16 +1,12 @@
 import logging
 
+import babel
 from django.conf import settings
-
-# SQLAlchemy
 from sqlalchemy import types
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
-# Lamb Framework
-from lamb.exc import ServerError, InvalidParamValueError
+from lamb.exc import InvalidParamValueError, ServerError
 from lamb.json.mixins import ResponseEncodableMixin
-
-import babel
 
 __all__ = ["LambLocale", "LambLocaleType"]
 
@@ -25,9 +21,7 @@ class LambLocale(ResponseEncodableMixin, babel.Locale):
         seps = {sep, *settings.LAMB_DEVICE_INFO_LOCALE_VALID_SEPS}
         for sep in seps:
             try:
-                return super(LambLocale, cls).parse(
-                    identifier=identifier, sep=sep, resolve_likely_subtags=resolve_likely_subtags
-                )
+                return super().parse(identifier=identifier, sep=sep, resolve_likely_subtags=resolve_likely_subtags)
             except Exception as e:
                 exceptions.append(e)
         if exceptions:
@@ -70,7 +64,7 @@ class LambLocaleType(types.TypeDecorator, ScalarCoercible):
         try:
             return LambLocale.parse(value)
         except (ValueError, babel.UnknownLocaleError) as e:
-            raise InvalidParamValueError("Unknown or unsupported locale value %s" % value) from e
+            raise InvalidParamValueError(f"Unknown or unsupported locale value {value}") from e
 
     def process_literal_param(self, value, dialect):
         return str(value)

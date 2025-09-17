@@ -1,31 +1,32 @@
 from __future__ import annotations
 
+import contextlib
 import copy
 import logging
-from typing import Any, Dict, List, Tuple, Union, Mapping, Callable, Optional
-from operator import getitem
+import os
+from collections.abc import Callable, Mapping
 from functools import reduce
-
-from django.conf import Settings
-from django.http.request import QueryDict
-
-# Lamb Framework
-from lamb import exc
-from lamb.ext.lxml import __lxml_hints_reverse_map__
+from operator import getitem
+from typing import Any, Union
 
 # import dpath.util
 import dpath
 import lxml.etree as etree
+from django.conf import Settings
+from django.http.request import QueryDict
 from lxml.etree import _Element as EtreeElement
 from lxml.etree import _ElementTree as Etree
+
+from lamb import exc
+from lamb.ext.lxml import __lxml_hints_reverse_map__
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["dpath_value", "adapt_dict_impl"]
 
 
-DictObject = Union[dict, EtreeElement, Etree, Mapping, Settings]
-KeyPath = Union[str, List[Any], Tuple[Any]]
+DictObject = dict | EtreeElement | Etree | Mapping | Settings
+KeyPath = str | list[Any] | tuple[Any]
 
 # main
 # TODO: migrate functions to cython with pure python versions - could be much faster
@@ -33,11 +34,11 @@ KeyPath = Union[str, List[Any], Tuple[Any]]
 
 
 def dpath_value(
-    dict_object: Optional[DictObject] = None,
-    key_path: Optional[KeyPath] = None,
-    req_type: Optional[Callable] = None,
+    dict_object: DictObject | None = None,
+    key_path: KeyPath | None = None,
+    req_type: Callable | None = None,
     allow_none: bool = False,
-    transform: Optional[Callable] = None,
+    transform: Callable | None = None,
     **kwargs,
 ):
     """Search for object in provided dict_object under key_path
@@ -70,7 +71,7 @@ def dpath_value(
             ) from _e
 
     # prepare key_path
-    if not isinstance(key_path, (str, list, tuple)):
+    if not isinstance(key_path, str | list | tuple):
         raise exc.ServerError
 
     _key_path = copy.copy(key_path)
@@ -79,19 +80,21 @@ def dpath_value(
     try:
         # custom dispatch
         try:
-            if isinstance(dict_object, dict):
+            if isinstance(dict_object, os._Environ):
+                result = _impl_environ(dict_object, key_path=_key_path, **kwargs)
+            elif isinstance(dict_object, dict):
                 result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
             elif isinstance(dict_object, Settings):
                 result = _impl_django_conf(dict_object, key_path=_key_path, **kwargs)
             elif isinstance(dict_object, QueryDict):
                 result = _impl_query_dict(dict_object, key_path=_key_path, **kwargs)
-            elif isinstance(dict_object, (Etree, EtreeElement)):
+            elif isinstance(dict_object, Etree | EtreeElement):
                 result = _impl_etree(dict_object, key_path=_key_path, **kwargs)
             else:
                 # last mile - attempt as dict
                 result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
-        except IndexError:
-            raise exc.InvalidBodyStructureError(f"Could not locate key: {key_path}")
+        except IndexError as e:
+            raise exc.InvalidBodyStructureError(f"Could not locate key: {key_path}") from e
 
         # check for none
         if result is None:
@@ -112,7 +115,7 @@ def dpath_value(
 
         return result
     except Exception as e:
-        if "default" in kwargs.keys():
+        if "default" in kwargs:
             return kwargs["default"]
         elif isinstance(e, exc.ApiError):
             raise
@@ -121,20 +124,20 @@ def dpath_value(
 
 
 # dict engine utils
-def _impl_dict_dpath(dict_object: Dict[Any, Any], key_path: KeyPath, **_) -> Any:
-    items: List[Any] = dpath.values(dict_object, key_path)
+def _impl_dict_dpath(dict_object: dict[Any, Any], key_path: KeyPath, **_) -> Any:
+    items: list[Any] = dpath.values(dict_object, key_path)
     result = items[0]
     return result
 
 
-def _impl_dict_reduce(dict_object: Dict[Any, Any], key_path: KeyPath, **_) -> Any:
+def _impl_dict_reduce(dict_object: dict[Any, Any], key_path: KeyPath, **_) -> Any:
     # TODO: candidate to remove - traverse speed same
     try:
         if isinstance(key_path, str):
             key_path = [key_path]
         return reduce(getitem, key_path, dict_object)
-    except Exception:
-        raise IndexError("Path not exist")
+    except Exception as e:
+        raise IndexError("Path not exist") from e
 
 
 # dpath_value could be used before full django and settings init complete
@@ -160,7 +163,7 @@ def adapt_dict_impl():
 
 
 # other sources
-def _impl_etree(element: Union[EtreeElement, Etree], key_path: str, namespaces: Optional[dict] = None, **_) -> Any:
+def _impl_etree(element: EtreeElement | Etree, key_path: str, namespaces: dict | None = None, **_) -> Any:
     """Etree/EtreeElement implementation
 
     :param element: Element object to extract value
@@ -168,11 +171,11 @@ def _impl_etree(element: Union[EtreeElement, Etree], key_path: str, namespaces: 
     :param namespaces: Namespaces for XML find mapping
     :return: Extracted value
     """
-    if not isinstance(element, (EtreeElement, Etree)):
-        logger.warning("Improperly configured element param data type: %s" % element)
+    if not isinstance(element, EtreeElement | Etree):
+        logger.warning(f"Improperly configured element param data type: {element}")
         raise exc.InvalidParamTypeError("ArgParsing. Improperly configured param source")
     if not isinstance(key_path, str):
-        logger.warning("Improperly configured key_path param data type: %s" % key_path)
+        logger.warning(f"Improperly configured key_path param data type: {key_path}")
         raise exc.InvalidParamTypeError("ArgParsing. Improperly configured param search key_path")
 
     try:
@@ -180,7 +183,7 @@ def _impl_etree(element: Union[EtreeElement, Etree], key_path: str, namespaces: 
         child = element.find(key_path, namespaces=namespaces)
         if child is None:
             raise exc.InvalidBodyStructureError(
-                "Could not extract param for key_path %s from provided XML data" % key_path,
+                f"Could not extract param for key_path {key_path} from provided XML data",
                 error_details={"key_path": key_path},
             )
         result = child.text
@@ -189,18 +192,16 @@ def _impl_etree(element: Union[EtreeElement, Etree], key_path: str, namespaces: 
         if result is not None:
             # validate result type through typeHint detecting in key_path and converting to ot
             hinted_type = child.get("typeHint")
-            if hinted_type is not None and hinted_type in __lxml_hints_reverse_map__.keys():
-                try:
+            if hinted_type is not None and hinted_type in __lxml_hints_reverse_map__:
+                with contextlib.suppress(Exception):
                     result = __lxml_hints_reverse_map__[hinted_type](result)
-                except Exception:
-                    pass
 
         return result
     except exc.ApiError:
         raise
     except etree.ParseError as e:
         raise exc.InvalidBodyStructureError(
-            "Could not extract param for key_path %s from provided XML data" % key_path,
+            f"Could not extract param for key_path {key_path} from provided XML data",
             error_details={"key_path": key_path},
         ) from e
     except Exception as e:
@@ -229,6 +230,28 @@ def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
         ) from e
 
 
-def _impl_query_dict(dict_object: QueryDict, key_path: Union[str, List[str]] = None, **kwargs) -> Any:
+def _impl_query_dict(dict_object: QueryDict, key_path: str | list[str] = None, **kwargs) -> Any:
     # TODO: support for multiple values
     return _impl_dict(dict_object.dict(), key_path, **kwargs)
+
+
+def _impl_environ(env: os._Environ, key_path: str | list[str] = None, **kwargs) -> Any:
+    if not isinstance(key_path, str):
+        raise exc.ProgrammingError("Environment variable name must be a string")
+
+    if key_path.endswith("_FILE"):
+        # early return - seems not like patch required
+        return _impl_dict(dict_object=env, key_path=key_path, **kwargs)
+
+    key_path_secret = key_path + "_FILE"
+    if key_path not in env and key_path_secret in env:
+        try:
+            file_path = env[key_path_secret]
+            with open(file_path, "r") as f:
+                result = f.read().strip()
+                env[key_path] = result
+                logger.warning(f"env variable monkey patching from _FILE version: {key_path} << {key_path_secret}")
+        except Exception as e:
+            raise exc.InvalidBodyStructureError("Could not adapt _FILE like env variable") from e
+
+    return _impl_dict(dict_object=env, key_path=key_path, **kwargs)

@@ -1,34 +1,34 @@
 from __future__ import annotations
 
+import contextlib
 import logging
-from typing import Any, Dict, List, Type, Union, TypeVar, Callable, Optional
+from collections.abc import Callable
 from datetime import date, datetime
 from functools import partial
+from typing import Any, TypeVar
 
+import sqlalchemy as sa
 from django.conf import settings
 from django.http import QueryDict
-
-# SQLAlchemy
-import sqlalchemy as sa
 from sqlalchemy import Float, func
+from sqlalchemy.dialects.postgresql import DOMAIN
+from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.orm.query import Query
 from sqlalchemy.sql.functions import Function
-from sqlalchemy.orm.attributes import QueryableAttribute
-from sqlalchemy.dialects.postgresql import DOMAIN
 
-# Lamb Framework
 from lamb.exc import (
     ApiError,
-    ServerError,
+    InvalidBodyStructureError,
     InvalidParamTypeError,
     InvalidParamValueError,
-    InvalidBodyStructureError,
+    ServerError,
 )
-from lamb.utils import dpath_value, datetime_end, datetime_begin
+from lamb.utils import datetime_begin, datetime_end, dpath_value
 from lamb.utils.core import compact
 from lamb.utils.transformers import (
-    transform_date,
     transform_boolean,
+    transform_date,
+    transform_datetime,
     transform_string_enum,
 )
 
@@ -36,6 +36,7 @@ __all__ = [
     "Filter",
     "FieldValueFilter",
     "ColumnValueFilter",
+    "DateFilter",
     "DatetimeFilter",
     "EnumFilter",
     "PostgresqlFastTextSearchFilter",
@@ -50,23 +51,23 @@ T = TypeVar("T")
 
 
 # TODO: migrate to dataclasses
-class Filter(object):
+class Filter:
     """Abstract filter for model query"""
 
     arg_name: str
-    req_type: Type
-    req_type_transformer: Optional[Callable]
+    req_type: type
+    req_type_transformer: Callable | None
 
-    def __init__(self, arg_name: str, req_type: Type, req_type_transformer: Callable = None):
+    def __init__(self, arg_name: str, req_type: type, req_type_transformer: Callable = None):
         # check params
         if not isinstance(arg_name, str):
-            logger.warning("Filter arg_name invalid data type: %s" % arg_name)
+            logger.warning(f"Filter arg_name invalid data type: {arg_name}")
             raise ServerError("Improperly configured filter")
         if not isinstance(req_type, type):
-            logger.warning("Filter req_type invalid data type: %s" % req_type)
+            logger.warning(f"Filter req_type invalid data type: {req_type}")
             raise ServerError("Improperly configured filter")
         if req_type_transformer is not None and not callable(req_type_transformer):
-            logger.warning("Filter req_type_transformer invalid data type: %s" % req_type_transformer)
+            logger.warning(f"Filter req_type_transformer invalid data type: {req_type_transformer}")
             raise ServerError("Improperly configured filter")
 
         # store values
@@ -74,7 +75,7 @@ class Filter(object):
         self.req_type = req_type
         self.req_type_transformer = req_type_transformer
 
-    def get_param_value(self, params: Dict, key_path: str = None) -> Optional[List[object]]:
+    def get_param_value(self, params: dict, key_path: str = None) -> list[object] | None:
         """Extracts and convert param value from dictionary"""
         # handle key_path default as arg_name
         if key_path is None:
@@ -105,8 +106,8 @@ class Filter(object):
         except ApiError:
             raise
         except Exception as e:
-            logger.warning("Param convert error: %s" % e)
-            raise InvalidParamTypeError("Invalid data type for param %s" % key_path)
+            logger.warning(f"Param convert error: {e}")
+            raise InvalidParamTypeError(f"Invalid data type for param {key_path}") from e
 
         # convert according to required transformer
         if self.req_type_transformer is not None:
@@ -115,8 +116,8 @@ class Filter(object):
             except ApiError:
                 raise
             except Exception as e:
-                logger.warning("Param convert error: %s" % e)
-                raise InvalidParamTypeError("Could not convert param type to required form %s" % key_path)
+                logger.warning(f"Param convert error: {e}")
+                raise InvalidParamTypeError(f"Could not convert param type to required form {key_path}") from e
 
         # return result
         return result
@@ -133,7 +134,7 @@ class Filter(object):
     def vary_param_value_min(self, value: T) -> T:
         return value
 
-    def apply_to_query(self, query: Query, params: Dict = None, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: dict = None, **kwargs) -> Query:
         """Apply filter to query"""
         return query
 
@@ -142,7 +143,7 @@ class FieldValueFilter(Filter):
     """Basic sqlalchemy attribute comparing filter"""
 
     comparing_field: QueryableAttribute
-    allowed_compares: List[str]
+    allowed_compares: list[str]
 
     def __init__(
         self,
@@ -150,21 +151,21 @@ class FieldValueFilter(Filter):
         req_type: type,
         comparing_field: QueryableAttribute,
         req_type_transformer: Callable = None,
-        allowed_compares: List[str] = ["__eq__", "__ne__", "__ge__", "__le__"],
+        allowed_compares: list[str] | None = None,
     ):
+        allowed_compares = allowed_compares or ["__eq__", "__ne__", "__ge__", "__le__"]
         super().__init__(arg_name, req_type, req_type_transformer)
 
         # check params
-        if not isinstance(comparing_field, QueryableAttribute):
+        if not isinstance(comparing_field, (QueryableAttribute, sa.ColumnClause)):
             logger.warning(
-                "Filter comparing_field invalid data type: %s %s"
-                % (comparing_field, comparing_field.__class__.__name__)
+                f"Filter comparing_field invalid data type: {comparing_field} {comparing_field.__class__.__name__}"
             )
             raise ServerError("Improperly configured filter")
 
         for c in allowed_compares:
             if c not in ["__eq__", "__ne__", "__lt__", "__le__", "__ge__", "__gt__"]:
-                logger.warning("Filter allowed_compares invalid data type: %s" % allowed_compares)
+                logger.warning(f"Filter allowed_compares invalid data type: {allowed_compares}")
                 raise ServerError("Improperly configured filter")
 
         # store attributes
@@ -212,7 +213,7 @@ class FieldValueFilter(Filter):
             param_value = self.get_param_value(params, key_path=self.arg_name + ".greater")
             if param_value is not None:
                 if len(param_value) > 1:
-                    raise InvalidParamValueError("Invalid param '%s' type for greater compare" % self.arg_name)
+                    raise InvalidParamValueError(f"Invalid param '{self.arg_name}' type for greater compare")
                 param_value = param_value[0]
                 param_value = self.vary_param_value_min(value=param_value)
                 query = query.filter(self.comparing_field.__gt__(param_value))
@@ -222,7 +223,7 @@ class FieldValueFilter(Filter):
             param_value = self.get_param_value(params, key_path=self.arg_name + ".min")
             if param_value is not None:
                 if len(param_value) > 1:
-                    raise InvalidParamValueError("Invalid param '%s' type for greater/equal compare" % self.arg_name)
+                    raise InvalidParamValueError(f"Invalid param '{self.arg_name}' type for greater/equal compare")
                 param_value = param_value[0]
                 param_value = self.vary_param_value_min(value=param_value)
                 query = query.filter(self.comparing_field.__ge__(param_value))
@@ -232,7 +233,7 @@ class FieldValueFilter(Filter):
             param_value = self.get_param_value(params, key_path=self.arg_name + ".less")
             if param_value is not None:
                 if len(param_value) > 1:
-                    raise InvalidParamValueError("Invalid param '%s' type for lower compare" % self.arg_name)
+                    raise InvalidParamValueError(f"Invalid param '{self.arg_name}' type for lower compare")
                 param_value = param_value[0]
                 param_value = self.vary_param_value_max(value=param_value)
                 query = query.filter(self.comparing_field.__lt__(param_value))
@@ -242,12 +243,15 @@ class FieldValueFilter(Filter):
             param_value = self.get_param_value(params, key_path=self.arg_name + ".max")
             if param_value is not None:
                 if len(param_value) > 1:
-                    raise InvalidParamValueError("Invalid param '%s' type for lower/equal compare" % self.arg_name)
+                    raise InvalidParamValueError(f"Invalid param '{self.arg_name}' type for lower/equal compare")
                 param_value = param_value[0]
                 param_value = self.vary_param_value_max(value=param_value)
                 query = query.filter(self.comparing_field.__le__(param_value))
 
         return query
+
+    def __str__(self):
+        return f"<{self.__class__.__name__}: arg={self.arg_name}, type={self.req_type}, field={self.comparing_field}, tf={self.req_type_transformer}, compares={self.allowed_compares}>"
 
 
 class ColumnValueFilter(FieldValueFilter):
@@ -262,26 +266,38 @@ class ColumnValueFilter(FieldValueFilter):
             arg_name = ins.name
 
         if req_type is None:
-            if isinstance(ins.type, DOMAIN):
-                req_type = ins.type.data_type.python_type
-            else:
-                req_type = ins.type.python_type
+            req_type = ins.type.data_type.python_type if isinstance(ins.type, DOMAIN) else ins.type.python_type
 
         super().__init__(arg_name=arg_name, req_type=req_type, comparing_field=column, **kwargs)
 
 
 # special syntax sugars
-class DatetimeFilter(ColumnValueFilter):
+class DateFilter(ColumnValueFilter):
     def __init__(self, *args, fmt=settings.LAMB_RESPONSE_DATE_FORMAT, **kwargs):
         super().__init__(*args, req_type=str, req_type_transformer=partial(transform_date, format=fmt), **kwargs)
 
-    def vary_param_value_min(self, value: Union[datetime, date]) -> datetime:
+    def vary_param_value_min(self, value: datetime | date) -> date:
+        if isinstance(value, datetime):
+            return value.date()
+        return value
+
+    def vary_param_value_max(self, value: datetime | date) -> date:
+        if isinstance(value, datetime):
+            return value.date()
+        return value
+
+
+class DatetimeFilter(ColumnValueFilter):
+    def __init__(self, *args, fmt="iso", **kwargs):
+        super().__init__(*args, req_type=str, req_type_transformer=partial(transform_datetime, format=fmt), **kwargs)
+
+    def vary_param_value_min(self, value: datetime | date) -> datetime:
         if isinstance(value, datetime):
             return value
         else:
             return datetime_begin(value)
 
-    def vary_param_value_max(self, value: Union[datetime, date]) -> datetime:
+    def vary_param_value_max(self, value: datetime | date) -> datetime:
         if isinstance(value, datetime):
             return value
         else:
@@ -334,8 +350,8 @@ class PostgresqlFastTextSearchFilter(Filter):
 
     def __init__(
         self,
-        columns: Optional[Union[QueryableAttribute, List[QueryableAttribute]]] = None,
-        tsvector_expr: Optional[Any] = None,
+        columns: QueryableAttribute | list[QueryableAttribute] | None = None,
+        tsvector_expr: Any | None = None,
         tsquery_func: Callable[[str], Function] = None,
         reconfig="russian",
         arg_name="search_text",
@@ -349,7 +365,7 @@ class PostgresqlFastTextSearchFilter(Filter):
             self._tsvector_expr = tsvector_expr
         elif columns is not None:
             # construct tsvector_expr based on columns
-            if not isinstance(columns, (list, tuple)):
+            if not isinstance(columns, list | tuple):
                 columns = [columns]
 
             _expr = func.COALESCE(columns[0], "")
@@ -369,17 +385,14 @@ class PostgresqlFastTextSearchFilter(Filter):
         else:
             self._tsquery_func = tsquery_func
 
-    def apply_to_query(self, query: Query, params: Dict, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: dict, **kwargs) -> Query:
         # extract param
         param_value = self.get_param_value(params=params)
         if param_value is None:
             return query
 
         # apply search
-        if len(param_value) > 0:
-            param_value = ",".join(param_value)
-        else:
-            param_value = param_value[0]
+        param_value = ",".join(param_value) if len(param_value) > 0 else param_value[0]
 
         # do not search over empty
         if len(param_value) == 0:
@@ -390,7 +403,7 @@ class PostgresqlFastTextSearchFilter(Filter):
         return query
 
 
-class JsonFilterDescriptor(object):
+class JsonFilterDescriptor:
     """Json filter descriptor
 
     :type key_path: list
@@ -405,7 +418,7 @@ class JsonFilterDescriptor(object):
         self.comparing_function = comparing_function
 
     def __str__(self):
-        return "JsonFilterDescriptor(%s, %s, %s)" % (self.key_path, self.value, self.comparing_function)
+        return f"JsonFilterDescriptor({self.key_path}, {self.value}, {self.comparing_function})"
 
 
 class JsonDataFilter(ColumnValueFilter):
@@ -453,10 +466,8 @@ class JsonDataFilter(ColumnValueFilter):
         # convert key path components to include int indices
         buffer = list()
         for path_component in unparsed_key_path:
-            try:
+            with contextlib.suppress(ValueError):
                 path_component = int(path_component)
-            except ValueError:
-                pass
             buffer.append(path_component)
         result.key_path = buffer
 
@@ -468,7 +479,7 @@ class JsonDataFilter(ColumnValueFilter):
         return result
 
     # def apply_to_query(self, query, request):
-    def apply_to_query(self, query: Query, params: Dict, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: dict, **kwargs) -> Query:
         # early return
         param_value = self.get_param_value(params, key_path=self.arg_name)
         if param_value is None:
@@ -496,6 +507,6 @@ class JsonDataFilter(ColumnValueFilter):
             elif descriptor.comparing_function == "__gt__":
                 query = query.filter(field.astext.cast(Float).__gt__(descriptor.value))
             else:
-                raise InvalidParamValueError("Unsupported comparing function %s" % descriptor.comparing_function)
+                raise InvalidParamValueError(f"Unsupported comparing function {descriptor.comparing_function}")
 
         return query

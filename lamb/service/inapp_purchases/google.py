@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 import json
-from typing import Union
 from datetime import datetime
+from typing import Union
 
-# Lamb Framework
+from google.auth.transport.requests import AuthorizedSession
+from google.oauth2 import service_account as google_service_account
+
 from lamb.exc import (
     ExternalServiceError,
-    InvalidParamValueError,
     InvalidBodyStructureError,
+    InvalidParamValueError,
 )
 
-from google.oauth2 import service_account as google_service_account
-from google.auth.transport.requests import AuthorizedSession
-
-from .base import PurchaseData, InAppAbstract, SubscriptionStatus
+from .base import InAppAbstract, PurchaseData, SubscriptionStatus
 
 
 class InAppGoogle(InAppAbstract):
@@ -34,7 +33,7 @@ class InAppGoogle(InAppAbstract):
     _session: AuthorizedSession = None
     _raw_data: dict = None
 
-    def __init__(self, receipt_data: dict, service_account: Union[str, dict], is_subscription: bool = True):
+    def __init__(self, receipt_data: dict, service_account: str | dict, is_subscription: bool = True):
         """
         :param receipt_data: dict containing `packageName`, `productId`, and `purchaseToken` values
         :param service_account: Path to json file or dict containing service account data, i.e. private key
@@ -44,10 +43,10 @@ class InAppGoogle(InAppAbstract):
             self.package_name = receipt_data["packageName"]
             self.product_id = receipt_data["productId"]
             self.purchase_token = receipt_data["purchaseToken"]
-        except KeyError:
+        except KeyError as e:
             raise InvalidBodyStructureError(
-                "Invalid receipt_data structure. Not all packageName, productId, " "purchaseToken are present"
-            )
+                "Invalid receipt_data structure. Not all packageName, productId, purchaseToken are present"
+            ) from e
 
         if isinstance(service_account, str):
             self.service_account_file = service_account
@@ -77,10 +76,7 @@ class InAppGoogle(InAppAbstract):
         return self._session
 
     def _create_request_uri(self):
-        if self.is_subscription:
-            uri_part = self.uri_subscription
-        else:
-            uri_part = self.uri_product
+        uri_part = self.uri_subscription if self.is_subscription else self.uri_product
 
         request_uri = self.uri_base + uri_part.replace("%packageName%", self.package_name).replace(
             "%productId%", self.product_id
@@ -95,22 +91,22 @@ class InAppGoogle(InAppAbstract):
 
         try:
             data = json.loads(response.content)
-        except json.decoder.JSONDecodeError:
-            raise ExternalServiceError("Unable to decode response for inapp purchase from Google server")
+        except json.decoder.JSONDecodeError as e:
+            raise ExternalServiceError("Unable to decode response for inapp purchase from Google server") from e
 
         if not response.ok:
             try:
                 error_reason = data["error"]["errors"][0]["reason"]
                 if error_reason == "purchaseTokenDoesNotMatchPackageName":
                     raise ExternalServiceError(
-                        "Error while processing data. Purchase token does not " "match package name"
+                        "Error while processing data. Purchase token does not match package name"
                     )
                 elif error_reason == "invalid":
                     raise ExternalServiceError("Error while processing data. Invalid token value")
                 else:
                     raise ValueError
-            except (KeyError, IndexError, ValueError):
-                raise ExternalServiceError("Error while processing data. Unable to identify the reason")
+            except (KeyError, IndexError, ValueError) as e:
+                raise ExternalServiceError("Error while processing data. Unable to identify the reason") from e
 
         return data
 

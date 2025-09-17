@@ -1,20 +1,19 @@
 from __future__ import annotations
 
+import contextlib
 import enum
-import uuid
 import logging
-from typing import Optional
+import uuid
 from datetime import date, datetime
 
-# Lamb Framework
+from lxml.etree import _Element, tostring
+
 from lamb.exc import (
     ApiError,
-    ServerError,
-    InvalidParamTypeError,
     InvalidBodyStructureError,
+    InvalidParamTypeError,
+    ServerError,
 )
-
-from lxml.etree import _Element, tostring
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +92,7 @@ def etree_as_string(element, pretty_print=True, xml_declaration=False, encoding=
     return result
 
 
-def detect_lxml_type_hint(value) -> Optional[str]:
+def detect_lxml_type_hint(value) -> str | None:
     """Detects typehint for Element tree item
     :param value: Value that would be added to element
     :type value: object
@@ -123,21 +122,21 @@ def etree_find_xml(element, path, namespaces=None, **kwargs):
     """
     # check params
     if not isinstance(element, _Element):
-        raise InvalidParamTypeError("Etree subtag query. Improperly configured element param data type: %s" % element)
+        raise InvalidParamTypeError(f"Etree subtag query. Improperly configured element param data type: {element}")
     if not isinstance(path, str):
-        raise InvalidParamTypeError("Etree subtag query. Improperly configured path param data type: %s" % path)
+        raise InvalidParamTypeError(f"Etree subtag query. Improperly configured path param data type: {path}")
 
     try:
         # extract child and text
         child = element.find(path, namespaces=namespaces)
         if child is None:
-            raise InvalidBodyStructureError("Etree subtag query. Could not locate child path with name = %s" % path)
+            raise InvalidBodyStructureError(f"Etree subtag query. Could not locate child path with name = {path}")
         return child
     except Exception as e:
         if not isinstance(e, ApiError):
-            logger.error("Value extraction unknown error: <%s> %s" % (e.__class__.__name__, e))
+            logger.error(f"Value extraction unknown error: <{e.__class__.__name__}> {e}")
             e = ServerError("Etree subtag query. Could not locate extract value with some unhandled exception.")
-        if "default" in kwargs.keys():
+        if "default" in kwargs:
             return kwargs["default"]
         else:
             raise e
@@ -160,15 +159,15 @@ def etree_find(element, path, req_type=None, allow_none=False, namespaces=None, 
     :return: Extracted value
     """
     if not isinstance(element, _Element):
-        raise InvalidParamTypeError("Etree subtag query. Improperly configured element param data type: %s" % element)
+        raise InvalidParamTypeError(f"Etree subtag query. Improperly configured element param data type: {element}")
     if not isinstance(path, str):
-        raise InvalidParamTypeError("Etree subtag query. Improperly configured path param data type: %s" % path)
+        raise InvalidParamTypeError(f"Etree subtag query. Improperly configured path param data type: {path}")
 
     try:
         # extract child and text
         child = element.find(path, namespaces=namespaces)
         if child is None:
-            raise InvalidBodyStructureError("Etree subtag query. Could not locate child path with name = %s" % path)
+            raise InvalidBodyStructureError(f"Etree subtag query. Could not locate child path with name = {path}")
         result = child.text
 
         if result is not None:
@@ -176,25 +175,23 @@ def etree_find(element, path, req_type=None, allow_none=False, namespaces=None, 
                 # validate result type through required in param data type and converting to it
                 try:
                     result = req_type(result)
-                except (ValueError, TypeError):
-                    raise InvalidParamTypeError("Invalid data type for params %s" % path)
+                except (ValueError, TypeError) as e:
+                    raise InvalidParamTypeError(f"Invalid data type for params {path}") from e
             elif result is not None:
                 # validate result type through typeHint detecting in path and converting to ot
                 hinted_type = child.get("typeHint")
-                if hinted_type is not None and hinted_type in __lxml_hints_reverse_map__.keys():
-                    try:
+                if hinted_type is not None and hinted_type in __lxml_hints_reverse_map__:
+                    with contextlib.suppress(Exception):
                         result = __lxml_hints_reverse_map__[hinted_type](result)
-                    except Exception:
-                        pass
         elif not allow_none:
-            raise InvalidParamTypeError("Etree subtag query. Child path value is empty for name = %s" % path)
+            raise InvalidParamTypeError(f"Etree subtag query. Child path value is empty for name = {path}")
 
         return result
     except Exception as e:
         if not isinstance(e, ApiError):
-            logger.error("Value extraction unknown error: <%s> %s" % (e.__class__.__name__, e))
+            logger.error(f"Value extraction unknown error: <{e.__class__.__name__}> {e}")
             e = ServerError("Etree subtag query. Could not locate extract value with some unhandled exception.")
-        if "default" in kwargs.keys():
+        if "default" in kwargs:
             return kwargs["default"]
         else:
             raise e

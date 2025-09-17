@@ -1,3 +1,233 @@
+# 3.5.23
+
+**Logging:**
+JSON logging improved and modified:
+- `statusCode` field rnamed to `status_code` for unification purpose
+- `http_host`, `http_origin` and `http_referer` fields if presented in request META data would be included in logs
+
+# 3.5.22
+
+**Fixes:**
+- `lamb.management.commands.lamb_apply_migration` - fixed to not conflict with parent `--db-key` arg
+
+# 3.5.21
+
+**Features:**
+
+- `lamb.service.aws.s3` - noew support `signature_host` arg 
+
+# 3.5.20
+
+**Fixes:**
+
+- `lamb.log.formatters.RequestJsonFormatter` fixed to discover fields not only from `__dict__` of request, but also with `hasattr` logic - support for descriptors for example.
+
+# 3.5.19
+
+**Features:**
+
+- `lamb.utils.a_response_paginated` support `db_as_rows` flag to return core-level rows instead of scalars
+- `lamb.utils.filters.FieldValueFilter` support `sa.ColumnClause` as source fields for filtering on core-level statements
+
+# 3.5.17
+
+**Changes:**
+
+- increase default pool size for db connections in async mode to `pool_size=100, overflow=100`
+- `LAMB_EXECUTION_TIME_LOG_MARKERS_LEVEL` independent config for printing ETM markers at end of `LambExecutionTimeMiddleware` - default is `None` (not print)
+- `LambExecutionTimeMiddleware` refactoring
+- `lamb.utils.a_response_paginated` supports `count_expr` argument (callable to calculate total size of pagination) and refactoring default implementation
+
+# 3.5.16
+
+**Changes:**
+
+- `lamb.exc.ProgrammingError` - logging logic changed. If `message` exist and flag `message_override==True` (default) then actual message would printed with `CRITICAL` level, but API response would be replaced with default message
+
+| exc                                                          | message_override | message        | logging   | API: error_message                      |
+|--------------------------------------------------------------|------------------|----------------|-----------|-----------------------------------------|
+| `raise ProgrammingError`                                     | `TRUE`           | `None`         | -         | Improperly implemented server side call |
+| `raise ProgrammingError('SomeError')`                        | `TRUE`           | `'SomeError'`  | SomeError | Improperly implemented server side call |
+| `raise ProgrammingError(message_override=False)`             | `FALSE`          | `None`         | -         | Improperly implemented server side call |
+| `raise ProgrammingError('SomeError',message_override=False)` | `FALSE`          | `'SomeError'`  | -         | SomeError                                        |
+
+
+# 3.5.15
+
+**Changes:**
+
+- `lamb.types.annotations.postgresql` - `uuid_pk` revert to logic `default=uuid.uuid4` for compatibility with `sentinel` like logic
+
+# 3.5.14
+
+**Features:**
+- `lamb.utils.dpath_value` - for `os.environ` supports `_FILE` like lookup for integration with Docker Secrets or similar solutions
+
+```python
+import os
+from lamb.utils import dpath_value
+from lamb.utils.validators import validate_not_empty
+
+result = dpath_value(os.environ, 'SOME_KEY', str, transform=validate_not_empty)
+# in case environment contains SOME_KEY variable - corresponding value would be extracted and validated
+# in case SOME_KEY not exist but SOME_KEY_FILE exists - value would be extracted from file and validated
+```
+
+# 3.5.13
+
+**Fixes:**
+
+- `lamb.services.aws.s3.S3BucketConfig` - `__str__` and `__repr__` use masked form of dict
+
+# 3.5.12
+
+**Features:**
+
+- `lamb.management.base.LambCommandMixin`
+  - now supports async database connections with `--db-async` flag
+  - database key argument renamed to `-D/--db-key`
+
+# 3.5.11
+
+**Features:**
+
+- `lamb.json.encoder.JsonEncoder` now supports dataclasses out-of-the-box
+- `lamb.utils.transformers.transform_typed_list` now supports dataclasses for elements creation if income item is dict
+
+# 3.5.10
+
+**Bug fixes:**
+
+- `lamb.utils.filters.DateFilter` - vary min/max produce date instances
+
+# 3.5.9
+
+**Features:**
+
+- `lamb.utils.a_response_paginated` - initial version of agnostic paginator
+
+# 3.5.8
+
+**Features**
+- `lamb.filters.DatetimeFilter` - bug fixed to act as datetime transformer, default format changed to `iso`
+- `lamb.filters.DateFilter` - actual date filter
+- `lamb.utils.response_sorted` - supports sqlalchemy 2 `Select` object with proper typehints
+- `lamb.utils.response_filtered` - supports sqlalchemy 2 `Select` object with proper typehints
+
+# 3.5.6
+
+**Features:**
+- `lamb.exc.BusinessLogicError` - new exception for actions prohibited from business logic point of view with `error_code=221` and `status_code=400`
+
+**Database processing changed:**
+
+- `LambRequest.lamb_db_session_map` - new field that contains session makers for all known databases (from LAMB_DB_CONFIG settings)
+  - `dict[str, sqlalchemy.orm.Session]` in sync mode 
+  - `dict[str, sqlalchemy.ext.asyncio.AsyncSession]` in async mode
+- `lamb.middleware.db.LambSQLAlchemyMiddleware` modified to act as complex contextmanager with connections to all known databases
+- `lamb.rest.RestView` modified in two ways:
+  - `__default_db__` - class level dunder variable declaring database default db_key on view (default value is "default" - oO)
+  - `db_session` - lazy attribute of view that provides access to db_session with key from `__default_db__`
+  
+_Example:_
+```python
+# old style
+@a_rest_allowed_http_methods(["GET"])
+class SomeView(RestView):
+    async def get(self, request: LambRequest):
+        async with lamb_db_context(db_key='pythia', pooled=True) as db_session:
+            db_session = request.lamb_db_session_map['pythia']
+            result = await db_session.execute(select(Area))
+            response = result.scalars().all()
+            return response
+
+# access db_session from mapping
+@a_rest_allowed_http_methods(["GET"])
+class SomeView(RestView):
+    async def get(self, request: LambRequest):
+        db_session = request.lamb_db_session_map['pythia']
+        result = await db_session.execute(select(Area))
+        response = result.scalars().all()
+        return response
+    
+# access db_session by default on view
+class PythiaView(RestView):
+    __default_db__ = 'pythia'
+    
+@a_rest_allowed_http_methods(["GET"])
+class SomeView(PythiaView):
+    async def get(self, request: LambRequest):
+        result = await self.db_session.execute(select(Area))
+        response = result.scalars().all()
+        return response
+```
+
+
+# 3.5.3
+
+**Features:**
+
+- `lamb.contrib.handbook` - new base module for handbooks and enum based handbooks
+- `lamb.db.dialects.postgres` - new module mixing postgresql ENUMs with enum based handbooks
+- `lamb.db.session` - declarative bases and corresponding metadata stored in registry to reuse in models creation and subclassing
+- `lamb.json` - mixin and encoder adapted to support generic `ResponseConformProtocol`
+- `lamb.management.base` - accept target database key as argument
+- `lamb.management.commands.alchemy_create` - accept target database argument to work over required metadata
+- `lamb.management.csv_command` - base CSV command command
+- `lamb.types.intrstrenum_type` - database representation of paired int/str handbook
+- `lamb.utils.core.class_or_instance_method` - new descriptor
+- `lamb.exc.ProgrammingError` - new exception for with `error_code=17` and `status_code=500`
+
+# 3.5.0
+
+**Dependencies:**
+- `psycogp2` bumped to actual version
+- `uvicorn-worker` included within ASGI pack
+
+**Features:**
+
+- `RequestRangeError` new error with `status_code=416` and `error_code=16` for requests where requested data range invalid for object
+- `lamb.utils.get_settings_value` discover usage of old styled configs and raise warnings (actually would use default lamb value)
+- `lamb.utils.humanize_bytes` bytes in human friendly form
+- `lamb.utils.bank_card_type_parse` bank card issuer parsing based on masked card number
+- `lamb.types.*` moved to files with `_type.py` suffix 
+- `lamb.types.dataclasses.bytes_range` contains `BytesRange` class suitable to parse `Range` header and calculate corresponding length and ranges data
+- `lamb.db.inspect` moved to `lamb.db.reflect`
+- `lamb.db.logging` moved to `lamb.db.log`
+- JSON logging formatters changed:
+  - camelCased fields replaced with snake_case variants
+  - `level_value` new field contains syslog severity level value
+  - `module_name` field remove
+  - `file_name` fidl now represents full fila path
+  - 
+
+**Middlewares:**
+
+- `LambMiddlewareMixin` replacement for old `AsyncMiddlewareMixin` aimed for modern style middlewares only
+- coroutine checking fixed to properly work in ASGI mode under python 3.12+
+- CORS, XRay, DeviceInfo, GRequest adpated to new base class
+- `LambEventLoggingMiddleware` deprecated and combined with `LambXRayMiddleware`:
+  - track_id field deprecated
+  - new `xline` field paired to `xray` introduced, by default would have `None` value (omit not explicit tracing)
+- `LambSQLAlchemyMiddleware` adapted to new base class and check underlying view (view or middleware) on async mode support - in this case produce AsyncSession object
+
+
+**Tools:**
+- Lint, format tools migrated to `ruff`
+- Bump version tool migrated to `bump-my-version`
+> NOTE: pre-commit hooks should be reinstalled
+
+**Settings:**
+- `LAMB_VERBOSE_SQL_LOG` renamed to `LAMB_LOG_SQL_VERBOSE`
+- `LAMB_VERBOSE_SQL_LOG_THRESHOLD` renamed to `LAMB_LOG_SQL_VERBOSE_THRESHOLD`
+- `LAMB_LOGGING_HEADER_XRAY` renamed to `LAMB_LOG_HEADER_XRAY`
+- `LAMB_LOG_HEADER_XLINE` new config for xline header name
+- `LAMB_LOG_LEVEL_SEVERITY` new config for python log levels mapping into syslog severity levels (default acts like `pygelf`)
+- `LAMB_ADD_CORS_HEADERS` value change - add `Range`, `X-Lamb-XLine` and drop `X-Lamb-TrackID`
+
+**Deprecations:**
+- Old `acquiring` module removed
+
 # 3.4.16
 
 **features**

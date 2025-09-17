@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-import os
 import logging
+import os
 import pathlib
 
-# SQLAlchemy
+import jinja2
 from sqlalchemy import text
 
-# Lamb Framework
-from lamb.utils import dpath_value
 from lamb.db.session import lamb_db_session_maker
-from lamb.management.base import LambCommand, CommandError
+from lamb.management.base import CommandError, LambCommand
+from lamb.utils import dpath_value
 from lamb.utils.validators import validate_not_empty
-
-import jinja2
 
 logger = logging.getLogger(__name__)
 
@@ -49,15 +46,6 @@ class Command(LambCommand):
             default=False,
         )
         parser.add_argument(
-            "--db-key",
-            action="store",
-            dest="db_key",
-            help="Database key to process query",
-            required=False,
-            type=str,
-            default="default",
-        )
-        parser.add_argument(
             "--env-bust",
             action="store_true",
             dest="env_bust",
@@ -66,15 +54,13 @@ class Command(LambCommand):
         )
 
     def handle(self, *args, **options):
-        db_key = dpath_value(options, "db_key", str, transform=validate_not_empty)
-        self.db_session = lamb_db_session_maker(db_key=db_key)
         migration_file_path: pathlib.Path = pathlib.Path(options["migration_file"])
         if not migration_file_path.exists():
             raise CommandError(f"File not exist: {migration_file_path}")
         if not migration_file_path.is_file():
             raise CommandError(f"Object at path is not file: {migration_file_path}")
 
-        with open(migration_file_path, "r") as f:
+        with open(migration_file_path) as f:
             _STMT = f.read()
             env_bust = dpath_value(options, "env_bust", bool, default=False)
             if env_bust:
