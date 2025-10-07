@@ -32,6 +32,7 @@ __all__ = [
     "lazy_default",
     "lazy_default_ro",
     "class_or_instance_method",
+    "get_full_cls_instance_name",
 ]
 
 
@@ -158,6 +159,19 @@ def get_redis_url(
         result.username = username
     result.path.add(str(db))
     return result.url
+
+
+def get_full_cls_instance_name(o) -> str:
+    if isinstance(o, type):
+        module = o.__module__
+        name = o.__qualname__
+    else:
+        module = o.__class__.__module__
+        name = o.__class__.__qualname__
+
+    if module is None or module == str.__class__.__module__:
+        return name
+    return module + "." + name
 
 
 # maskers

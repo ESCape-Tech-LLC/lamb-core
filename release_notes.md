@@ -1,3 +1,11 @@
+# 3.5.24
+
+**Logging:**
+- `lamb.middleware.rest` - logs additional `exception_cls` and `exception` fields and extra
+
+**Features:**
+- `lamb.utils.core.get_full_cls_instance_name` - new function to discover full class or instance qualified name
+
 # 3.5.23
 
 **Logging:**

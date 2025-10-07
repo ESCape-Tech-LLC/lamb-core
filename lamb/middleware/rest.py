@@ -19,7 +19,7 @@ from lamb.exc import (
 )
 from lamb.json import JsonResponse
 from lamb.utils import LambRequest, dpath_value
-from lamb.utils.core import import_by_name
+from lamb.utils.core import get_full_cls_instance_name, import_by_name
 
 try:
     from cassandra import DriverException
@@ -95,7 +95,13 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
         #     return exception
 
         # process exception to response
-        logger.exception("Handled exception:")
+        logger.exception(
+            "Handled exception:",
+            extra={
+                "exception_cls": get_full_cls_instance_name(exception),
+                "exception": str(exception),
+            },
+        )
         if not isinstance(exception, ApiError):
             if isinstance(exception, _DB_EXCEPTIONS):
                 exception = DatabaseError()
