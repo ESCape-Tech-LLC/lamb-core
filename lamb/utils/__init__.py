@@ -8,6 +8,7 @@ import functools
 import io
 import json
 import logging
+import platform
 import re
 import sys
 import tempfile
@@ -101,6 +102,7 @@ __all__ = [
     "CONTENT_ENCODING_MULTIPART",
     "dpath_value",
     "inject_app_defaults",
+    "inject_date_format",
     "get_settings_value",
     "datetime_end",
     "datetime_begin",
@@ -840,6 +842,19 @@ def inject_app_defaults(application: str):
     except ImportError:
         # Silently skip failing settings modules
         pass
+
+
+def inject_date_format():
+    """
+    Patching date response format to respect glibc usage on platform
+    """
+    # using libc_ver() means you are not using the OS as a proxy for which libc
+    # library Python is using. And so your code will work on any OS, regardless
+    # of which libc library has been used.
+    if platform.libc_ver()[0] == "glibc":
+        # use a glibc-only format option to get a 4 digit year
+        logger.warning("Patching LAMB_RESPONSE_DATE_FORMAT to respect glibc usage on platform ")
+        settings.LAMB_RESPONSE_DATE_FORMAT = settings.LAMB_RESPONSE_DATE_FORMAT.replace("%Y", "%4Y")
 
 
 def check_device_info_versions_above(
