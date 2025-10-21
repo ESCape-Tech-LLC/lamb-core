@@ -1,3 +1,9 @@
+# 3.5.26
+
+**Feature:**
+- `lamb_apply_migration` CLI tools now supports `--postgresql-notice-loglevel` to print in logs `NOTICE` messages from PostgreSQL driver
+- `lamb.types.annotations.postrgesql` annotations improved for better compatibility with IDE
+
 # 3.5.25
 
 **Fix:**
