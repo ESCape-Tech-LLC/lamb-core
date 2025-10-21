@@ -34,21 +34,21 @@ __all__ = [
 ]
 
 # annotations
-int_s = Annotated[int, mapped_column(SMALLINT)]
-int_b = Annotated[int, mapped_column(BIGINT)]
-int_i = Annotated[int, mapped_column(INTEGER)]
+int_s: type[int] = Annotated[int, mapped_column(SMALLINT)]
+int_b: type[int] = Annotated[int, mapped_column(BIGINT)]
+int_i: type[int] = Annotated[int, mapped_column(INTEGER)]
 
-bool_f = Annotated[bool, mapped_column(BOOLEAN, server_default=text("FALSE"))]
-bool_t = Annotated[bool, mapped_column(BOOLEAN, server_default=text("TRUE"))]
+bool_f: type[bool] = Annotated[bool, mapped_column(BOOLEAN, server_default=text("FALSE"))]
+bool_t: type[bool] = Annotated[bool, mapped_column(BOOLEAN, server_default=text("TRUE"))]
 
-uuid_pk = Annotated[
+uuid_pk: type[UUID] = Annotated[
     uuid.UUID, mapped_column(UUID, primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid())
 ]
 
-str_v = Annotated[str, mapped_column(VARCHAR)]
-str_ci = Annotated[str, mapped_column(CITEXT)]
-str_ts = Annotated[str, mapped_column(TSVECTOR)]
+str_v: type[str] = Annotated[str, mapped_column(VARCHAR)]
+str_ci: type[str] = Annotated[str, mapped_column(CITEXT)]
+str_ts: type[str] = Annotated[str, mapped_column(TSVECTOR)]
 
-timestamp_tz = Annotated[datetime, mapped_column(TIMESTAMP(timezone=True))]
+timestamp_tz: type[datetime] = Annotated[datetime, mapped_column(TIMESTAMP(timezone=True))]
 
-jsonb = Annotated[list[Any] | dict[str, Any], mapped_column(JSONB)]
+jsonb: type[dict] = Annotated[list[Any] | dict[str, Any], mapped_column(JSONB)]
