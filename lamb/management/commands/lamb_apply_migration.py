@@ -7,10 +7,8 @@ import pathlib
 import jinja2
 from sqlalchemy import text
 
-from lamb.db.session import lamb_db_session_maker
 from lamb.management.base import CommandError, LambCommand
 from lamb.utils import dpath_value
-from lamb.utils.validators import validate_not_empty
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +50,32 @@ class Command(LambCommand):
             help="Flag to bust migration file with environment variables (jinja engine used)",
             default=False,
         )
+        parser.add_argument(
+            "--postgresql-notice-loglevel",
+            action="store",
+            dest="postgres_notice_log_level",
+            help="PostgreSQL logging level - can be used to log NOTICE messages (would attach handlers of lamb logger)",
+            default=None,
+            required=False,
+        )
 
     def handle(self, *args, **options):
+        # patch postgresql logging if required
+        if _pg_level := dpath_value(options, "postgres_notice_log_level", str, default=None):
+            try:
+                _pg_level = _pg_level.upper()
+                _lamb_handlers = logging.getLogger("lamb").handlers
+
+                pg_logger = logging.getLogger("sqlalchemy.dialects.postgresql")
+                pg_logger.setLevel(logging.INFO)
+
+                for handler in _lamb_handlers:
+                    pg_logger.addHandler(handler)
+            except Exception as e:
+                logger.error(f"postgresql logger patch failed: {e}")
+                pass
+
+        # execute migration
         migration_file_path: pathlib.Path = pathlib.Path(options["migration_file"])
         if not migration_file_path.exists():
             raise CommandError(f"File not exist: {migration_file_path}")
