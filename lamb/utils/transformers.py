@@ -26,6 +26,12 @@ __all__ = [
     "transform_datetime_milliseconds_float",
     "transform_datetime_microseconds_int",
     "transform_datetime_iso",
+    "transform_datetime_iso_auto",
+    "transform_datetime_iso_microseconds",
+    "transform_datetime_iso_milliseconds",
+    "transform_datetime_iso_auto_zulu",
+    "transform_datetime_iso_milliseconds_zulu",
+    "transform_datetime_iso_microseconds_zulu",
     "transform_typed_list",
     "tf_list_int",
     "tf_list_string",
@@ -166,8 +172,41 @@ def transform_datetime_microseconds_int(value: datetime) -> int:
     return int(value.timestamp() * 1000000)
 
 
-def transform_datetime_iso(value: datetime, sep: str = "T", timespec="milliseconds") -> str:
-    return value.isoformat(sep=sep, timespec=timespec)
+def transform_datetime_iso(value: datetime, sep: str = "T", timespec="auto", zulu: bool = False) -> str:
+    result = value.isoformat(sep=sep, timespec=timespec)
+    if zulu:
+        result = result.replace("+00:00", "Z")
+    return result
+
+
+def transform_datetime_iso_milliseconds(value: datetime) -> str:
+    # syntax sugar: to use with LAMB_RESPONSE_DATETIME_TRANSFORMER import_by_name logic
+    return transform_datetime_iso(value=value, sep="T", timespec="milliseconds")
+
+
+def transform_datetime_iso_microseconds(value: datetime) -> str:
+    # syntax sugar: to use with LAMB_RESPONSE_DATETIME_TRANSFORMER import_by_name logic
+    return transform_datetime_iso(value=value, sep="T", timespec="microseconds")
+
+
+def transform_datetime_iso_auto(value: datetime) -> str:
+    # syntax sugar: to use with LAMB_RESPONSE_DATETIME_TRANSFORMER import_by_name logic
+    return transform_datetime_iso(value=value, sep="T", timespec="auto")
+
+
+def transform_datetime_iso_milliseconds_zulu(value: datetime) -> str:
+    # syntax sugar: to use with LAMB_RESPONSE_DATETIME_TRANSFORMER import_by_name logic
+    return transform_datetime_iso(value=value, sep="T", timespec="milliseconds", zulu=True)
+
+
+def transform_datetime_iso_microseconds_zulu(value: datetime) -> str:
+    # syntax sugar: to use with LAMB_RESPONSE_DATETIME_TRANSFORMER import_by_name logic
+    return transform_datetime_iso(value=value, sep="T", timespec="microseconds", zulu=True)
+
+
+def transform_datetime_iso_auto_zulu(value: datetime) -> str:
+    # syntax sugar: to use with LAMB_RESPONSE_DATETIME_TRANSFORMER import_by_name logic
+    return transform_datetime_iso(value=value, sep="T", timespec="auto", zulu=True)
 
 
 # dynamic typed

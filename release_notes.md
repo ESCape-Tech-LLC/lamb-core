@@ -1,3 +1,13 @@
+# 3.5.28
+- `lamb.utils.trasformers.transform_datetime_iso` default format changed from `milliseconds` to `auto`
+- `lamb.utils.trasformers` syntax sugars for transformers add to use with import_by_name on LAMB_RESPONSE_DATETIME_TRANSFORMER
+  - `transform_datetime_iso_milliseconds` - ISO format with separator `T` and milliseconds accuracy
+  - `transform_datetime_iso_microseconds` - ISO format with separator `T` and microseconds accuracy
+  - `transform_datetime_iso_auto` - ISO format with separator `T` and `auto` accuracy (if microsecond fraction exist - would respect)
+  - `transform_datetime_iso_milliseconds_zulu` - ISO format with separator `T` and milliseconds accuracy and `Zulu/Military` zone respect (`+00:00` as `Z`)
+  - `transform_datetime_iso_microseconds_zulu` - ISO format with separator `T` and microseconds accuracy and `Zulu/Military` zone respect (`+00:00` as `Z`)
+  - `transform_datetime_iso_auto_zulu` - ISO format with separator `T` and `auto` accuracy (if microsecond fraction exist - would respect) and `Zulu/Military` zone respect (`+00:00` as `Z`)
+
 # 3.5.27
 
 **Feature:**
