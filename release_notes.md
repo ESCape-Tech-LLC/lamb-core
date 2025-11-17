@@ -1,3 +1,8 @@
+# 3.5.27
+
+**Feature:**
+- `lamb.json.encoder` now respects extension part of phone number producing `(ext.123)` suffix
+
 # 3.5.26
 
 **Feature:**

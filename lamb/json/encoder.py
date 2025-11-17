@@ -48,6 +48,8 @@ class JsonEncoder(json.JSONEncoder):
             result = list(obj)
         elif isinstance(obj, PhoneNumber):
             result = obj.e164
+            if obj._phone_number.extension is not None:
+                result += f"(ext. {obj._phone_number.extension})"
         elif dataclasses.is_dataclass(obj) and not isinstance(obj, ResponseConformProtocol):
             result = dataclasses.asdict(obj)
         elif isinstance(obj, ResponseConformProtocol):
