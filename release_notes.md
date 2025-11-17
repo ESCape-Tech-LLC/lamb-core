@@ -1,4 +1,12 @@
+# 3.5.29
+
+**Features:**
+
+- `lamb.settings.LAMB_LOG_XHEADERS_NAMESPACE` - new config hat would be used as namescape (UUID V5) for badly formatted values  `XLine`, `XRay`
+
 # 3.5.28
+
+**Features:**
 - `lamb.utils.trasformers.transform_datetime_iso` default format changed from `milliseconds` to `auto`
 - `lamb.utils.trasformers` syntax sugars for transformers add to use with import_by_name on LAMB_RESPONSE_DATETIME_TRANSFORMER
   - `transform_datetime_iso_milliseconds` - ISO format with separator `T` and milliseconds accuracy

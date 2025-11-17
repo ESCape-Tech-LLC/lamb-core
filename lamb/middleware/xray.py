@@ -3,7 +3,7 @@ import uuid
 
 from lamb.middleware.base import LambMiddlewareMixin
 from lamb.utils import dpath_value, get_settings_value
-from lamb.utils.core import lazy
+from lamb.utils.core import lazy_default_ro
 from lamb.utils.transformers import transform_uuid
 from lamb.utils.validators import validate_not_empty
 
@@ -20,7 +20,7 @@ class LambXRayMiddleware(LambMiddlewareMixin):
     - xline - received from request header or None, aimed to combine several requests under one logical unit
     """
 
-    @lazy
+    @lazy_default_ro("X-Lamb-XRay")
     def settings_header_xray(self):
         result = get_settings_value(
             "LAMB_LOG_HEADER_XRAY",
@@ -31,7 +31,7 @@ class LambXRayMiddleware(LambMiddlewareMixin):
         )
         return result
 
-    @lazy
+    @lazy_default_ro("X-Lamb-XLine")
     def settings_header_xline(self):
         result = get_settings_value(
             "LAMB_LOG_HEADER_XLINE",
@@ -42,12 +42,42 @@ class LambXRayMiddleware(LambMiddlewareMixin):
         )
         return result
 
+    @lazy_default_ro(uuid.NAMESPACE_OID)
+    def settings_x_namespace(self):
+        result = get_settings_value(
+            "LAMB_LOG_XHEADERS_NAMESPACE",
+            req_type=str,
+            allow_none=False,
+            transform=transform_uuid,
+        )
+        return result
+
+    def _transform_uuid(self, value):
+        if isinstance(value, uuid.UUID):
+            return value
+        value = validate_not_empty(value, min_length=1)
+
+        try:
+            return uuid.UUID(value)
+        except (TypeError, ValueError) as e:
+            result = uuid.uuid5(self.settings_x_namespace, value)
+            logger.debug(f"<{self.__class__.__name__}>: telemetry replaced value: [e={e}] {value} -> {result}")
+            return result
+
     def before_request(self, request):
         request.xray = dpath_value(
-            request.META, self.settings_header_xray, str, transform=transform_uuid, default=uuid.uuid4()
+            request.META,
+            self.settings_header_xray,
+            str,
+            transform=self._transform_uuid,
+            default=uuid.uuid4(),
         )
         request.xline = dpath_value(
-            request.META, self.settings_header_xline, str, transform=transform_uuid, default=None
+            request.META,
+            self.settings_header_xline,
+            str,
+            transform=self._transform_uuid,
+            default=None,
         )
         logger.debug(
             f"<{self.__class__.__name__}>: Did attach x-fields to request: xray={request.xray}, xline={request.xline}"

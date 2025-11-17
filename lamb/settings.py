@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 # main
 LAMB_APP_NAME = None
@@ -95,6 +96,7 @@ LAMB_LOG_LEVEL_SEVERITY = {  # pygelf inspired
     logging.ERROR: 3,
     logging.CRITICAL: 2,
 }
+LAMB_LOG_XHEADERS_NAMESPACE = uuid.NAMESPACE_OID
 
 # services
 LAMB_REDIS_URL = "redis://localhost:6379/0"
