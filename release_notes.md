@@ -1,3 +1,9 @@
+# 3.5.30
+
+**Features:**
+- `lamb.service.redis.cache.json_cached` - support sync/async functions
+- `lamb.service.redis.cache.rejson_cached` - support sync/async functions
+
 # 3.5.29
 
 **Features:**
