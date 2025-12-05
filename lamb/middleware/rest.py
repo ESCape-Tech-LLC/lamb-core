@@ -58,7 +58,9 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
         _ = request.FILES
 
         # early return
-        if request.resolver_match is None or request.resolver_match.app_name not in _apply_to_apps:
+        if request.resolver_match is None or (
+            "*" not in _apply_to_apps and request.resolver_match.app_name not in _apply_to_apps
+        ):
             return response
 
         # try to encode response
