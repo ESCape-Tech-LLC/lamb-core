@@ -17,7 +17,7 @@ import contextlib
 
 from lamb.json.encoder import JsonEncoder
 from lamb.log.constants import LAMB_LOG_FORMAT_SIMPLE
-from lamb.utils.core import lazy_default, masked_dict
+from lamb.utils.core import compact, lazy_default, masked_dict
 
 __all__ = ["MultilineFormatter", "CeleryMultilineFormatter", "RequestJsonFormatter", "CeleryJsonFormatter"]
 
@@ -370,7 +370,7 @@ class RequestJsonFormatter(_BaseJsonFormatter):
 
             try:
                 resolved = resolve(request.path)
-                result["url_name"] = resolved.url_name
+                result["url_name"] = ":".join(compact(resolved.app_name, resolved.url_name))
             except Exception:
                 pass
 
