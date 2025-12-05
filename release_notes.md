@@ -1,3 +1,11 @@
+# 3.5.31
+
+**Changes/Features:**
+- `LAMB_RESPONSE_APPLY_TO_APPS`
+  - supports wildcard version `LAMB_RESPONSE_APPLY_TO_APPS=['*']` - would apply to all views with not `request.resolver_match is not None`
+  - `['*']` default value from now
+- `lamb.log.formatters.RequestJsonFormatter` from now represent full name including `app_name:url_name` if `app_name is not None`
+
 # 3.5.30
 
 **Features:**
