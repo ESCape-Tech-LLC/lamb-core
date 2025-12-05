@@ -1,5 +1,13 @@
 # 3.5.31
 
+**Fixes:**
+- `lamb.utils.default_views` - fixed issue with class type emit instead of instance of exception that lead to invalid serialization
+
+**Features:**
+- `lamb.middleware.rest.LambRestApiJsonMiddleware` and relevant `LAMB_RESPONSE_EXCEPTION_SERIALIZER` adapted to include request object
+
+# 3.5.31
+
 **Changes/Features:**
 - `LAMB_RESPONSE_APPLY_TO_APPS`
   - supports wildcard version `LAMB_RESPONSE_APPLY_TO_APPS=['*']` - would apply to all views with not `request.resolver_match is not None`
