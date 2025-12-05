@@ -16,14 +16,14 @@ def page_not_found(request: HttpRequest, *_, **__) -> JsonResponse:
     """
     JSON 404 view
     """
-    return LambRestApiJsonMiddleware.produce_error_response(request, NotExistError)
+    return LambRestApiJsonMiddleware.produce_error_response(request, NotExistError())
 
 
 def server_error(request: HttpRequest, *_, **__) -> JsonResponse:
     """
     JSON 500 view
     """
-    return LambRestApiJsonMiddleware.produce_error_response(request, ServerError)
+    return LambRestApiJsonMiddleware.produce_error_response(request, ServerError())
 
 
 def bad_request(request: HttpRequest, *_, **__) -> JsonResponse:
