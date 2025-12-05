@@ -132,7 +132,7 @@ def rejson_cached(cache_key: str, ttl: int = 15 * 60, redis_conf_name: str = "ca
                 await rj.set(name=cache_key, path=".", obj=response)
                 await r.expire(name=cache_key, time=ttl)
                 logger.debug(
-                    f"rejson_cached: cache add- KEY={cache_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl}
+                    f"rejson_cached: cache add - KEY={cache_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl}
                 )
                 return JsonResponse(response)
         else:
@@ -151,7 +151,7 @@ def rejson_cached(cache_key: str, ttl: int = 15 * 60, redis_conf_name: str = "ca
                 rj.set(name=cache_key, path=".", obj=response)
                 r.expire(name=cache_key, time=ttl)
                 logger.debug(
-                    f"rejson_cached: cache add- KEY={cache_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl}
+                    f"rejson_cached: cache add - KEY={cache_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl}
                 )
                 return JsonResponse(response)
 
