@@ -1,4 +1,4 @@
-# 3.5.31
+# 3.5.32
 
 **Fixes:**
 - `lamb.utils.default_views` - fixed issue with class type emit instead of instance of exception that lead to invalid serialization
