@@ -75,7 +75,8 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
     _exception_serializer = None
 
     @classmethod
-    def _default_exception_serializer(cls, exception: ApiError) -> tuple[Any, int]:
+    def _default_exception_serializer(cls, exception: ApiError, request: LambRequest) -> tuple[Any, int]:
+        _ = request  # only for kwarg matching
         result = OrderedDict()
         result["error_code"] = exception.app_error_code
         result["error_message"] = exception.message
@@ -90,11 +91,10 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
         _ = request.FILES
 
         # TODO: check - resolver logic changed
+        # TODO: handle django Resolver404 properly - wrpped in unknown for some reason
         # early return
         if (_resolver := request.resolver_match) and _resolver.app_name not in _apply_to_apps:
             return exception
-        # if request.resolver_match is None or request.resolver_match.app_name not in _apply_to_apps:
-        #     return exception
 
         # process exception to response
         logger.exception(
@@ -136,7 +136,7 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
             else:
                 cls._exception_serializer = cls._default_exception_serializer
 
-        result, status_code = cls._exception_serializer(exception)
+        result, status_code = cls._exception_serializer(exception, request)
 
         if request.method == "HEAD":
             # HEAD requests should not contain any response body
