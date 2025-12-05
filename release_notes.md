@@ -1,3 +1,8 @@
+# 3.5.34
+
+**Fixes:**
+- `lamb.log.formatters` - fixed `SafeAtoms` import when gunicorn not installed
+
 # 3.5.32
 
 **Fixes:**

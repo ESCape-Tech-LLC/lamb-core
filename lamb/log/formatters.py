@@ -10,7 +10,7 @@ from typing import Any, Mapping
 try:
     from gunicorn.glogging import SafeAtoms
 except ImportError:
-    SafeAtoms = object()
+    SafeAtoms = type("_SafeAtoms")
 
 
 import contextlib
