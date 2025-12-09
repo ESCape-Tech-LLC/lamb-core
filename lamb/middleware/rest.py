@@ -84,16 +84,18 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
         return result, exception.status_code
 
     @classmethod
-    def produce_error_response(cls, request: LambRequest, exception: Exception):
+    def produce_error_response(cls, request: LambRequest, exception: Exception, ignore_resolver: bool = False):
         """Internal service for process exception and convert it for proper response info"""
         # touch request body
         _ = request.POST
         _ = request.FILES
 
-        # TODO: check - resolver logic changed
-        # TODO: handle django Resolver404 properly - wrpped in unknown for some reason
         # early return
-        if (_resolver := request.resolver_match) and _resolver.app_name not in _apply_to_apps:
+        if ignore_resolver:
+            pass
+        elif request.resolver_match is None or (
+            "*" not in _apply_to_apps and request.resolver_match.app_name not in _apply_to_apps
+        ):
             return exception
 
         # process exception to response

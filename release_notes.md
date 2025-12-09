@@ -1,3 +1,8 @@
+# 3.5.35
+
+**Fixes:**
+- `lamb.utils.default_views` - processing fixed for Resolver404
+
 # 3.5.34
 
 **Fixes:**
