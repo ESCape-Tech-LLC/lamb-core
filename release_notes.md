@@ -1,3 +1,30 @@
+# 3.5.36
+
+> Possible breaking changes if some project depends on removed dependencies - fix by add in project specific requirements  
+
+**Dependencies:**
+
+Project dependencies revised 
+
+- Removed:
+  - `ipaddress` - migrated to std lib
+  - `asgiref` - `django` already contains
+  - `pushjack` - obsolete
+  - `python-redis-lock` - obsolete
+  - `babel` - rare used `lamb.types.locale_type`
+  - `openpyxl` - rare used `lamb.ext.openpyxl_utils`
+  - `colour` - unused
+  - `jmespath` - unused
+  - `geopy` - unused
+
+- Append:
+  - `redis` - explicit include after `python-redis-lock` remove
+  - `redis[hiredis]` - only with `extra=boost`
+
+- Remove candidates - possible remove next release:
+  - `lxml` - rare used but highly integrated in `dpath_value` 
+  - `geoip2` - rare used but highly integrated in `DeviceInfo`
+
 # 3.5.35
 
 **Fixes:**
