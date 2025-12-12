@@ -1,3 +1,8 @@
+# 3.5.37
+
+**Fixes:**
+- revert `babel` as dependency temporary
+
 # 3.5.36
 
 > Possible breaking changes if some project depends on removed dependencies - fix by add in project specific requirements  
