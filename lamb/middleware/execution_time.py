@@ -39,6 +39,12 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         logger.debug(f"<{self.__class__.__name__}>. settings_skip_methods: {result}")
         return result
 
+    @lazy_default_ro(default=[])
+    def _settings_skip_urls(self) -> list[str]:
+        result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_URLS", list, transform=tf_list_string, default=[])
+        logger.debug(f"<{self.__class__.__name__}>. settings_skip_log_urls: {result}")
+        return result
+
     @lazy_default_ro(default=False)
     def _settings_should_store(self) -> bool:
         result = dpath_value(settings, "LAMB_EXECUTION_TIME_STORE", str, transform=transform_boolean)
@@ -162,6 +168,8 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                     "streaming": response.streaming,
                     "content_length": len(response.content) if not response.streaming else None,
                 }
+                if metric.full_name not in self._settings_skip_urls:
+                    logger.log(level_total, msg, extra=extra)
             elif exception is not None:
                 msg = f"{msg} {exception.__class__.__name__}"
                 extra = {
@@ -169,7 +177,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                     "streaming": None,
                     "content_length": None,
                 }
-            logger.log(level_total, msg, extra=extra)
+                logger.log(level_total, msg, extra=extra)
 
         if level_markers := self._settings_log_markers_level:
             if time_measure is not None:

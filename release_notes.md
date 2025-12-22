@@ -1,3 +1,13 @@
+# 3.5.38
+
+**Features:**
+- `LAMB_EXECUTION_TIME_SKIP_URLS` new settings 
+  - supports remove logs from `ExecutionTimeMiddleware`, 
+  - default is empty list (meaning do nto skip any url)
+  - fully qualified `app_name:url_name` should be used
+  - useful to remove `ping` for example (`LAMB_EXECUTION_TIME_SKIP_URLS=['api:ping']`)
+
+
 # 3.5.37
 
 **Fixes:**

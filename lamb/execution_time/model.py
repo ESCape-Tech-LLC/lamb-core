@@ -21,15 +21,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from lamb.db.session import DeclarativeBase
 from lamb.exc import ImproperlyConfiguredError
 from lamb.json.mixins import ResponseEncodableMixin
-
-# from lamb.types import DeviceInfo, DeviceInfoType
 from lamb.types.device_info_type import DeviceInfo, DeviceInfoType
-from lamb.utils import tz_now
+from lamb.utils import compact, tz_now
 
 __all__ = ["LambExecutionTimeMarker", "LambExecutionTimeMetric"]
 
@@ -62,6 +61,11 @@ class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
     status_code: Mapped[int | None] = mapped_column(SMALLINT)
     elapsed_time: Mapped[float] = mapped_column(FLOAT, default=0.0, server_default=text("0"))
     context: Mapped[Any | None] = mapped_column(_JSON, nullable=True)
+
+    # dynamic
+    @hybrid_property
+    def full_name(self):
+        return ":".join(compact([self.app_name, self.url_name]))
 
     # relations
     markers: Mapped[list[LambExecutionTimeMarker]] = relationship(
