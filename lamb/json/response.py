@@ -14,6 +14,11 @@ try:
 except ImportError:
     ujson = None
 
+try:
+    import orjson
+except ImportError:
+    orjson = None
+
 
 from lamb import exc
 from lamb.utils import dpath_value
@@ -69,6 +74,19 @@ def _impl_ujson(data: Any, encoder: json.JSONEncoder, indent: int | None) -> Any
         )
 
 
+def _impl_orjson(data: Any, encoder: orjson.JSONEncoder, indent: int | None) -> Any:
+    if indent is not None:
+        return orjson.dumps(
+            data,
+            default=encoder.default,
+            option=orjson.OPT_PASSTHROUGH_DATETIME | orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2,
+        )
+    else:
+        return orjson.dumps(
+            data, default=encoder.default, option=orjson.OPT_PASSTHROUGH_DATETIME | orjson.OPT_NON_STR_KEYS
+        )
+
+
 def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, int | None], Any]:
     settings_engine: str | None = dpath_value(
         settings,
@@ -90,6 +108,9 @@ def _get_dump_engine() -> Callable[[Any, json.JSONEncoder, int | None], Any]:
             elif settings_engine == "json":
                 result = _impl_json
                 module = json
+            elif settings_engine == "orjson":
+                result = _impl_orjson
+                module = orjson
             else:
                 raise exc.ImproperlyConfiguredError(f"Unknown LAMB_RESPONSE_JSON_ENGINE: {settings_engine}")
 

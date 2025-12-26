@@ -1,3 +1,8 @@
+# 3.5.39
+
+**Features:**
+- revert support of `orjson` response encoding engine
+
 # 3.5.38
 
 **Features:**
