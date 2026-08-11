@@ -139,14 +139,14 @@ def rejson_cached(cache_key: str | Callable, ttl: int = 15 * 60, redis_conf_name
 
                 # cache: check
                 if cached_data := await rj.get(_key):
-                    logger.debug(f"_rejson_cached: cache HIT - KEY={_key}", extra={"key": _key})
+                    logger.debug(f"rejson_cached: cache HIT - KEY={_key}", extra={"key": _key})
                     return JsonResponse(cached_data)
 
                 # cache: calculate and store
                 response = await view_func(request, *args, **kwargs)
                 await rj.set(name=_key, path=".", obj=response)
                 await _redis_cache.expire(_key, ttl)
-                logger.debug(f"_rejson_cached: cache ADD - KEY={_key}, TTL={ttl}", extra={"key": _key, "ttl": ttl})
+                logger.debug(f"rejson_cached: cache ADD - KEY={_key}, TTL={ttl}", extra={"key": _key, "ttl": ttl})
                 return JsonResponse(response)
         else:
 
@@ -157,14 +157,14 @@ def rejson_cached(cache_key: str | Callable, ttl: int = 15 * 60, redis_conf_name
 
                 # cache: check
                 if cached_data := rj.get(_key):
-                    logger.info(f"_rejson_cached: cache HIT - KEY={_key}", extra={"key": _key})
+                    logger.info(f"rejson_cached: cache HIT - KEY={_key}", extra={"key": _key})
                     return JsonResponse(cached_data)
 
                 # cache: calculate and store
                 response = view_func(request, *args, **kwargs)
                 rj.set(name=_key, path=".", obj=response)
                 _redis_cache.expire(name=_key, time=ttl)
-                logger.debug(f"_rejson_cached: cache ADD - KEY={_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl})
+                logger.debug(f"rejson_cached: cache ADD - KEY={_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl})
                 return JsonResponse(response)
 
         return wraps(view_func)(_view_wrapper)
