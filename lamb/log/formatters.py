@@ -208,15 +208,8 @@ class _BaseJsonFormatter(_BaseFormatter):
             "msg": message,
             "line_no": record.lineno,
             "file_name": record.pathname,
+            "logger_name": record.name,
         }
-
-        # path_name = record.pathname
-        # if path_name is not None and (components := path_name.split(os.path.sep)) and len(components) > 3:
-        #     components = components[-3:]
-        #     components.insert(0, '...')
-        #     path_name = os.sep.join(components)
-        #
-        # result['file_name'] = path_name
 
         if record.exc_info:
             result["stack_trace"] = self.formatException(record.exc_info)
