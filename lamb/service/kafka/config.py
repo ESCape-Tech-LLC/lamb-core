@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 
+from lamb.utils.core import masked_string
 from lamb.utils.transformers import tf_list_string
 from lamb.utils.validators import v_opt_string
 
@@ -22,3 +23,9 @@ class KafkaConfig:
         self.sasl_plain_password = v_opt_string(self.sasl_plain_password)
         self.security_protocol = v_opt_string(self.security_protocol)
         self.sasl_mechanism = v_opt_string(self.sasl_mechanism)
+
+        self.sasl_mechanism = self.sasl_mechanism.upper() if self.sasl_mechanism else None
+        self.security_protocol = self.security_protocol.upper() if self.security_protocol else None
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: bootstrap_servers={self.bootstrap_servers}, security_protocol={self.security_protocol}, sasl_mechanism={self.sasl_mechanism}, sasl_plain_username={self.sasl_plain_username}, sasl_plain_username={masked_string(self.sasl_plain_password)}>"
