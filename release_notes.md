@@ -1,4 +1,13 @@
-# 3.6.9
+# 3.6.2
+
+- feat: log records include logger name in extra; ref: styling
+- feat: kafka config normalize protocol/mechanism and provide masked repr
+
+# 3.6.1
+
+- dep: rollback django dependency to compatible with lifespan protocol
+
+# 3.6.0
 
 **Dependencies/refactoring**
 
