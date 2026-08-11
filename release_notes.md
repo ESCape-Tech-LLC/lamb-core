@@ -1,3 +1,17 @@
+# 3.6.9
+
+**Dependencies/refactoring**
+
+- migrate to pyproject.toml structure
+- bump all major dependencies
+- bump base Python version to 3.14
+- reduce count of extra dependencies
+- deep refactoring according to new linter rules
+- move to contrib package: image uploaders, db event storage, db patterns, db settings
+- deprecate and remove in-app purchase package
+- unify contract for s3 binding with async engine support
+- move all asyncio extra to main dependencies
+
 # 3.5.39
 
 **Features:**

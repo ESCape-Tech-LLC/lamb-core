@@ -7,13 +7,12 @@ import os
 from collections.abc import Callable, Mapping
 from functools import reduce
 from operator import getitem
-from typing import Any, Union
+from typing import Any
 
-# import dpath.util
 import dpath
-import lxml.etree as etree
 from django.conf import Settings
 from django.http.request import QueryDict
+from lxml import etree
 from lxml.etree import _Element as EtreeElement
 from lxml.etree import _ElementTree as Etree
 
@@ -22,7 +21,7 @@ from lamb.ext.lxml import __lxml_hints_reverse_map__
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["dpath_value", "adapt_dict_impl"]
+__all__ = ["adapt_dict_impl", "dpath_value"]
 
 
 DictObject = dict | EtreeElement | Etree | Mapping | Settings
@@ -230,12 +229,12 @@ def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
         ) from e
 
 
-def _impl_query_dict(dict_object: QueryDict, key_path: str | list[str] = None, **kwargs) -> Any:
+def _impl_query_dict(dict_object: QueryDict, key_path: str | list[str] | None = None, **kwargs) -> Any:
     # TODO: support for multiple values
     return _impl_dict(dict_object.dict(), key_path, **kwargs)
 
 
-def _impl_environ(env: os._Environ, key_path: str | list[str] = None, **kwargs) -> Any:
+def _impl_environ(env: os._Environ, key_path: str | list[str] | None = None, **kwargs) -> Any:
     if not isinstance(key_path, str):
         raise exc.ProgrammingError("Environment variable name must be a string")
 
@@ -247,7 +246,7 @@ def _impl_environ(env: os._Environ, key_path: str | list[str] = None, **kwargs) 
     if key_path not in env and key_path_secret in env:
         try:
             file_path = env[key_path_secret]
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 result = f.read().strip()
                 env[key_path] = result
                 logger.warning(f"env variable monkey patching from _FILE version: {key_path} << {key_path_secret}")

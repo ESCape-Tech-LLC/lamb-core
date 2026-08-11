@@ -9,7 +9,7 @@ from lamb.exc import ClientError, NotExistError, ServerError
 from lamb.json.response import JsonResponse
 from lamb.middleware.rest import LambRestApiJsonMiddleware
 
-__all__ = ["page_not_found", "server_error", "bad_request"]
+__all__ = ["bad_request", "page_not_found", "server_error"]
 
 
 def page_not_found(request: HttpRequest, *_, **__) -> JsonResponse:

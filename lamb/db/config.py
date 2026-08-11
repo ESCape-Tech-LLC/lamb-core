@@ -165,7 +165,9 @@ class Config:
             if "+" in _driver:
                 _driver = _driver.rpartition("+")[2]
 
-            result = {"json_serializer": lambda obj: json.dumps(obj, cls=JsonEncoder, ensure_ascii=False)}
+            result: dict[str, Any] = {
+                "json_serializer": lambda obj: json.dumps(obj, cls=JsonEncoder, ensure_ascii=False)
+            }
 
             if _driver == "psycopg2":
                 result.update(

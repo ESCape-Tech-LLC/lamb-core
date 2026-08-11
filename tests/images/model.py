@@ -4,8 +4,8 @@ import enum
 from sqlalchemy import BIGINT, Column, ForeignKey
 
 # Lamb Framework
-from lamb.service.image.model import AbstractImage
-from lamb.service.image.uploaders import ImageUploadMode, ImageUploadSlice
+from lamb.contrib.image.model import AbstractImage
+from lamb.contrib.image.uploaders import ImageUploadMode, ImageUploadSlice
 
 
 @enum.unique

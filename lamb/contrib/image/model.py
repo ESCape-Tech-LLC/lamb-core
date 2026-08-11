@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+from typing import ClassVar
 
+from frozendict import frozendict
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import BIGINT, VARCHAR
 from sqlalchemy.ext.declarative import AbstractConcreteBase
@@ -20,7 +22,7 @@ logger = logging.getLogger(__name__)
 class ImageMixin:
     """Abstract mixin for image subclasses."""
 
-    __slicing__: list[SliceRule] = [SliceRule("origin", -1, Mode.NoAction, "")]
+    __slicing__: ClassVar[list[SliceRule]] = [SliceRule("origin", -1, Mode.NoAction, "")]
     slices_info = Column(ImageSlicesType, nullable=False)
 
 
@@ -49,4 +51,4 @@ class AbstractImage(ImageMixin, ResponseEncodableMixin, AbstractConcreteBase, De
     # meta
     __abstract__ = True
 
-    __mapper_args__ = {"polymorphic_on": image_type, "polymorphic_identity": ABSTRACT_IMAGE_TYPE}
+    __mapper_args__ = frozendict({"polymorphic_on": image_type, "polymorphic_identity": ABSTRACT_IMAGE_TYPE})

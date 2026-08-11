@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # TODO: add csv sniffer to auto extract delimiter, line-break and quote info
 class CsvCommandMixin:
-    help = "Base command mixin for CSV files processing"  # noqa: A003
+    help = "Base command mixin for CSV files processing"
 
     _default_file_path: str = None
     _input_file: str

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import NewType, Optional, Union
+from typing import NewType
 
 import geoip2
 import lazy_object_proxy
@@ -17,7 +17,7 @@ from lamb.utils import LambRequest
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["get_country_info", "get_city_info", "get_asn_info"]
+__all__ = ["get_asn_info", "get_city_info", "get_country_info"]
 
 
 # utils
@@ -50,7 +50,7 @@ def _resolve_ip_source(value: str | LambRequest) -> str | None:
 
 
 def _get_info(source: str | LambRequest, reader: ProxyReader, reader_name: str):
-    if reader is None or reader == None:  # noqa
+    if reader is None or reader == None:
         logger.debug(f"max_mind. {reader_name}: break -> reader is None")
         return None
 

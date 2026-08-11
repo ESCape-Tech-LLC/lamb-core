@@ -7,11 +7,11 @@ from urllib.parse import urljoin
 from django.conf import settings
 
 from lamb.exc import ServerError
-from lamb.service.aws.s3 import S3Uploader
+from lamb.service.aws.s3engine import S3Engine
 from lamb.types import IT, SliceRule
 from lamb.utils import LambRequest
+from lamb.utils.core import import_by_name
 
-from ...utils.core import import_by_name
 from .model import AbstractImage
 from .uploaders import BaseUploader
 
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    "get_default_uploader_class",
     "create_image_slices",
-    "upload_images",
+    "get_default_uploader_class",
     "parse_static_url",
     "remove_image_from_storage",
+    "upload_images",
 ]
 
 
@@ -102,7 +102,7 @@ def upload_images(
         allow_svg=allow_svg,
     )
     # Create images of specified class
-    result = list()
+    result = []
     for ss in stored_slices:
         image = image_class()
         image.slices_info = ss
@@ -168,7 +168,7 @@ def remove_image_from_storage(image: AbstractImage, fail_silently: bool | None =
 
         # Else try to find and remove S3 file
         try:
-            S3Uploader.remove_by_url(slice_info.url)
+            S3Engine.remove_by_url(slice_info.url)
         except Exception:
             if not fail_silently:
                 raise

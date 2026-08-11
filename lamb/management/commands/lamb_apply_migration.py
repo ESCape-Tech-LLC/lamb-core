@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(LambCommand):
-    help = "Support script for plain SQL scripts running over configured databases"  # noqa: A003
+    help = "Support script for plain SQL scripts running over configured databases"
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
@@ -60,7 +60,7 @@ class Command(LambCommand):
         )
 
     def handle(self, *args, **options):
-        # patch postgresql logging if required
+        # patch PostgreSQL logging if required
         if _pg_level := dpath_value(options, "postgres_notice_log_level", str, default=None):
             try:
                 _pg_level = _pg_level.upper()
@@ -72,8 +72,7 @@ class Command(LambCommand):
                 for handler in _lamb_handlers:
                     pg_logger.addHandler(handler)
             except Exception as e:
-                logger.error(f"postgresql logger patch failed: {e}")
-                pass
+                logger.error(f"lamb_apply_migration. PostgreSQL logger patch failed: {e}")
 
         # execute migration
         migration_file_path: pathlib.Path = pathlib.Path(options["migration_file"])
@@ -88,17 +87,17 @@ class Command(LambCommand):
             if env_bust:
                 template = jinja2.Template(_STMT)
                 _STMT = template.render(os.environ)
-                logger.debug(f"migration after template render: {_STMT}")
+                logger.debug(f"lamb_apply_migration. migration after template render: {_STMT}")
 
         if not options["autocommit"]:
-            logger.info("apply migration. mode usual")
+            logger.info("lamb_apply_migration. Executing mode: usual")
             self.db_session.execute(text(_STMT))
             self.db_session.commit()
         else:
             # касательно всей ветки этой
             # - почему и во имя чего, мистер Андерсон - я уже достоверно не помню
             # - вроде как это было нужно для скриптов лютых с подавлением автоматического эмита транзакций
-            logger.info("apply migration.  mode autocommit")
+            logger.info("lamb_apply_migration. Executing mode: autocommit")
             self.db_session.execute(text("ROLLBACK"))
             autocommit_engine = self.db_session.bind.execution_options(isolation_level="AUTOCOMMIT")
             cursor = autocommit_engine.raw_connection().cursor()
@@ -116,4 +115,4 @@ class Command(LambCommand):
                 logger.debug(f"try execute: {_STMT}")
                 cursor.execute(_STMT)
             cursor.execute("COMMIT;")
-        logger.info(f"Did apply migration: {migration_file_path}")
+        logger.info(f"lamb_apply_migration. Did apply migration: {migration_file_path}")

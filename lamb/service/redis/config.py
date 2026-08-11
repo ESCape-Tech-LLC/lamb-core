@@ -23,7 +23,7 @@ TS = TypeVar("TS", redis.sentinel.Sentinel, redis_asyncio.sentinel.Sentinel)
 
 
 @enum.unique
-class Mode(str, enum.Enum):
+class Mode(enum.StrEnum):
     GENERIC = "GENERIC"
     SENTINEL = "SENTINEL"
     CLUSTER_101 = "CLUSTER_101"

@@ -113,7 +113,7 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
                 exception = RequestBodyTooBigError()
             else:
                 exception = ServerError()
-            logger.error(f"exception wrapped into: {exception!r}")
+            logger.error(f"{cls.__name__}. exception wrapped into: {exception!r}")
 
         # optional patch error
         if settings.LAMB_ERROR_OVERRIDE_PROCESSOR is not None:
@@ -123,7 +123,7 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
             except Exception as e:
                 exception = ImproperlyConfiguredError()
                 logger.exception("Exception processor failed")
-                logger.error(f"Converting {e!r} -> {exception!r}")
+                logger.error(f"{cls.__name__}. Converting {e!r} -> {exception!r}")
 
         # envelope error
         if cls._exception_serializer is None:

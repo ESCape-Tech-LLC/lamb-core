@@ -8,7 +8,7 @@ import uuid
 from collections.abc import Iterable
 from io import BytesIO
 
-from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.uploadedfile import SimpleUploadedFile, UploadedFile
 from PIL import Image as PILImage
 
 from lamb import exc
@@ -43,13 +43,13 @@ def _get_bytes_image_mime_type(data: bytes) -> str | None:
         image = PILImage.open(stream)
         image.verify()
         return PILImage.MIME[image.format]
-    except Exception as e:
-        logger.debug(f"image encoded check exception: {e}")
+    except PILImage.UnidentifiedImageError as e:
+        logger.debug(f"_get_bytes_image_mime_type. image encoded check exception: {e}")
         return None
 
 
 class BaseUploader:
-    def __init__(self, envelope_folder: str = None) -> None:
+    def __init__(self, envelope_folder: str | None = None) -> None:
         super().__init__()
         self.enveloper_folder = envelope_folder
 
@@ -60,7 +60,7 @@ class BaseUploader:
 
     def process_image(
         self,
-        source_image: PILImage.Image | str | BytesIO,
+        source_image: PILImage.Image | str | BytesIO | UploadedFile,
         request: LambRequest,
         slices: Iterable[SliceRule] = (),
         image_format: str | None = None,
@@ -92,7 +92,6 @@ class BaseUploader:
             if not is_svg:
                 raise exc.InvalidParamTypeError("Could not open file as valid image") from e
         except Exception as e:
-            logger.exception(e)
             raise exc.ServerError("Failed to process file as image") from e
 
         # store data
@@ -107,7 +106,7 @@ class BaseUploader:
             )
             result = [slice_class(title=s.title, mode=None, url=image_url, width=None, height=None) for s in slices]
         else:
-            result = list()
+            result = []
 
             for s in slices:
                 # create copy if size known
@@ -193,6 +192,7 @@ class BaseUploader:
                 files[key] = f
                 logger.debug("did patch FILES object to include image from POST base64 encoded data")
             except Exception:
+                logger.exception(f"Failed to upload {key} -> {value}")
                 continue
 
         # check request
@@ -206,8 +206,8 @@ class BaseUploader:
                 raise exc.InvalidBodyStructureError("Invalid count of uploading images")
 
         # Decode original image
-        result = list()
-        for _, uploaded_file in files.items():
+        result = []
+        for uploaded_file in files.values():
             processed_image_slices = self.process_image(
                 source_image=uploaded_file,
                 slices=slicing,

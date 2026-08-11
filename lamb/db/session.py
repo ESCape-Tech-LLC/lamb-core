@@ -16,14 +16,14 @@ from lamb.utils import get_settings_value
 
 __all__ = [
     "DeclarativeBase",
-    "metadata",
-    "lamb_db_session_maker",
-    "declarative_base",
-    "create_engine",
     "create_async_engine",
-    "get_engine",
+    "create_engine",
+    "declarative_base",
     "get_declarative_base",
+    "get_engine",
     "get_metadata",
+    "lamb_db_session_maker",
+    "metadata",
 ]
 
 logger = logging.getLogger(__name__)

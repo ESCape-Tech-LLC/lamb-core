@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 class LambLocale(ResponseEncodableMixin, babel.Locale):
     @classmethod
     def parse(cls, identifier, sep="_", resolve_likely_subtags=True):
-        exceptions = list()
+        exceptions = []
         seps = {sep, *settings.LAMB_DEVICE_INFO_LOCALE_VALID_SEPS}
-        for sep in seps:
+        for _sep in seps:
             try:
-                return super().parse(identifier=identifier, sep=sep, resolve_likely_subtags=resolve_likely_subtags)
+                return super().parse(identifier=identifier, sep=_sep, resolve_likely_subtags=resolve_likely_subtags)
             except Exception as e:
                 exceptions.append(e)
         if exceptions:

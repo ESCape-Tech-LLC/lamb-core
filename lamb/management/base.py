@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import ClassVar
 
 import sqlalchemy.orm
 from django.conf import settings
@@ -11,25 +12,25 @@ from lamb.utils import dpath_value
 from lamb.utils.core import lazy
 from lamb.utils.validators import validate_not_empty
 
-__all__ = ["LambCommand", "LambCommandMixin", "CommandError"]
+__all__ = ["CommandError", "LambCommand", "LambCommandMixin"]
 
 logger = logging.getLogger(__name__)
 
 
 class LambCommandMixin:
-    log_level: str | None = None
-    db_key: str | None = None
-    db_async: bool = False
+    log_level: ClassVar[str | None] = None
+    db_key: ClassVar[str | None] = None
+    db_async: ClassVar[bool] = False
 
     @lazy
-    def db_session(self) -> sqlalchemy.orm.Session:
+    def db_session(self) -> sqlalchemy.orm.Session | sqlalchemy.ext.asyncio.AsyncSession:
         return lamb_db_session_maker(db_key=self.db_key, pooled=True, sync=not self.db_async)
 
     @lazy
     def db_metadata(self) -> sqlalchemy.schema.MetaData:
         return get_metadata(db_key=self.db_key, pooled=True, sync=not self.db_async)
 
-    def add_arguments(self: BaseCommand, parser):
+    def add_arguments(self, parser):
         # noinspection PyUnresolvedReferences
         super().add_arguments(parser)
         parser.add_argument(
@@ -46,7 +47,7 @@ class LambCommandMixin:
             "--db-key",
             action="store",
             dest="db_key",
-            default="default",
+            default=self.db_key or "default",
             help="Database to use",
             type=str,
         )
@@ -54,7 +55,7 @@ class LambCommandMixin:
             "--db-async",
             action="store_true",
             dest="db_async",
-            default=False,
+            default=self.db_async or False,
             help="Use asynchronously database session and metadata",
         )
 
@@ -70,13 +71,13 @@ class LambCommandMixin:
         # parse db key
         _db_key = dpath_value(options, "db_key", str, transform=validate_not_empty)
         if _db_key not in settings.LAMB_DB_CONFIG:
-            raise CommandError(f"Unknown db key: {_db_key}")
+            raise CommandError(f"{self.__class__.__name__}. Unknown db_key={_db_key}")
         self.db_key = _db_key
-
         self.db_async = dpath_value(options, "db_async", bool)
 
-        logger.info(f"LambCommandMixin. db key: {self.db_key}")
-        logger.info(f"LambCommandMixin. db_async: {self.db_async}")
+        logger.info(
+            f"{self.__class__.__name__}. options: db_key={self.db_key}, db_async={self.db_async}, log_level={self.log_level}"
+        )
 
         # noinspection PyUnresolvedReferences
         super().execute(*args, **options)
@@ -88,7 +89,7 @@ class LambCommand(LambCommandMixin, BaseCommand):
 
     """
 
-    help = "Abstract Lamb management command"  # noqa: A003
+    help = "Abstract Lamb management command"
 
     def handle(self, *args, **options):
         raise NotImplementedError("subclasses of BaseCommand must provide a handle() method")

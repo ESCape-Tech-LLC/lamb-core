@@ -18,7 +18,7 @@ from lamb.exc import (
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["etree_as_string", "detect_lxml_type_hint"]
+__all__ = ["detect_lxml_type_hint", "etree_as_string"]
 
 
 # utilities
@@ -139,7 +139,7 @@ def etree_find_xml(element, path, namespaces=None, **kwargs):
         if "default" in kwargs:
             return kwargs["default"]
         else:
-            raise e
+            raise e  # noqa: TRY201
 
 
 def etree_find(element, path, req_type=None, allow_none=False, namespaces=None, **kwargs):
@@ -194,4 +194,4 @@ def etree_find(element, path, req_type=None, allow_none=False, namespaces=None, 
         if "default" in kwargs:
             return kwargs["default"]
         else:
-            raise e
+            raise e  # noqa: TRY201

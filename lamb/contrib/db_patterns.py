@@ -7,7 +7,7 @@ from lamb.db.session import DeclarativeBase
 from lamb.exc import ServerError
 from lamb.utils import get_primary_keys
 
-__all__ = ["DbEnum", "ConfigEnum"]
+__all__ = ["ConfigEnum", "DbEnum"]
 
 
 def get_class_by_name(base, classname):
@@ -59,7 +59,7 @@ class DbEnum(enum.Enum):
     """
 
     __table_class__ = None
-    __attrib_mapping__ = {}
+    __attrib_mapping__ = {}  # noqa: RUF012
 
     def __new__(cls, code, *args, **kwargs):
         obj = object.__new__(cls)
@@ -92,7 +92,7 @@ class DbEnum(enum.Enum):
         :rtype: lamb.db.session.DeclarativeBase
         """
         pk = get_primary_keys(item)
-        pk_column_name, pk_column_description = pk.popitem()
+        pk_column_name, _ = pk.popitem()
         setattr(item, pk_column_name, self.value)
         return item
 

@@ -29,7 +29,7 @@ def _compile_drop_type(element, compiler, **_):
 
 
 class Command(LambCommandMixin, LabelCommand):
-    help = "Creates database table for provided modules"  # noqa: A003
+    help = "Creates database table for provided modules"
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
@@ -65,9 +65,10 @@ class Command(LambCommandMixin, LabelCommand):
                 metadata.drop_all(**kwargs)
 
             metadata.create_all(**kwargs)
+            logger.info(f"lamb_alchemy_create. Did complete create_all: {label=}, {tables=}")
         except ImportError as e:
-            logging.warning(f"Module import failed: {e}")
+            logger.warning(f"lamb_alchemy_create. Module import failed: {e}")
             raise CommandError(f'Failed to import module. "{e}"') from e
         except (SQLAlchemyError, DBAPIError) as e:
-            logger.warning(f"Database commit failed: {e}")
+            logger.warning(f"lamb_alchemy_create. Database commit failed: {e}")
             raise CommandError(f'Database error occurred. "{e}"') from e

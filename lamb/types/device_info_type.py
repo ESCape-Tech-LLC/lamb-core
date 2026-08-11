@@ -89,7 +89,6 @@ class DeviceInfo(ResponseEncodableMixin):
                 except Exception as e:
                     logger.debug(f"device_info geoip2 country parsing failed: {e}")
                     geoip2_info["country"] = None
-                    pass
 
                 try:
                     city_info = get_city_info(ip_address)
@@ -105,7 +104,6 @@ class DeviceInfo(ResponseEncodableMixin):
                 except Exception as e:
                     logger.debug(f"device_info geoip2 city parsing failed: {e}")
                     geoip2_info["city"] = None
-                    pass
 
                 try:
                     asn_info = get_asn_info(ip_address)
@@ -117,7 +115,6 @@ class DeviceInfo(ResponseEncodableMixin):
                 except Exception as e:
                     logger.debug(f"device_info geoip2 asn parsing failed: {e}")
                     geoip2_info["asn"] = None
-                    pass
             else:
                 geoip2_info = None
 
@@ -132,20 +129,20 @@ class DeviceInfo(ResponseEncodableMixin):
                     device_locale = None
 
             # construct and store device info
-            result = dict(
-                device_family=device_family,
-                device_platform=device_platform,
-                device_os=device_os_version,
-                device_locale=device_locale,
-                app_version=app_version,
-                app_build=app_build,
-                app_id=app_id,
-                ip_address=ip_address,
-                ip_routable=ip_routable,
-                geoip2_info=geoip2_info,
-            )
-        except Exception as e:
-            logger.warning(f"DeviceInfo request parsing failed due: {e}")
+            result = {
+                "device_family": device_family,
+                "device_platform": device_platform,
+                "device_os": device_os_version,
+                "device_locale": device_locale,
+                "app_version": app_version,
+                "app_build": app_build,
+                "app_id": app_id,
+                "ip_address": ip_address,
+                "ip_routable": ip_routable,
+                "geoip2_info": geoip2_info,
+            }
+        except Exception:
+            logger.exception("DeviceInfo. parsing failed")
             result = {}
 
         return result
@@ -181,7 +178,7 @@ def get_device_info_class() -> type[DT]:
 
     if _cached_device_info_class is None:
         _cached_device_info_class = import_by_name(settings.LAMB_DEVICE_INFO_CLASS)
-        logger.info(f"device info class would be used: {_cached_device_info_class}")
+        logger.info(f"get_device_info_class. Device info class would be used: {_cached_device_info_class}")
 
     return _cached_device_info_class
 

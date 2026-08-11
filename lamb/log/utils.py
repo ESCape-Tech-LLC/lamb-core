@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Any
 
-__all__ = ["inject_logging_factory", "get_gunicorn_logging_dict"]
+__all__ = ["get_gunicorn_logging_dict", "inject_logging_factory"]
 
 
 from lamb.log.constants import LAMB_LOG_FORMAT_GUNICORN_SIMPLE

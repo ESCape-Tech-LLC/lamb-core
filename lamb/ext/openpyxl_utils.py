@@ -16,7 +16,7 @@ from lamb.exc import (
 )
 from lamb.utils.core import compact, lazy
 
-__all__ = ["Worksheet", "Workbook", "Cell", "Row", "Column"]
+__all__ = ["Cell", "Column", "Row", "Workbook", "Worksheet"]
 
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class Workbook:
             sheet = self.worksheets_dict[sheet]
         self._workbook.remove(sheet.openpyxl_worksheet)
 
-    def create_sheet(self, title: str = None, index: int = None) -> Worksheet:
+    def create_sheet(self, title: str | None = None, index: int | None = None) -> Worksheet:
         return Worksheet(self._workbook.create_sheet(title=title, index=index), create_columns=self._create_columns)
 
     # excel general
@@ -64,12 +64,12 @@ class Workbook:
         return self._workbook
 
     # iterators
-    def iter_rows(self) -> Generator[Generator[Cell, None, None], None, None]:
+    def iter_rows(self) -> Generator[Generator[Cell]]:
         max_row = self._worksheet.max_row - 1
-        for row in range(0, max_row):
+        for row in range(max_row):
             yield self.cells(row=row)
 
-    def save(self, outputfile_path: str = None):
+    def save(self, outputfile_path: str | None = None):
         if outputfile_path is None:
             outputfile_path = self._filename
         self._workbook.save(outputfile_path)
@@ -146,19 +146,19 @@ class Worksheet:
         return [cell.typed_value(req_type=str, default=None) for cell in self.cells(0)]
 
     @property
-    def rows(self) -> Generator[Row, None, None]:
+    def rows(self) -> Generator[Row]:
         max_row = self._wrapped_worksheet.max_row
-        for row_index in range(0, max_row):
+        for row_index in range(max_row):
             yield Row(worksheet=self, row_index=row_index)
 
     @property
-    def columns(self) -> Generator[Column, None, None]:
+    def columns(self) -> Generator[Column]:
         max_column = self._wrapped_worksheet.max_column
-        for column_index in range(0, max_column):
+        for column_index in range(max_column):
             yield Column(worksheet=self, column_index=column_index)
 
     # cell access
-    def cells(self, row: int) -> Generator[Cell, None, None]:
+    def cells(self, row: int) -> Generator[Cell]:
         max_column = self._wrapped_worksheet.max_column
         for column in range(1, max_column + 1):
             result_cell = Cell(self._wrapped_worksheet.cell(row=row + 1, column=column))
@@ -218,7 +218,7 @@ class Row:
         self._worksheet.cell(row=self._row_index, column=column_name).value = value
 
     @property
-    def cells(self) -> Generator[Cell, None, None]:
+    def cells(self) -> Generator[Cell]:
         _row = next(
             self._worksheet.openpyxl_worksheet.iter_rows(
                 min_row=self._row_index + 1,
@@ -237,9 +237,9 @@ class Column:
         self._column_index = column_index
 
     @property
-    def cells(self) -> Generator[Cell, None, None]:
+    def cells(self) -> Generator[Cell]:
         max_row = self._worksheet.openpyxl_worksheet.max_row
-        for row_index in range(0, max_row):
+        for row_index in range(max_row):
             yield self._worksheet.cell(row=row_index, column=self._column_index)
 
 
@@ -247,7 +247,7 @@ class Cell:
     def __init__(self, cell: OpenpyxlCell):
         self._cell = cell
 
-    def typed_value(self, req_type: type, allow_none: bool = False, transform: Callable = None, **kwargs):
+    def typed_value(self, req_type: type, allow_none: bool = False, transform: Callable | None = None, **kwargs):
         def _type_convert(_result):
             if req_type is None:
                 return _result

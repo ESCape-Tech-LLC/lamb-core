@@ -16,15 +16,15 @@ from sqlalchemy.dialects.postgresql import JSONB
 from lamb import exc
 from lamb.json import JsonEncoder
 from lamb.json.mixins import ResponseEncodableMixin
-from lamb.service.aws.s3 import S3Uploader
+from lamb.service.aws.s3engine import S3Engine
 
 __all__ = [
+    "IT",
+    "ImageListSlicesType",
+    "ImageSlice",
+    "ImageSlicesType",
     "Mode",
     "SliceRule",
-    "ImageSlice",
-    "IT",
-    "ImageSlicesType",
-    "ImageListSlicesType",
 ]
 
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # uploading image rules
 @enum.unique
-class Mode(str, enum.Enum):
+class Mode(enum.StrEnum):
     """Image cropping mode for upload"""
 
     Resize = "resize"
@@ -83,8 +83,8 @@ class ImageSlice(ResponseEncodableMixin):
         if "ImageUploadServiceAmazonS3" in settings.LAMB_IMAGE_UPLOAD_ENGINE:
             bucket_url = getattr(settings, "LAMB_AWS_BUCKET_URL", None)
             if bucket_url:
-                s3_uploader = S3Uploader()
-                _, _, path = s3_uploader.s3_parse_url(self.url)
+                s3_uploader = S3Engine()
+                _, _, path = s3_uploader.aws_s3_parse_url(self.url)
                 with contextlib.suppress(BotoCoreError):
                     self.url = s3_uploader.generate_presigned_url(path, 300)
         return asdict(self)
@@ -95,7 +95,7 @@ class ImageSlice(ResponseEncodableMixin):
 IT = TypeVar("IT", bound=ImageSlice)
 
 
-class ImageSlicesType(types.TypeDecorator):  # noqa
+class ImageSlicesType(types.TypeDecorator):
     """
     Column type for storing list of ImageSlice objects
 
@@ -132,7 +132,7 @@ class ImageSlicesType(types.TypeDecorator):  # noqa
         if not isinstance(value, list):
             logger.warning(f"Invalid data type to store as image slices: {value}")
             raise exc.ServerError("Invalid data type to store as image slices")
-        if not all([isinstance(s, self._slice_class) for s in value]):
+        if not all(isinstance(s, self._slice_class) for s in value):
             logger.warning(f"Invalid data type to store as image slices: {value}, required class = {self._slice_class}")
             raise exc.ServerError("Invalid data type to store as image slices")
 
@@ -166,7 +166,7 @@ class ImageSlicesType(types.TypeDecorator):  # noqa
         return value
 
 
-class ImageListSlicesType(types.TypeDecorator):  # noqa
+class ImageListSlicesType(types.TypeDecorator):
     """Column type that acts like List[ImageSlicesType] to store info about many images in one field
     :arg encoder_class: can be used to customize json encoding on non PostgreSQL engines
     :arg slice_class: can be used to specify subclass of `ImageSlice` that would be stored in slices
@@ -201,10 +201,10 @@ class ImageListSlicesType(types.TypeDecorator):  # noqa
         if not isinstance(value, list):
             logger.warning(f"Invalid data type to store as image slices: {value}")
             raise exc.ServerError("Invalid data type to store as image slices")
-        if any([not isinstance(v, list) for v in value]):
+        if any(not isinstance(v, list) for v in value):
             logger.warning(f"Invalid data type to store as image slices: {value}")
             raise exc.ServerError("Invalid data type to store as image slices")
-        if any([not isinstance(item, self._slice_class) for v in value for item in v]):
+        if any(not isinstance(item, self._slice_class) for v in value for item in v):
             logger.warning(f"Invalid data type to store as image slices: {value}")
             raise exc.ServerError("Invalid data type to store as image slices")
 
@@ -229,7 +229,7 @@ class ImageListSlicesType(types.TypeDecorator):  # noqa
         if not isinstance(value, list):
             logger.warning(f"Invalid data type stored in database to interpret as List of ImagesSlices: {value}")
             raise exc.ServerError("Invalid data type to retrieve as image slices")
-        if any([not isinstance(v, list) for v in value]):
+        if any(not isinstance(v, list) for v in value):
             logger.warning(f"Invalid data type stored in database to interpret as List of ImagesSlices: {value}")
             raise exc.ServerError("Invalid data type to retrieve as image slices")
 

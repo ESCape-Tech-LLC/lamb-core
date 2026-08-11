@@ -19,27 +19,27 @@ from lamb.utils.transformers import transform_uuid
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "validate_range",
-    "validate_length",
-    "validate_phone_number",
-    "validate_email",
-    "validate_url",
-    "validate_port",
-    "validate_ip_address",
-    "validate_timeout",
-    "validate_not_empty",
-    "v_opt_uuid",
     "v_opt_string",
+    "v_opt_uuid",
+    "validate_email",
+    "validate_ip_address",
+    "validate_length",
+    "validate_not_empty",
+    "validate_phone_number",
+    "validate_port",
+    "validate_range",
+    "validate_timeout",
+    "validate_url",
 ]
 
 VT = TypeVar("VT")
 
 
-def validate_range(
+def validate_range[VT](
     value: VT | None,
     min_value: VT | None = None,
     max_value: VT | None = None,
-    key: str = None,
+    key: str | None = None,
     allow_none: bool = False,
 ) -> VT | None:
     """Value within interval validator
@@ -59,10 +59,6 @@ def validate_range(
             raise InvalidParamValueError(
                 f"Invalid param {key} value or type, should be between {min_value} and {max_value}", error_details=key
             )
-        # if value < min_value or value > max_value:
-        #     raise InvalidParamValueError(
-        #         f"Invalid param {key} value or type, should be between {min_value} and {max_value}", error_details=key
-        #     )
         return value
     except InvalidParamValueError:
         raise
@@ -70,7 +66,7 @@ def validate_range(
         raise InvalidParamTypeError(f"Invalid param type for {key}", error_details=key) from e
 
 
-def validate_length(
+def validate_length[VT](
     value: VT | None,
     min_length: int | None = None,
     max_length: int | None = None,
@@ -171,7 +167,7 @@ def validate_email(value: str | None, allow_none: bool = False) -> str | None:
         raise InvalidParamValueError("Invalid email format") from e
 
 
-def validate_url(value: str | None, allow_none: bool = False, schemes: list[str] = None) -> str | None:
+def validate_url(value: str | None, allow_none: bool = False, schemes: list[str] | None = None) -> str | None:
     # early return
     if value is None and allow_none:
         return value
@@ -185,7 +181,12 @@ def validate_url(value: str | None, allow_none: bool = False, schemes: list[str]
         raise InvalidParamValueError("Invalid URL format") from e
 
 
-def validate_port(value: int | AnyStr | None, allow_none: bool = False) -> int | None:
+def validate_positive_int[AnyStr: (bytes, str)](
+    value: int | AnyStr | None,
+    allow_none: bool = False,
+    min_value: int = 1,
+    max_value: int | None = None,
+) -> int | None:
     # early return
     if value is None and allow_none:
         return value
@@ -194,9 +195,13 @@ def validate_port(value: int | AnyStr | None, allow_none: bool = False) -> int |
     try:
         value = int(value)
     except Exception as e:
-        raise InvalidParamTypeError("Invalid port number") from e
+        raise InvalidParamTypeError("Invalid value for int casting") from e
 
-    return validate_range(value, min_value=0, max_value=65535)
+    return validate_range(value, min_value=min_value, max_value=max_value)
+
+
+def validate_port[AnyStr: (bytes, str)](value: int | AnyStr | None, allow_none: bool = False) -> int | None:
+    return validate_positive_int(value=value, allow_none=allow_none, min_value=1, max_value=65535)
 
 
 def validate_ip_address(value: str | None, version: int | None = None, allow_none: bool = False) -> str | None:
@@ -220,7 +225,7 @@ def validate_timeout(value: float) -> float:
     return validate_range(value, min_value=0.0)
 
 
-def validate_not_empty(value: VT | None, min_length=1, **kwargs) -> VT:
+def validate_not_empty[VT](value: VT | None, min_length=1, **kwargs) -> VT:
     if "min_length" not in kwargs:
         kwargs["min_length"] = min_length
     if "value" not in kwargs:
@@ -246,7 +251,7 @@ def v_opt_uuid(value: str | None, key: str | None = None) -> uuid.UUID | None:
     return transform_uuid(value, key=key)
 
 
-def v_opt_string(value: str | None, key: str | None = None) -> str | None:
+def v_opt_string(value: str | None, key: str | None = None, **kwargs) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
@@ -255,4 +260,4 @@ def v_opt_string(value: str | None, key: str | None = None) -> str | None:
         else:
             raise InvalidParamTypeError("Invalid param type for string")
 
-    return validate_length(value=value, trimming=True, empty_as_none=True, allow_none=True, key=key)
+    return validate_length(value=value, trimming=True, empty_as_none=True, allow_none=True, key=key, **kwargs)

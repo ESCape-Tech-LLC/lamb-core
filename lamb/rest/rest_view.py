@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from functools import update_wrapper
-from typing import Union
 
 from django.utils.decorators import classonlymethod
 from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession

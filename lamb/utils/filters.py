@@ -33,15 +33,15 @@ from lamb.utils.transformers import (
 )
 
 __all__ = [
-    "Filter",
-    "FieldValueFilter",
+    "ColumnBooleanFilter",
     "ColumnValueFilter",
     "DateFilter",
     "DatetimeFilter",
     "EnumFilter",
-    "PostgresqlFastTextSearchFilter",
-    "ColumnBooleanFilter",
+    "FieldValueFilter",
+    "Filter",
     "JsonDataFilter",
+    "PostgresqlFastTextSearchFilter",
 ]
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class Filter:
     req_type: type
     req_type_transformer: Callable | None
 
-    def __init__(self, arg_name: str, req_type: type, req_type_transformer: Callable = None):
+    def __init__(self, arg_name: str, req_type: type, req_type_transformer: Callable | None = None):
         # check params
         if not isinstance(arg_name, str):
             logger.warning(f"Filter arg_name invalid data type: {arg_name}")
@@ -75,7 +75,7 @@ class Filter:
         self.req_type = req_type
         self.req_type_transformer = req_type_transformer
 
-    def get_param_value(self, params: dict, key_path: str = None) -> list[object] | None:
+    def get_param_value(self, params: dict, key_path: str | None = None) -> list[object] | None:
         """Extracts and convert param value from dictionary"""
         # handle key_path default as arg_name
         if key_path is None:
@@ -134,7 +134,7 @@ class Filter:
     def vary_param_value_min(self, value: T) -> T:
         return value
 
-    def apply_to_query(self, query: Query, params: dict = None, **kwargs) -> Query:
+    def apply_to_query(self, query: Query, params: dict | None = None, **kwargs) -> Query:
         """Apply filter to query"""
         return query
 
@@ -150,7 +150,7 @@ class FieldValueFilter(Filter):
         arg_name: str,
         req_type: type,
         comparing_field: QueryableAttribute,
-        req_type_transformer: Callable = None,
+        req_type_transformer: Callable | None = None,
         allowed_compares: list[str] | None = None,
     ):
         allowed_compares = allowed_compares or ["__eq__", "__ne__", "__ge__", "__le__"]
@@ -352,7 +352,7 @@ class PostgresqlFastTextSearchFilter(Filter):
         self,
         columns: QueryableAttribute | list[QueryableAttribute] | None = None,
         tsvector_expr: Any | None = None,
-        tsquery_func: Callable[[str], Function] = None,
+        tsquery_func: Callable[[str], Function] | None = None,
         reconfig="russian",
         arg_name="search_text",
     ):
@@ -464,7 +464,7 @@ class JsonDataFilter(ColumnValueFilter):
         unparsed_key_path = unparsed_key_path.split(".")
 
         # convert key path components to include int indices
-        buffer = list()
+        buffer = []
         for path_component in unparsed_key_path:
             with contextlib.suppress(ValueError):
                 path_component = int(path_component)

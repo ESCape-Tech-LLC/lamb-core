@@ -9,7 +9,7 @@ from lamb.utils.core import class_or_instance_method
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["HandbookMixin", "HandbookEnumMixin"]
+__all__ = ["HandbookEnumMixin", "HandbookMixin"]
 
 
 class HandbookMixin(ResponseEncodableMixin):

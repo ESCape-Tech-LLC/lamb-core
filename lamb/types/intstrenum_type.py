@@ -21,8 +21,8 @@ class IntStrEnum(HandbookEnumMixin, enum.Enum):
     """
 
     # cache titles
-    _ignore_ = ["_title_map"]
-    _title_map: dict[str, Any] = {}
+    _ignore_ = ["_title_map"]  # noqa: RUF012
+    _title_map: dict[str, Any] = {}  # noqa: RUF012
 
     def __init__(self, *args, **kwargs):
         # check datatypes
@@ -55,7 +55,7 @@ class IntStrEnum(HandbookEnumMixin, enum.Enum):
         # early return and normalize
         if isinstance(value, int) or not isinstance(value, str):
             # raise exc.InvalidParamValueError(f'{value} is not valid value for {cls.__name__}')
-            raise ValueError(f"{value} is not valid value for {cls.__name__}")
+            raise TypeError(f"{value} is not valid value for {cls.__name__}")
 
         value = value.upper()
 

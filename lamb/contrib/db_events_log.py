@@ -14,11 +14,11 @@ from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.types import DeviceInfoType
 
-__all__ = ["EventSourceType", "EventTrack", "EventRecord"]
+__all__ = ["EventRecord", "EventSourceType", "EventTrack"]
 
 
 @enum.unique
-class EventSourceType(str, enum.Enum):
+class EventSourceType(enum.StrEnum):
     SERVER = "SERVER"
     CLIENT = "CLIENT"
 

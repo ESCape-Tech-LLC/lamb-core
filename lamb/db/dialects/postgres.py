@@ -7,7 +7,7 @@ from lamb.exc import ImproperlyConfiguredError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["PGEnumMixin", "PG_ENUM"]
+__all__ = ["PG_ENUM", "PGEnumMixin"]
 
 
 class PGEnumMixin(HandbookEnumMixin):
@@ -20,7 +20,7 @@ class PGEnumMixin(HandbookEnumMixin):
         return super().__new__(cls, *args, **kwargs)
 
 
-class PG_ENUM(ENUM):  # noqa: N801
+class PG_ENUM(ENUM):
     def __init__(self, *args, **kwargs):
         if len(args) == 1 and issubclass(args[0], PGEnumMixin):
             _enum = args[0]

@@ -20,7 +20,7 @@ except ImportError:
     CassandraModel = object()
 
 
-__all__ = ["ResponseEncodableMixin", "ResponseConformProtocol"]
+__all__ = ["ResponseConformProtocol", "ResponseEncodableMixin"]
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class ResponseEncodableMixin:
 
                 # append hybrid properties
                 response_attributes.extend(
-                    # [ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property]  # noqa: E721
+                    # [ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property]
                     [ormd for ormd in ins.all_orm_descriptors if isinstance(ormd, hybrid_property)]
                 )
 

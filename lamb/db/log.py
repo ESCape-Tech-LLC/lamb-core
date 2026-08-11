@@ -4,7 +4,7 @@ from django.conf import settings
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
-__all__ = ["sql_logging_enable", "sql_logging_disable"]
+__all__ = ["sql_logging_disable", "sql_logging_enable"]
 
 
 # TODO: fix - not work with 1.4-2.0 versions

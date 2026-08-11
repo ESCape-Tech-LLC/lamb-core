@@ -15,7 +15,7 @@ class TableConfigMixin:
         result = re.sub("(?<!^)(?=[A-Z])", "_", class_name).lower()
         return result
 
-    __table_args__ = {"mysql_engine": "InnoDB"}
+    __table_args__ = {"mysql_engine": "InnoDB"}  # noqa: RUF012
 
 
 class TimeMarksMixin:

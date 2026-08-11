@@ -10,8 +10,8 @@ from django.core.cache import cache
 from sqlalchemy import TEXT, VARCHAR, Column
 
 from lamb import exc
+from lamb.contrib.db_patterns import DbEnum
 from lamb.db.context import lamb_db_context
-from lamb.db.patterns import DbEnum
 from lamb.db.session import DeclarativeBase
 from lamb.json.mixins import ResponseEncodableMixin
 from lamb.utils.transformers import transform_boolean
@@ -20,10 +20,10 @@ __all__ = [
     "AbstractSettingsStorage",
     "AbstractSettingsValue",
     "BaseConverter",
-    "SimpleTypeConverter",
-    "JsonConverter",
-    "IntBooleanConverter",
     "BooleanConverter",
+    "IntBooleanConverter",
+    "JsonConverter",
+    "SimpleTypeConverter",
 ]
 
 
@@ -171,7 +171,7 @@ class AbstractSettingsValue(DbEnum):
     """
 
     __table_class__ = None
-    __attrib_mapping__ = {"val": "value", "description": "description", "disclaimer": "disclaimer"}
+    __attrib_mapping__ = {"val": "value", "description": "description", "disclaimer": "disclaimer"}  # noqa: RUF012
 
     __cache_timeout__ = None
     __cache_prefix__ = "lamb_settings"

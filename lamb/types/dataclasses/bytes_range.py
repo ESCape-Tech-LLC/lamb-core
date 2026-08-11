@@ -12,7 +12,7 @@ class BytesRange:
     bytes_end: int | None = None
 
     @property
-    def slice(self) -> slice:  # noqa: A003
+    def slice(self) -> slice:
         if self.bytes_start is None:
             return slice(self.bytes_end, None)
         else:
@@ -61,11 +61,11 @@ class BytesRange:
             if bytes_start is not None and bytes_end is not None and bytes_end < bytes_start:
                 raise InvalidParamValueError(f"Invalid bytes range: {value}")
             return BytesRange(bytes_start=bytes_start, bytes_end=bytes_end)
-        except Exception as e:
+        except Exception:
             if safe:
                 return BytesRange(bytes_start=None, bytes_end=None)
             else:
-                raise e
+                raise
 
     def content_range(self, length: int) -> str | None:
         if self.bytes_start is None and self.bytes_end is None:

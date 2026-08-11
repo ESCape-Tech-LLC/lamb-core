@@ -18,7 +18,7 @@ from lamb.utils import dpath_value
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["redis_rate_check_pipelined", "redis_rate_check_lua", "redis_rate_clear_lua"]
+__all__ = ["redis_rate_check_lua", "redis_rate_check_pipelined", "redis_rate_clear_lua"]
 
 
 # utilities
@@ -110,7 +110,7 @@ def redis_rate_check_pipelined(conn: redis.Redis, bucket_name_base: str, limits=
     """
     # check and sort limits
     if limits is None:
-        limits = list()
+        limits = []
     logger.debug(f"start rate check pipelined: {conn, bucket_name_base, limits}")
     limits_dict: dict[int, int] = _check_limits(limits)
 
@@ -147,7 +147,7 @@ def redis_rate_check_lua(
     """
     # check and sort limits
     if limits is None:
-        limits = list()
+        limits = []
     logger.debug(f"Lua throttling. Start rate check: {conn, bucket_name_base, limits, increment}")
     rate_limits = _redis_rate_parse_limits(bucket_name_base, limits)
     logger.debug(f"Lua throttling. Limits: {rate_limits}")
@@ -198,7 +198,7 @@ def redis_rate_check_lua(
             result[bname] = result_record
         end
         return cjson.encode(result)
-        """  # noqa: W291, W293
+        """
 
         conn.redis_rate_check_lua = conn.register_script(redis_rate_check_lua_)
         logger.debug(f"Lua throttling. Script compiled and loaded: {conn.redis_rate_check_lua}")
@@ -217,7 +217,7 @@ def redis_rate_check_lua(
         logger.debug(f"Lua throttling. Response json: {res}")
         res_rate_limits = _redis_rate_parse_response(res)
         logger.debug(f"Lua throttling. Response parsed: {res_rate_limits}")
-        if any([not rl.success for rl in res_rate_limits]):
+        if any(not rl.success for rl in res_rate_limits):
             logger.warning(f"Lua throttling. Limit reached on response: {res_rate_limits}")
             raise ThrottlingError(limits=res_rate_limits)
         return res_rate_limits
@@ -239,7 +239,7 @@ def redis_rate_clear_lua(
     """
     # check and sort limits
     if limits is None:
-        limits = list()
+        limits = []
     logger.debug(f"Lua throttling. Start rate clear: {conn, bucket_name_base, limits}")
     rate_limits = _redis_rate_parse_limits(bucket_name_base, limits)
     logger.info(f"Lua throttling. Limits to clear: {rate_limits}")

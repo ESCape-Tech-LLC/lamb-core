@@ -1,17 +1,20 @@
 import json
 import logging
+from collections.abc import Callable
 from functools import wraps
 
 from asgiref.sync import iscoroutinefunction
 from django.conf import settings
 
+from lamb.exc import ProgrammingError
 from lamb.json import JsonEncoder, JsonResponse
 from lamb.service.redis.config import RedisConfig
+from lamb.service.redis.pool import get_redis_async, get_redis_sync
 
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["rejson_cached", "json_cached"]
+__all__ = ["json_cached", "rejson_cached"]
 
 
 def json_cached(cache_key: str, ttl: int = 15 * 60, redis_conf_name: str = "cache"):
@@ -109,8 +112,20 @@ def json_cached(cache_key: str, ttl: int = 15 * 60, redis_conf_name: str = "cach
     return decorator
 
 
-def rejson_cached(cache_key: str, ttl: int = 15 * 60, redis_conf_name: str = "cache"):
+def rejson_cached(cache_key: str | Callable, ttl: int = 15 * 60, redis_conf_name: str = "a-cache"):
     """Version of cache with Redis/Valkey instance that supports JSON operations"""
+
+    # TODO: create version with exclusive computation locks and double cache check
+
+    def _cache_key(request, *args, **kwargs) -> str:
+        if callable(cache_key):
+            _key = cache_key(request, *args, **kwargs)
+        elif isinstance(cache_key, str):
+            _key = cache_key
+        else:
+            raise ProgrammingError(f"Invalid cache_key object type: {type(cache_key)} = {cache_key}")
+
+        return _key
 
     _encoder = JsonEncoder()
 
@@ -118,41 +133,38 @@ def rejson_cached(cache_key: str, ttl: int = 15 * 60, redis_conf_name: str = "ca
         if iscoroutinefunction(view_func):
 
             async def _view_wrapper(request, *args, **kwargs):
-                # check cache
-                redis_conf: RedisConfig = settings.LAMB_REDIS_CONFIG[redis_conf_name]
-                r = await redis_conf.aredis()
-                rj = r.json(encoder=_encoder)
+                _key = _cache_key(cache_key, **kwargs)
+                _redis_cache = get_redis_async(redis_conf_name)
+                rj = _redis_cache.json(encoder=_encoder)
 
-                if cached_data := await rj.get(cache_key):
-                    logger.info(f"rejson_cached: cache hit - KEY={cache_key}", extra={"key": cache_key})
+                # cache: check
+                if cached_data := await rj.get(_key):
+                    logger.debug(f"_rejson_cached: cache HIT - KEY={_key}", extra={"key": _key})
                     return JsonResponse(cached_data)
 
-                # store to redis and return response
+                # cache: calculate and store
                 response = await view_func(request, *args, **kwargs)
-                await rj.set(name=cache_key, path=".", obj=response)
-                await r.expire(name=cache_key, time=ttl)
-                logger.debug(
-                    f"rejson_cached: cache add - KEY={cache_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl}
-                )
+                await rj.set(name=_key, path=".", obj=response)
+                await _redis_cache.expire(_key, ttl)
+                logger.debug(f"_rejson_cached: cache ADD - KEY={_key}, TTL={ttl}", extra={"key": _key, "ttl": ttl})
                 return JsonResponse(response)
         else:
 
             def _view_wrapper(request, *args, **kwargs):
-                # check cache
-                redis_conf: RedisConfig = settings.LAMB_REDIS_CONFIG[redis_conf_name]
-                r = redis_conf.redis()
-                rj = r.json(encoder=_encoder)
-                if cached_data := rj.get(cache_key):
-                    logger.info(f"rejson_cached: cache hit - KEY={cache_key}", extra={"key": cache_key})
+                _key = _cache_key(request, *args, **kwargs)
+                _redis_cache = get_redis_sync(redis_conf_name)
+                rj = _redis_cache.json(encoder=_encoder)
+
+                # cache: check
+                if cached_data := rj.get(_key):
+                    logger.info(f"_rejson_cached: cache HIT - KEY={_key}", extra={"key": _key})
                     return JsonResponse(cached_data)
 
-                # store to redis and return response
+                # cache: calculate and store
                 response = view_func(request, *args, **kwargs)
-                rj.set(name=cache_key, path=".", obj=response)
-                r.expire(name=cache_key, time=ttl)
-                logger.debug(
-                    f"rejson_cached: cache add - KEY={cache_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl}
-                )
+                rj.set(name=_key, path=".", obj=response)
+                _redis_cache.expire(name=_key, time=ttl)
+                logger.debug(f"_rejson_cached: cache ADD - KEY={_key}, TTL={ttl}", extra={"key": cache_key, "ttl": ttl})
                 return JsonResponse(response)
 
         return wraps(view_func)(_view_wrapper)

@@ -4,7 +4,7 @@ from django.test import override_settings
 from django.core.cache import cache
 
 # Lamb Framework
-from lamb.ext.settings import AbstractSettingsValue, AbstractSettingsStorage
+from lamb.contrib.db_settings import AbstractSettingsValue, AbstractSettingsStorage
 
 from tests.testcases import LambTestCase
 

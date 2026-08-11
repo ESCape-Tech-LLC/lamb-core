@@ -20,17 +20,17 @@ from sqlalchemy.dialects.postgresql import (
 from sqlalchemy.orm import mapped_column
 
 __all__ = [
-    "uuid_pk",
-    "str_v",
-    "str_ci",
-    "str_ts",
-    "int_s",
-    "int_i",
-    "int_b",
     "bool_f",
     "bool_t",
-    "timestamp_tz",
+    "int_b",
+    "int_i",
+    "int_s",
     "jsonb",
+    "str_ci",
+    "str_ts",
+    "str_v",
+    "timestamp_tz",
+    "uuid_pk",
 ]
 
 # annotations

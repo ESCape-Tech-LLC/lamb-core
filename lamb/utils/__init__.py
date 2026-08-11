@@ -15,10 +15,10 @@ import tempfile
 import warnings
 import zoneinfo
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 from inspect import isclass
-from typing import Any, Awaitable, BinaryIO, TypedDict, TypeVar
+from typing import Any, BinaryIO, TypedDict, TypeVar
 from urllib.parse import unquote
 from xml.etree import cElementTree
 
@@ -37,8 +37,6 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import ColumnProperty, Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-
-from lamb.utils.core import lazy
 
 try:
     import cassandra
@@ -78,52 +76,51 @@ from lamb.utils.core import (
 from .dpath import dpath_value
 
 __all__ = [
-    "DeprecationClassHelper",
-    "DeprecationClassMixin",
-    "compact",
-    "import_by_name",
-    "random_string",
-    "masked_url",
-    "masked_dict",
-    "get_redis_url",
-    "list_chunks",
-    "LambRequest",
-    "parse_body_as_json",
-    "dpath_value",
-    "a_response_paginated",
-    "response_paginated",
-    "response_sorted",
-    "response_filtered",
-    "get_request_body_encoding",
-    "get_request_accept_encoding",
-    "get_current_request",
-    "CONTENT_ENCODING_XML",
     "CONTENT_ENCODING_JSON",
     "CONTENT_ENCODING_MULTIPART",
-    "dpath_value",
-    "inject_app_defaults",
-    "inject_date_format",
-    "get_settings_value",
-    "datetime_end",
-    "datetime_begin",
-    "check_device_info_versions_above",
-    "timed_lru_cache",
-    "timed_lru_cache_clear",
-    "async_download_resources",
-    "async_download_images",
-    "async_request_urls",
-    "image_convert_to_rgb",
-    "file_is_svg",
-    "image_decode_base64",
-    "str_coercible",
-    "get_columns",
-    "get_primary_keys",
-    "get_file_mime_type",
-    "tz_now",
+    "CONTENT_ENCODING_XML",
     "TZ_MSK",
     "TZ_UTC",
-    "humanize_bytes",
+    "DeprecationClassHelper",
+    "DeprecationClassMixin",
+    "LambRequest",
+    "a_response_paginated",
+    "async_download_images",
+    "async_download_resources",
+    "async_request_urls",
     "bank_card_type_parse",
+    "check_device_info_versions_above",
+    "compact",
+    "datetime_begin",
+    "datetime_end",
+    "dpath_value",
+    "file_is_svg",
+    "get_columns",
+    "get_current_request",
+    "get_file_mime_type",
+    "get_primary_keys",
+    "get_redis_url",
+    "get_request_accept_encoding",
+    "get_request_body_encoding",
+    "get_settings_value",
+    "humanize_bytes",
+    "image_convert_to_rgb",
+    "image_decode_base64",
+    "import_by_name",
+    "inject_app_defaults",
+    "inject_date_format",
+    "list_chunks",
+    "masked_dict",
+    "masked_url",
+    "parse_body_as_json",
+    "random_string",
+    "response_filtered",
+    "response_paginated",
+    "response_sorted",
+    "str_coercible",
+    "timed_lru_cache",
+    "timed_lru_cache_clear",
+    "tz_now",
 ]
 
 
@@ -214,7 +211,6 @@ def _response_pagination_params(
 ) -> _PaginationParams:
     # TODO: move outside of utils to omit cycle loading
     from lamb.utils.transformers import transform_boolean
-    from lamb.utils.validators import validate_range
 
     # extract params
     if request is None and params is None:
@@ -276,10 +272,10 @@ def _response_pagination_params(
     )
 
 
-async def a_response_paginated(
+async def a_response_paginated[PV: (list, Query, ModelQuerySet, Select)](
     collection: PV,
-    params: dict = None,
-    db_session: SAAsyncSession = None,  # alchemy session
+    params: dict | None = None,
+    db_session: SAAsyncSession | None = None,  # alchemy session
     count_expr: Callable[[PV], Awaitable[int]] | None = None,
     db_as_rows: bool = False,
 ) -> PaginationResult:
@@ -348,10 +344,10 @@ async def a_response_paginated(
     return result
 
 
-def response_paginated(
+def response_paginated[PV: (list, Query, ModelQuerySet, Select)](
     data: PV,
     request: LambRequest = None,
-    params: dict = None,
+    params: dict | None = None,
     add_extended_query: bool = False,
 ) -> PaginationResult:
     """Pagination utility
@@ -481,9 +477,7 @@ def _get_instance_sorting_attribute_names(ins: object) -> list[str]:
     sortable_attributes.update(set(ins.mapper.column_attrs.values()))
 
     # append hybrid attributes
-    sortable_attributes.update(
-        set([ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property])  # noqa: E721
-    )
+    sortable_attributes.update({ormd for ormd in ins.all_orm_descriptors if type(ormd) == hybrid_property})
 
     result = []
     for ormd in sortable_attributes:
@@ -566,7 +560,7 @@ def _sorting_apply_sorters(
     model_class: DeclarativeMeta,
     check_duplicate: bool = True,
 ) -> Query:
-    applied_sort_fields: list[str] = list()
+    applied_sort_fields: list[str] = []
     for _sorting_field, _sorting_functor in sorters:
         if _sorting_field in applied_sort_fields and check_duplicate:
             logger.debug(f"skip duplicate sorting field: {_sorting_field}")
@@ -580,11 +574,11 @@ def _sorting_apply_sorters(
 SV = TypeVar("SV", Query, Select)
 
 
-def response_sorted(
+def response_sorted[SV: (Query, Select)](
     query: SV,
     model_class: DeclarativeMeta,
     params: dict,
-    default_sorting: str = None,
+    default_sorting: str | None = None,
     **kwargs,
 ) -> SV:
     """Apply order by sortings to sqlalchemy query instance from params dictionary
@@ -652,11 +646,11 @@ def response_sorted(
     return query
 
 
-def response_filtered(
+def response_filtered[SV: (Query, Select)](
     query: SV,
     filters: list[object],
-    request: LambRequest = None,
-    params: dict = None,
+    request: LambRequest | None = None,
+    params: dict | None = None,
 ) -> SV:
     # TODO: fix typing for filters
     # TODO: auto discover request params if not provided
@@ -793,7 +787,7 @@ def get_settings_value(*names, req_type: Callable | None = None, allow_none: boo
                     DeprecationWarning,
                     stacklevel=2,
                 )
-            except (ImportError, AttributeError, InvalidBodyStructureError):
+            except ImportError, AttributeError, InvalidBodyStructureError:
                 continue
 
     # extract value
@@ -805,7 +799,7 @@ def get_settings_value(*names, req_type: Callable | None = None, allow_none: boo
                     f"Use of deprecated settings param {name}, use {names[0]} instead", DeprecationWarning, stacklevel=2
                 )
             return result
-        except (ImportError, AttributeError, InvalidBodyStructureError):
+        except ImportError, AttributeError, InvalidBodyStructureError:
             continue
         except Exception as e:
             raise ImproperlyConfiguredError(
@@ -898,8 +892,8 @@ def check_device_info_versions_above(
             _min_app_build = int(min_v[1]) if not isinstance(min_v[1], int | float) else min_v[1]
             if _source.device_platform.lower() == _platform and _min_app_build > _source.app_build:
                 return False
-        except Exception as e:
-            logger.warning(f"Skip above version checking for {min_v} cause of invalid structure, error: {e}")
+        except Exception:
+            logger.exception(f"Skip above version checking for {min_v} cause of invalid structure")
             continue
 
     return True
@@ -986,7 +980,7 @@ def timed_lru_cache_clear():
 
 # async downloads
 @enum.unique
-class AsyncFallStrategy(str, enum.Enum):
+class AsyncFallStrategy(enum.StrEnum):
     RAISING = "RAISING"
     NONE = "NONE"
     EXCEPTION = "EXCEPTION"
@@ -1018,7 +1012,7 @@ def _async_request_url(
             if res.status_code != 200:
                 raise ExternalServiceError(f"Could not download resource, invalid status: {url}")
             return res
-        except Exception as e:
+        except requests.RequestException as e:
             return _handle_async_fall(e, fall_strategy)
 
 

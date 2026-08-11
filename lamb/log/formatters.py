@@ -5,12 +5,13 @@ import json
 import logging
 import os
 import zoneinfo
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 try:
     from gunicorn.glogging import SafeAtoms
 except ImportError:
-    SafeAtoms = type("_SafeAtoms")
+    SafeAtoms = str
 
 
 import contextlib
@@ -19,7 +20,7 @@ from lamb.json.encoder import JsonEncoder
 from lamb.log.constants import LAMB_LOG_FORMAT_SIMPLE
 from lamb.utils.core import compact, lazy_default, masked_dict
 
-__all__ = ["MultilineFormatter", "CeleryMultilineFormatter", "RequestJsonFormatter", "CeleryJsonFormatter"]
+__all__ = ["CeleryJsonFormatter", "CeleryMultilineFormatter", "MultilineFormatter", "RequestJsonFormatter"]
 
 # constants
 # BUILTIN_ATTRS - would be removed from extra
@@ -135,19 +136,19 @@ class _BaseJsonFormatter(_BaseFormatter):
 
     json_lib = json
 
-    @lazy_default(list())
+    @lazy_default([])
     def settings_json_hiding_fields(self) -> list[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_HIDE
 
-    @lazy_default(list())
+    @lazy_default([])
     def settings_extra_masking_keys(self) -> list[str]:
         from django.conf import settings
 
         return settings.LAMB_LOG_JSON_EXTRA_MASKING
 
-    @lazy_default(dict())
+    @lazy_default({})
     def settings_severity_mapping(self):
         from django.conf import settings
 
@@ -230,7 +231,7 @@ class _BaseJsonFormatter(_BaseFormatter):
 
         return result
 
-    def format(self, record):  # noqa: A003
+    def format(self, record):
         message = record.getMessage()
         json_record = self.json_record(message, record)
         return self.to_json(json_record)
@@ -243,7 +244,7 @@ class CeleryMixin:
 
         return get_current_task
 
-    def format(self, record: logging.LogRecord):  # noqa: A003
+    def format(self, record: logging.LogRecord):
         task = self.get_current_task()
         if task and task.request:
             record.__dict__.update(task_id=task.request.id, task_name=task.name)
@@ -295,7 +296,7 @@ class MultilineFormatter(_BaseFormatter):
         return message
 
     # contract
-    def format(self, record: logging.LogRecord) -> str:  # noqa: A003
+    def format(self, record: logging.LogRecord) -> str:
         if self.usesTime():
             record.asctime = self.formatTime(record, self.datefmt)
 
@@ -371,7 +372,7 @@ class RequestJsonFormatter(_BaseJsonFormatter):
             try:
                 resolved = resolve(request.path)
                 result["url_name"] = ":".join(compact(resolved.app_name, resolved.url_name))
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
         return result

@@ -15,27 +15,27 @@ import dateutil
 from lamb.exc import ApiError, InvalidParamTypeError, InvalidParamValueError, ProgrammingError
 
 __all__ = [
-    "transform_boolean",
-    "transform_date",
-    "transform_datetime",
-    "transform_string_enum",
-    "transform_uuid",
-    "transform_prefixed_tsquery",
-    "transform_datetime_seconds_int",
-    "transform_datetime_milliseconds_int",
-    "transform_datetime_milliseconds_float",
-    "transform_datetime_microseconds_int",
-    "transform_datetime_iso",
-    "transform_datetime_iso_auto",
-    "transform_datetime_iso_microseconds",
-    "transform_datetime_iso_milliseconds",
-    "transform_datetime_iso_auto_zulu",
-    "transform_datetime_iso_milliseconds_zulu",
-    "transform_datetime_iso_microseconds_zulu",
-    "transform_typed_list",
     "tf_list_int",
     "tf_list_string",
     "tf_list_uuid",
+    "transform_boolean",
+    "transform_date",
+    "transform_datetime",
+    "transform_datetime_iso",
+    "transform_datetime_iso_auto",
+    "transform_datetime_iso_auto_zulu",
+    "transform_datetime_iso_microseconds",
+    "transform_datetime_iso_microseconds_zulu",
+    "transform_datetime_iso_milliseconds",
+    "transform_datetime_iso_milliseconds_zulu",
+    "transform_datetime_microseconds_int",
+    "transform_datetime_milliseconds_float",
+    "transform_datetime_milliseconds_int",
+    "transform_datetime_seconds_int",
+    "transform_prefixed_tsquery",
+    "transform_string_enum",
+    "transform_typed_list",
+    "transform_uuid",
 ]
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ def transform_date(value: datetime | date | str, **kwargs) -> datetime.date:
 _ISO_MSEC_REGEX = r"(?P<prefix>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?P<seconds>\.\d{1,3})(?P<suffix>\+\d{2}:\d{2})"
 
 
-def transform_datetime(value: datetime | date | str | int | float, __format=None, **kwargs) -> datetime:
+def transform_datetime(value: datetime | date | str | float, __format=None, **kwargs) -> datetime:
     from django.conf import settings
 
     from lamb.utils import datetime_begin
@@ -213,7 +213,7 @@ def transform_datetime_iso_auto_zulu(value: datetime) -> str:
 ET = TypeVar("ET")
 
 
-def transform_string_enum(value: str, enum_class: type[ET], key: str | None = None) -> ET:
+def transform_string_enum[ET](value: str, enum_class: type[ET], key: str | None = None) -> ET:
     """Transforms string version into string based Enum"""
     if isinstance(value, enum_class):
         return value
@@ -241,7 +241,7 @@ def transform_string_enum(value: str, enum_class: type[ET], key: str | None = No
 
 
 @singledispatch
-def transform_typed_list(
+def transform_typed_list[ET](
     value: object | ET | list[ET], cls: type[ET], convert: bool = False, key: str | None = None, **_
 ) -> list[ET]:
     if isinstance(value, cls):
@@ -276,7 +276,7 @@ def transform_typed_list(
 
 
 @transform_typed_list.register(str)
-def _transform_typed_list(value: str, cls: type[ET], skip_empty: bool = True, separator: str = ",", **kwargs) -> ET:
+def _transform_typed_list[ET](value: str, cls: type[ET], skip_empty: bool = True, separator: str = ",", **kwargs) -> ET:
     value = value.split(separator)
     if skip_empty:
         value = [v for v in value if len(v) > 0]

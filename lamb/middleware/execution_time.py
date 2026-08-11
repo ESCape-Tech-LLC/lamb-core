@@ -109,7 +109,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             resolved = resolve(request.path)
             metric.app_name = resolved.app_name
             metric.url_name = resolved.url_name
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         # finalize meter, collect markers and append context
@@ -139,7 +139,7 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                     marker.percentage = m[3]
                     metric.markers.append(marker)
         except Exception:
-            pass
+            logger.exception(f"<{self.__class__.__name__}>. metrics store failed")
 
         # store: database
         if request.method not in self._settings_skip_methods and self._settings_should_store:
@@ -152,7 +152,6 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                     db_session.commit()
             except Exception as e:
                 logger.error(f"<{self.__class__.__name__}>. metrics store failed: {e}")
-                pass
 
         # store: logging
         if level_total := self._settings_log_total_level:
@@ -179,12 +178,12 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
                 }
                 logger.log(level_total, msg, extra=extra)
 
-        if level_markers := self._settings_log_markers_level:
-            if time_measure is not None:
-                for index, m in enumerate(time_measure.get_log_list()):
-                    logger.log(level_markers, f"<{self.__class__.__name__}>. [{index}] {m}")
+        if (level_markers := self._settings_log_markers_level) and time_measure is not None:
+            for index, m in enumerate(time_measure.get_log_list()):
+                logger.log(level_markers, f"<{self.__class__.__name__}>. [{index}] {m}")
 
     # lifecycle
+    # TODO: switch to async pure version
     def process_request(self, request: LambRequest):
         logger.debug(f"<{self.__class__.__name__}>: Start - attaching etm")
         self._start(request=request)

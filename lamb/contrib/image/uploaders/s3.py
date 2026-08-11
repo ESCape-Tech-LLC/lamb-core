@@ -8,7 +8,8 @@ from boto3.session import Session as AWSSession
 from django.conf import settings
 
 from lamb import exc
-from lamb.service.aws.s3 import S3BucketConfig, S3Uploader
+from lamb.service.aws.config import S3BucketConfig
+from lamb.service.aws.s3engine import S3Engine
 from lamb.utils import LambRequest
 
 from .base import BaseUploader, PILImage
@@ -30,7 +31,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             logger.warning("s3_config not provided -> try auto discover from settings.LAMB_AWS_CONFIG['default']")
             conn_cfg = settings.LAMB_AWS_CONFIG["default"]
 
-        self._s3_uploader = S3Uploader(conn_cfg=conn_cfg)
+        self._s3_uploader = S3Engine(config=conn_cfg)
 
     def store_image(
         self,
@@ -64,7 +65,7 @@ class ImageUploadServiceAmazonS3(BaseUploader):
             # upload image
             try:
                 uploaded_url = self._s3_uploader.put_object(
-                    body=tf, relative_path=relative_path, file_type=image_mime_type, private=private
+                    body=tf, path=relative_path, file_type=image_mime_type, private=private
                 )
                 return uploaded_url
             except Exception as e:

@@ -4,7 +4,6 @@ import logging
 from django.conf import settings
 
 from lamb.db.context import lamb_db_context
-from lamb.db.session import lamb_db_session_maker
 from lamb.middleware.base import LambMiddlewareMixin
 from lamb.utils import LambRequest
 

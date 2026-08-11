@@ -5,10 +5,11 @@ from django.http import HttpResponse
 from lamb.exc import NotAllowedMethodError
 from lamb.rest.rest_view import RestView
 
-__all__ = ["rest_allowed_http_methods", "a_rest_allowed_http_methods"]
+__all__ = ["a_rest_allowed_http_methods", "rest_allowed_http_methods"]
 
 
 # TODO: combine in one decorator agnostic to sync/async
+# TODO: migrate to base django views - decorator actually not required
 
 
 def rest_allowed_http_methods(method_list):

@@ -6,7 +6,6 @@ import functools
 import importlib
 import random
 import string
-import sys
 import types
 import urllib.parse
 import warnings
@@ -19,20 +18,20 @@ import furl
 __all__ = [
     "DeprecationClassHelper",
     "DeprecationClassMixin",
+    "class_or_instance_method",
     "compact",
-    "import_by_name",
-    "random_string",
-    "masked_url",
-    "masked_dict",
-    "masked_string",
+    "get_full_cls_instance_name",
     "get_redis_url",
-    "list_chunks",
+    "import_by_name",
     "lazy",
-    "lazy_ro",
     "lazy_default",
     "lazy_default_ro",
-    "class_or_instance_method",
-    "get_full_cls_instance_name",
+    "lazy_ro",
+    "list_chunks",
+    "masked_dict",
+    "masked_string",
+    "masked_url",
+    "random_string",
 ]
 
 
@@ -136,7 +135,7 @@ def random_string(length: int = 10, char_set: str = string.ascii_letters + strin
 CT = TypeVar("CT")
 
 
-def list_chunks(lst: list[CT], n: int) -> Generator[list[CT], None, None]:
+def list_chunks[CT](lst: list[CT], n: int) -> Generator[list[CT]]:
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
@@ -145,7 +144,7 @@ def list_chunks(lst: list[CT], n: int) -> Generator[list[CT], None, None]:
 def get_redis_url(
     host: str = "localhost",
     port: int = 6379,
-    password: str = None,
+    password: str | None = None,
     db: int = 0,
     username: str | None = None,
 ) -> str:
@@ -300,7 +299,7 @@ class lazy:
             name = f"_{owner.__name__}{name}"
 
         if not isinstance(getattr(owner, name), cls):
-            raise AttributeError(f"{owner.__name__}.{name}' is not a {cls.__name__} attribute")
+            raise TypeError(f"{owner.__name__}.{name}' is not a {cls.__name__} attribute")
 
         if name in inst.__dict__:
             del inst.__dict__[name]

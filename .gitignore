@@ -1,24 +1,108 @@
+# def: OS artifacts
+**/.DS_Store
 .DS_Store
 .idea
+.vscode
 *.pyc
-docs/build/
-env/
 
-tests/static/*
-!tests/static/.gitkeep
+# def: byte-compiled / optimized
+__pycache__/
+.pytest_cache/
+*.py[cod]
 
-logs/*
-!logs/.keep
+# def: build artefacts
+*.so
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+include/
+man/
+venv/
+*.egg-info/
+.installed.cfg
+*.egg
+build.sh
 
+# def: unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# def: app artifacts
+static/*
+!static/.gitkeep
+log/*
+!log/.gitkeep
+tmp/*
+!tmp/.gitkeep
 run/*
-!run/.keep
+!run/.gitkeep
+bkp/*
+!bkp/.gitkeep
+crt/*
+!crt/.gitkeep
 
+# def: data
+data/*
+data/geoip/*
+!data/.gitkeep
+!data/geoip/.gitkeep
+
+
+# def: envs
+env/
+.env
+.env.api
+.env.secrets
+.env.host
+.env.dev
+.env.prod
+
+# def: playgrounds and utils
+snippets.sh
+playground*.py
+playground*.ipynb
+playground*.json
+playground*.sh
+playground*.sql
+playground*.xml
+playground*.init
+playground*.csv
+playground*.md
+!playground-base.ipynb
+!playground-base-pod.ipynb
+
+# def: dev tools
+pre-commit.log
 celerybeat.pid
 celerybeat-schedule.db
-./config.py
-/*.egg-info
+celerybeat-schedule
+celerybeat-schedule*
 
-playground.py
-build/
+# def: locks
+# yeap, now we ignore locks
+Cargo.lock
+uv.lock
 
-pre-commit.log
+# app: <add app specific here>
+
+# app: writerside
+docs/Writerside/topics/api/*
+!docs/Writerside/topics/api/.gitkeep
+docs/Writerside/topics/schemas/*
+!docs/Writerside/topics/schemas/.gitkeep
+
+# sbom
+sbom-esi-backend.json
+sbom-esi-backend-update.json
+sbom-esi-backend-update.odt
+sbom-requirements.txt

@@ -38,7 +38,7 @@ class ExecutionTimeMeter:
         self.start_time = time.time()
         self.context = None
 
-    def append_marker(self, message: str = None):
+    def append_marker(self, message: str | None = None):
         """Appends new marker to measures series"""
         self._markers.append(ExecutionTimeMeter.Marker(message))
 
@@ -51,7 +51,7 @@ class ExecutionTimeMeter:
 
         total_elapsed = self.get_total_time()
 
-        result = list()
+        result = []
 
         previous_timestamp = self.start_time
         for marker in self._markers:
@@ -74,11 +74,11 @@ class ExecutionTimeMeter:
         ]
         return result
 
-    def get_log_messages(self, header: str = None):
+    def get_log_messages(self, header: str | None = None):
         total_elapsed = self.get_total_time()
         measurements = self.get_measurements()
 
-        message_elements = list()
+        message_elements = []
         final_header = header + " measures: " if isinstance(header, str) else "Time measures: "
         message_elements.append(final_header)
         message_elements.append(f"Total time: {total_elapsed:.6f} sec.")
@@ -89,11 +89,11 @@ class ExecutionTimeMeter:
 
         return message_elements
 
-    def log_marks(self, header: str = None):
+    def log_marks(self, header: str | None = None):
         """Log collected markers using standard logging module"""
         try:
             message_elements = self.get_log_messages(header)
             message = "\n".join(message_elements)
             logger.info(message)
-        except Exception:
+        except Exception:  # noqa: S110
             pass
