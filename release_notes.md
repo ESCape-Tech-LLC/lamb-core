@@ -1,3 +1,9 @@
+# 3.6.3
+
+- dep: add dotenv
+- feat: rename command alchemy_create to lamb_alchemy_create
+- feat: add new lamb_env_bust command
+
 # 3.6.2
 
 - feat: log records include logger name in extra; ref: styling
