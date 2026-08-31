@@ -133,6 +133,7 @@ _JSON_DUMP_IMPL = lazy_object_proxy.Proxy(_get_dump_engine)
 _JSON_CONTENT_TYPE = "application/json; charset=utf8"
 
 
+# response
 class JsonResponse(HttpResponse):
     def __init__(self, data=None, status=200, callback=None, request=None, **kwargs):
         # determine content_type

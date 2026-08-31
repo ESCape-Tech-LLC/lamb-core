@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from lamb.db.config import Config, parse_django_config
+from lamb.db.config import LambDbConfig, parse_django_config
 from lamb.exc import ServerError
 from lamb.utils import get_settings_value
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # TODO: modify to handle config dict version - cause on start LAMB_DB_CONFIG is not exist
 _LAMB_DB_CONFIG = get_settings_value("LAMB_DB_CONFIG", req_type=dict, default=None)
 
-_configs_registry: dict[str, Config] = {}
+_configs_registry: dict[str, LambDbConfig] = {}
 if _LAMB_DB_CONFIG is None:
     warnings.warn(
         "parsing old style django DATABASE config, should migrate to LAMB_DB_CONFIG",
@@ -43,10 +43,10 @@ if _LAMB_DB_CONFIG is None:
     _configs_registry = parse_django_config()
 else:
     for _db_key, raw_config in _LAMB_DB_CONFIG.items():
-        if isinstance(raw_config, Config):
+        if isinstance(raw_config, LambDbConfig):
             _configs_registry[_db_key] = raw_config
         else:
-            _configs_registry[_db_key] = Config(**raw_config)
+            _configs_registry[_db_key] = LambDbConfig(**raw_config)
 
 # engines registry
 _engines_registry: dict[tuple[str, bool, bool], Engine | AsyncEngine] = {}
@@ -61,7 +61,7 @@ def get_engine(db_key: str, pooled: bool, sync: bool) -> Engine | AsyncEngine:
         logger.critical(f"unknown db key: {db_key}. known registry - {_configs_registry}")
         raise ServerError("Database session constructor failed to get database params")
 
-    db_config: Config = _configs_registry[db_key]
+    db_config: LambDbConfig = _configs_registry[db_key]
     connection_string = db_config.connection_string_(sync=sync, pooled=pooled)
     engine_options = db_config.engine_options_(sync=sync, pooled=pooled)
 
@@ -87,7 +87,7 @@ def get_session_maker(db_key: str = "default", pooled: bool = True, sync: bool =
     if key in _maker_registry:
         return _maker_registry[key]
 
-    database_config: Config = _configs_registry[db_key]
+    database_config: LambDbConfig = _configs_registry[db_key]
     engine = get_engine(db_key, pooled, sync)
     session_options = database_config.session_options_(sync=sync, pooled=pooled)
 
@@ -113,7 +113,7 @@ def get_declarative_base(db_key: str, pooled: bool, sync: bool):
         _metadata = _result.metadata
         _metadata.bind = get_engine(db_key, pooled=pooled, sync=sync)
         _declarative_registry[cls_name] = _result
-    logger.debug(f"did return declarative: {cls_name}")
+    logger.debug(f"get_declarative_base:  result={cls_name}")
     return _declarative_registry[cls_name]
 
 

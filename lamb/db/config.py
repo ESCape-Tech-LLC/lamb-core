@@ -9,10 +9,16 @@ from typing import Any
 import furl
 
 from lamb.exc import ImproperlyConfiguredError, ServerError
+from lamb.json.encoder import JsonEncoder
 from lamb.utils import get_settings_value
 from lamb.utils.core import compact, masked_url
 
-__all__ = ["Config", "parse_django_config"]
+try:
+    import orjson
+except ImportError:
+    orjson = None
+
+__all__ = ["LambDbConfig", "parse_django_config"]
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +29,22 @@ class InvalidDatabaseConfigError(ImproperlyConfiguredError):
 
 auto = object()
 
+_encoder = JsonEncoder()
+
+
+def _json_serializer(obj) -> str | bytes:
+    if orjson is not None:
+        return orjson.dumps(
+            obj,
+            default=_encoder.default,
+            option=orjson.OPT_PASSTHROUGH_DATETIME | orjson.OPT_NON_STR_KEYS,
+        ).decode("utf-8")
+    else:
+        return json.dumps(obj, default=_encoder.default, ensure_ascii=False)
+
 
 @dataclasses.dataclass(frozen=True)
-class Config:
+class LambDbConfig:
     driver: str | None = None
     async_driver: str | None = None
     host: str | list[str] | None = None
@@ -91,7 +110,7 @@ class Config:
         if self.db_name is not None:
             result.path.add(self.db_name)
 
-        logger.debug(f"<{self.__class__.__name__}>. driver would be used: {_driver}")
+        logger.debug(f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] driver: {_driver}")
         if _driver in ["sqlite+pysqlite", "sqlite+pysqlcipher", "sqlite+aiosqlite"] and (
             self.username is None or len(self.username) == 0
         ):
@@ -102,9 +121,7 @@ class Config:
         if _connect_options is not None and len(_connect_options) > 0:
             result.args.update(_connect_options)
 
-        logger.debug(
-            f"<{self.__class__.__name__}>. connection string constructed: {sync, pooled=} -> {masked_url(result)}"
-        )
+        logger.debug(f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] connection_string_: {masked_url(result)}")
         return result.url
 
     # connect options
@@ -115,21 +132,16 @@ class Config:
             # default
             result = {}
             logger.debug(
-                f"<{self.__class__.__name__}>. connection options constructed from DEFAULT: {sync, pooled=} -> {result}"
+                f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] connect_options_: {result=}, mode=DEFAULTS,"
             )
-            # return {}
         elif isinstance(_options, dict):
             result = _options
-            logger.debug(
-                f"<{self.__class__.__name__}>. connection options constructed from DICT: {sync, pooled=} -> {result}"
-            )
+            logger.debug(f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] connect_options_: {result=}, mode=DICT")
         elif callable(_options):
             result = _options(self, sync, pooled)
             logger.debug(
-                f"<{self.__class__.__name__}>. "
-                f"connection options constructed from CALLABLE: {sync, pooled=} -> {result}"
+                f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] connect_options_: {result=}, mode=CALLABLE"
             )
-            # return _options(self, sync, pooled)
         else:
             raise InvalidDatabaseConfigError
 
@@ -141,13 +153,22 @@ class Config:
 
         if _options is None:
             # default
-            return {}
+            result = {}
+            logger.debug(
+                f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] session_options_: {result=}, mode=DEFAULTS"
+            )
         elif isinstance(_options, dict):
-            return _options
+            result = _options
+            logger.debug(f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] session_options_: {result=}, mode=DICT")
         elif callable(_options):
-            return _options(self, sync, pooled)
+            result = _options(self, sync, pooled)
+            logger.debug(
+                f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] session_options_: {result=}, mode=CALLABLE"
+            )
         else:
             raise InvalidDatabaseConfigError
+
+        return result
 
     # engine options
     def engine_options_(self, sync: bool, pooled: bool) -> dict[str, Any]:
@@ -157,17 +178,13 @@ class Config:
         _options = self.engine_options if sync else self.aengine_options
 
         if _options is None:
-            from lamb.json.encoder import JsonEncoder  # TODO: check move to top level
-
             # extract driver
             _driver = self.driver if sync else self.async_driver
 
             if "+" in _driver:
                 _driver = _driver.rpartition("+")[2]
 
-            result: dict[str, Any] = {
-                "json_serializer": lambda obj: json.dumps(obj, cls=JsonEncoder, ensure_ascii=False)
-            }
+            result: dict[str, Any] = {"json_serializer": _json_serializer}
 
             if _driver == "psycopg2":
                 result.update(
@@ -199,28 +216,21 @@ class Config:
                     if self.multi_host:
                         result.update({"pool_pre_ping": True})
             logger.debug(
-                f"<{self.__class__.__name__}>. "
-                f"engine options constructed from DEFAULT: {sync, pooled, _driver=} -> {result}"
+                f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] engine_options_: {result=}, mode=DEFAULTS, driver={_driver}"
             )
-            # return result
         elif isinstance(_options, dict):
             result = _options
-            logger.debug(
-                f"<{self.__class__.__name__}>. engine options constructed from DICT: {sync, pooled=} -> {result}"
-            )
-            # return _options
+            logger.debug(f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] engine_options_: {result=}, mode=DICT")
         elif callable(_options):
             result = _options(self, sync, pooled)
-            logger.debug(
-                f"<{self.__class__.__name__}>. engine options constructed from CALLABLE: {sync, pooled=} -> {result}"
-            )
+            logger.debug(f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] engine_options_: {result=}, mode=CALLABLE")
         else:
             raise InvalidDatabaseConfigError
 
         return result
 
 
-def parse_django_config() -> dict[str, Config]:
+def parse_django_config() -> dict[str, LambDbConfig]:
     from django.conf import settings
 
     result = {}
@@ -231,7 +241,7 @@ def parse_django_config() -> dict[str, Config]:
         if _engine == "sqlite3":
             _engine = "sqlite"
 
-        result[key] = Config(
+        result[key] = LambDbConfig(
             driver=_engine,
             async_driver=None,
             db_name=dct["NAME"],
@@ -257,3 +267,7 @@ def parse_django_config() -> dict[str, Config]:
             raise ServerError("Could not initialize database configs")
 
     return result
+
+
+# deprecation compatibility
+Config = LambDbConfig

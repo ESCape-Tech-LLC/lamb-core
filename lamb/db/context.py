@@ -27,7 +27,7 @@ class lamb_db_context:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         logger.debug(
-            f"<{self.__class__.__name__}>. exit lamb database context (sync): db_key={self._db_key}, sync={self._pooled}"
+            f"<{self.__class__.__name__}>. exit lamb database context (sync): db_key={self._db_key}, pooled={self._pooled}"
         )
         self.db_session.close()
 
@@ -40,6 +40,6 @@ class lamb_db_context:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         logger.debug(
-            f"<{self.__class__.__name__}>. exit lamb database context (async): db_key={self._db_key}, sync={self._pooled}"
+            f"<{self.__class__.__name__}>. exit lamb database context (async): db_key={self._db_key}, pooled={self._pooled}"
         )
         await self.db_session.close()

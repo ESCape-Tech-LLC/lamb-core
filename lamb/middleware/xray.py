@@ -20,8 +20,12 @@ class LambXRayMiddleware(LambMiddlewareMixin):
     - xline - received from request header or None, aimed to combine several requests under one logical unit
     """
 
+    sync_capable: bool = True
+    async_capable: bool = True
+
+    # utils
     @lazy_default_ro("X-Lamb-XRay")
-    def settings_header_xray(self):
+    def settings_header_xray(self) -> str:
         result = get_settings_value(
             "LAMB_LOG_HEADER_XRAY",
             "LAMB_LOGGING_HEADER_XRAY",
@@ -32,7 +36,7 @@ class LambXRayMiddleware(LambMiddlewareMixin):
         return result
 
     @lazy_default_ro("X-Lamb-XLine")
-    def settings_header_xline(self):
+    def settings_header_xline(self) -> str:
         result = get_settings_value(
             "LAMB_LOG_HEADER_XLINE",
             "LAMB_EVENT_LOGGING_HEADER_TRACKID",
@@ -43,7 +47,7 @@ class LambXRayMiddleware(LambMiddlewareMixin):
         return result
 
     @lazy_default_ro(uuid.NAMESPACE_OID)
-    def settings_x_namespace(self):
+    def settings_x_namespace(self) -> uuid.UUID:
         result = get_settings_value(
             "LAMB_LOG_XHEADERS_NAMESPACE",
             req_type=str,
