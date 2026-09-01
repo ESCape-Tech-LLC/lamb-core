@@ -186,17 +186,50 @@ class LambDbConfig:
 
             result: dict[str, Any] = {"json_serializer": _json_serializer}
 
-            if _driver == "psycopg2":
+            if sync and _driver in ("psycopg", "psycopg2"):
                 result.update(
                     {
                         "insertmanyvalues_page_size": 10000,
-                        "connect_args": compact({"connect_timeout": 5, "application_name": self.app_name}),
+                        "connect_args": compact(
+                            {
+                                "connect_timeout": 5,
+                                "application_name": self.app_name,
+                            }
+                        ),
                     }
                 )
                 if pooled:
-                    result.update({"pool_recycle": 3600, "pool_size": 5, "max_overflow": 10})
-                    if self.multi_host:
-                        result.update({"pool_pre_ping": True})
+                    result.update(
+                        {
+                            "pool_recycle": 1800,
+                            "pool_timeout": 15,
+                            "pool_size": 10,
+                            "max_overflow": 10,
+                            "pool_pre_ping": True,
+                        }
+                    )
+            elif _driver == "psycopg" and not sync:
+                result.update(
+                    {
+                        "insertmanyvalues_page_size": 10000,
+                        "connect_args": compact(
+                            {
+                                "connect_timeout": 5,
+                                "application_name": self.app_name,
+                            }
+                        ),
+                    }
+                )
+                if pooled:
+                    result.update(
+                        {
+                            "pool_recycle": 1800,
+                            "pool_timeout": 15,
+                            "pool_size": 100,
+                            "max_overflow": 100,
+                            "pool_pre_ping": True,
+                        }
+                    )
             elif _driver == "asyncpg":
                 result.update(
                     {
@@ -212,9 +245,15 @@ class LambDbConfig:
                     }
                 )
                 if pooled:
-                    result.update({"pool_size": 100, "max_overflow": 100})
-                    if self.multi_host:
-                        result.update({"pool_pre_ping": True})
+                    result.update(
+                        {
+                            "pool_recycle": 1800,
+                            "pool_timeout": 15,
+                            "pool_size": 100,
+                            "max_overflow": 100,
+                            "pool_pre_ping": True,
+                        }
+                    )
             logger.debug(
                 f"<{self.__class__.__name__}>. [{sync=}, {pooled=}] engine_options_: {result=}, mode=DEFAULTS, driver={_driver}"
             )
