@@ -3,33 +3,44 @@ from __future__ import annotations
 import contextlib
 import datetime
 import logging
+from typing import Any
 
 from django.conf import settings
 from django.http import HttpResponse
 from django.urls import resolve
-from django.utils.deprecation import MiddlewareMixin
 
 from lamb.db.context import lamb_db_context
+from lamb.exc import ApiError
 from lamb.execution_time import ExecutionTimeMeter
 from lamb.execution_time.model import LambExecutionTimeMarker, LambExecutionTimeMetric
-from lamb.utils import LambRequest, dpath_value
+from lamb.middleware.base import LambMiddlewareMixin
+from lamb.utils import LambRequest, compact, dpath_value
 from lamb.utils.core import lazy_default_ro
 from lamb.utils.transformers import tf_list_string, transform_boolean
+from lamb.utils.validators import v_opt_string
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["LambExecutionTimeMiddleware"]
 
-# TODO: modify to act like StatsD daemon
-# TODO: migrate to async/sync version
 
+class LambExecutionTimeMiddleware(LambMiddlewareMixin):
+    """Execution time middleware
 
-class LambExecutionTimeMiddleware(MiddlewareMixin):
-    @classmethod
-    def append_mark(cls, request: LambRequest, message: str):
-        """Appends new marker to request"""
-        with contextlib.suppress(Exception):
-            request.lamb_execution_meter.append_marker(message)
+    Acting logic:
+        - expects that it is not first exception handler in chains - so not processing sync/async `process_exception`
+        - so expects that would work over success/not success `HttpResponse` object as response
+        - if response object contains hidden field `_lamb_error` produced by `LambRestApiJsonMiddleware` would respect it
+        - on start attach `ExecutionTimeMeter` instance to request
+        - on finish convert this instance to `LambdaExecutionTimeMetric` object with relevant response/exception status_codes and details
+        - collected metric+markers - would be printed in log according to LAMB_EXECUTION_TIME_... settings
+        - collected metric+markers - would be stored in database according to LAMB_EXECUTION_TIME_... settings
+         # TODO: collect metrics in storage and flush in independent subprocess
+         # TODO: respect configuration of percent based log storage in database - reduce count for handbooks, ping...
+    """
+
+    sync_capable = True
+    async_capable = True
 
     # settings: memoize
     @lazy_default_ro(default=[])
@@ -89,20 +100,68 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         logger.debug(f"<{self.__class__.__name__}>. settings_log_markers_level: {result}")
         return result
 
-    # utils
+    # public contract
+    @classmethod
+    def append_mark(cls, request: LambRequest, message: str):
+        """Appends new marker to request"""
+        with contextlib.suppress(Exception):
+            request.lamb_execution_meter.append_marker(message)
+
+    # lifecycle
+    def __call__(self, request: LambRequest):
+        # sync/async adaption
+        if self.async_mode:
+            return self.__acall__(request)
+
+        # processing
+        logger.debug(f"<{self.__class__.__name__}>. Processing __call__")
+        self._start(request)
+
+        response = self.get_response(request)
+        metric, exception = self._metrics_finalize(request, response)
+        self._metrics_log(request=request, metric=metric, response=response, exception=exception)
+        self._metrics_store_db(request=request, metric=metric)
+        return response
+
+    async def __acall__(self, request: LambRequest):
+        # processing
+        logger.debug(f"<{self.__class__.__name__}>. Processing __acall__")
+        self._start(request)
+
+        response = await self.get_response(request)
+        metric, exception = self._metrics_finalize(request, response)
+        self._metrics_log(request=request, metric=metric, response=response, exception=exception)
+        await self._a_metrics_store_db(request=request, metric=metric)
+        return response
+
+    # utilities
     def _start(self, request):
         """Appends metric object to request"""
         request.lamb_execution_meter = ExecutionTimeMeter()
+        logger.debug(f"<{self.__class__.__name__}>. start: did attach etm instance")
 
-    def _finish(self, request: LambRequest, response: HttpResponse | None, exception: Exception | None):
-        """Stores collected data in database and logs"""
+    def _metrics_finalize(
+        self, request: LambRequest, response: HttpResponse | None = None
+    ) -> tuple[LambExecutionTimeMetric, Exception | None]:
+        """Append finish time mark to internal meter if exists and create corresponding metric record"""
+        # auto extract exception info of wellknown forms
+        if isinstance(response, HttpResponse) and hasattr(response, "_lamb_error"):
+            exception = response._lamb_error
+        else:
+            exception = None
+
         # prepare base container and record
         metric = LambExecutionTimeMetric()
         metric.http_method = request.method
         metric.headers = dict(request.headers)
         metric.args = dict(request.GET) or None
         metric.device_info = request.lamb_device_info
-        metric.status_code = response.status_code if response else None
+        if response is not None:
+            metric.status_code = response.status_code
+        elif isinstance(exception, ApiError):
+            metric.status_code = exception.status_code
+        else:
+            metric.status_code = None
 
         # append app_name and url_name
         try:
@@ -113,24 +172,23 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
             pass
 
         # finalize meter, collect markers and append context
-        time_measure = None
         try:
-            time_measure = request.lamb_execution_meter
+            meter = request.lamb_execution_meter
 
-            if time_measure.context:
-                if isinstance(time_measure.context, list | tuple | set | dict):
-                    metric.context = time_measure.context
+            if meter.context:
+                if isinstance(meter.context, list | tuple | set | dict):
+                    metric.context = meter.context
                 else:
                     logger.warning(
                         f"<{self.__class__.__name__}>. Invalid request.lamb_execution_meter.context value. "
                         f"It will not be saved to DB"
                     )
 
-            time_measure.append_marker("finish")
-            metric.start_time = datetime.datetime.fromtimestamp(time_measure.start_time)
-            metric.elapsed_time = time_measure.get_total_time()
+            meter.append_marker("finish")
+            metric.start_time = datetime.datetime.fromtimestamp(meter.start_time)
+            metric.elapsed_time = meter.get_total_time()
             if settings.LAMB_EXECUTION_TIME_COLLECT_MARKERS:
-                measures = time_measure.get_measurements()
+                measures = meter.get_measurements()
                 for m in measures:
                     marker = LambExecutionTimeMarker()
                     marker.marker = m[0]
@@ -141,58 +199,80 @@ class LambExecutionTimeMiddleware(MiddlewareMixin):
         except Exception:
             logger.exception(f"<{self.__class__.__name__}>. metrics store failed")
 
-        # store: database
-        if request.method not in self._settings_skip_methods and self._settings_should_store:
-            try:
-                # logger.warning(f'analyze store rate: {self.store_rates}')
-                # database
-                with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
-                    # make in context to omit invalid commits under exceptions
-                    db_session.add(metric)
-                    db_session.commit()
-            except Exception as e:
-                logger.error(f"<{self.__class__.__name__}>. metrics store failed: {e}")
+        # append exception info
+        if exception is not None:
+            exc_info: dict[str, Any] = {
+                "exc": v_opt_string(str(exception)),
+                "exc_cls": str(exception.__class__.__name__),
+            }
+            if isinstance(exception, ApiError):
+                exc_info["app_error_code"] = exception.app_error_code
+                if _wrapped := exception._wrapped_exception:
+                    exc_info["wrapped"] = {
+                        "exc": v_opt_string(str(_wrapped)),
+                        "exc_cls": str(_wrapped.__class__.__name__),
+                    }
+            metric.exc_info = exc_info
+        return metric, exception
 
-        # store: logging
+    def _metrics_log(
+        self,
+        request: LambRequest,
+        metric: LambExecutionTimeMetric,
+        response: HttpResponse | None = None,
+        exception: Exception | None = None,
+    ):
+        # log: general info
         if level_total := self._settings_log_total_level:
-            msg = (
-                f'"{request.method} {request.get_full_path()}" {request.lamb_execution_meter.get_total_time():.6f} sec.'
-            )
-            extra = {}
+            components = [
+                request.method,
+                request.get_full_path(),
+                f"{metric.elapsed_time:.6f} sec.",
+                metric.status_code,
+            ]
+            should_log = True
             if response is not None:
-                length = len(response.content) if not response.streaming else "<stream>"
-                msg = f"{msg} {response.status_code} {length}"
+                components.append(str(len(response.content)) if not response.streaming else "<streaming>")
                 extra = {
-                    "status_code": response.status_code,
+                    "status_code": metric.status_code,
                     "streaming": response.streaming,
                     "content_length": len(response.content) if not response.streaming else None,
                 }
-                if metric.full_name not in self._settings_skip_urls:
-                    logger.log(level_total, msg, extra=extra)
-            elif exception is not None:
-                msg = f"{msg} {exception.__class__.__name__}"
+                if metric.full_name in self._settings_skip_urls:
+                    should_log = False
+            else:
+                components.append(str(exception.__class__.__name__))
                 extra = {
-                    "status_code": None,
-                    "streaming": None,
-                    "content_length": None,
+                    "status_code": metric.status_code,
                 }
+
+            if should_log:
+                msg = " ".join(str(r) for r in compact(components))
                 logger.log(level_total, msg, extra=extra)
 
-        if (level_markers := self._settings_log_markers_level) and time_measure is not None:
-            for index, m in enumerate(time_measure.get_log_list()):
+        # log: individual steps
+        if level_markers := self._settings_log_markers_level:
+            for index, m in enumerate(metric.markers):
                 logger.log(level_markers, f"<{self.__class__.__name__}>. [{index}] {m}")
 
-    # lifecycle
-    # TODO: switch to async pure version
-    def process_request(self, request: LambRequest):
-        logger.debug(f"<{self.__class__.__name__}>: Start - attaching etm")
-        self._start(request=request)
+    async def _a_metrics_store_db(self, request: LambRequest, metric: LambExecutionTimeMetric):
+        if request.method not in self._settings_skip_methods and self._settings_should_store:
+            try:
+                async with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
+                    db_session.expire_on_commit = False
+                    db_session.add(metric)
+                    await db_session.commit()
+                    logger.debug(f"<{self.__class__.__name__}> DB metrics store: [ASYNC] SUCCES")
+            except Exception as e:
+                logger.error(f"<{self.__class__.__name__}>. DB metrics store: [ASYNC] FAILED {e=}")
 
-    def process_response(self, request: LambRequest, response: HttpResponse) -> HttpResponse:
-        logger.debug(f"<{self.__class__.__name__}>: Finish on response")
-        self._finish(request, response, None)
-        return response
-
-    def process_exception(self, request: LambRequest, exception: Exception):
-        logger.debug(f"<{self.__class__.__name__}>: Finish on exception")
-        self._finish(request, None, exception)
+    def _metrics_store_db(self, request: LambRequest, metric: LambExecutionTimeMetric):
+        if request.method not in self._settings_skip_methods and self._settings_should_store:
+            try:
+                with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
+                    db_session.expire_on_commit = False
+                    db_session.add(metric)
+                    db_session.commit()
+                    logger.debug(f"<{self.__class__.__name__}> DB metrics store: [SYNC] SUCCESS")
+            except Exception as e:
+                logger.error(f"<{self.__class__.__name__}>. DB metrics store: [SYNC] FAILED {e=}")
