@@ -1,3 +1,45 @@
+# 3.6.4
+
+- feat/attention: LambExecutionTimeMetric - new `exc_info` field, would require table recreation of `ALTER TABLE lamb_execution_time_metric ADD COLUMN exc_info JSONB NULL;`
+
+- fix: db_config - JSON serializer not as lambda for psycopg3 memory leak fix
+- feat: db_config - support psycopg3 default connect options
+- ref: db_config - class rename
+- ref: db_config - logging within construct improved and fixed
+- ref: db.context - logging fixed
+- chore: db_config - PostgreSQL defaults for all drivers and cases changed
+  - pool_pre_ping=True
+  - pool_timeout=15
+  - pool_recycle=1800
+  - pool_size=10/max_overflow=10 - for SYNC engine
+  - pool_size=100/max_overflow=100 - for ASYNC engine (would be changed later to 50+20)
+
+- feat: device info - locale parsing with lru cache
+- feat: device info - default locale attach moved from middleware on DeviceInfo init level
+- ref: device info - internal validator changed on v_opt_string
+
+- feat: JsonResponse - add hidden `_lamb_error` attribute desired to analyze within middleware chain
+
+- feat: exc.ApiError - add `_wrapped_exception` attribute to wrap origin exception; 
+- ref: exc.ApiError - repr modified for exception logging
+
+- feat: middleware.rest: completely rewritten for sync/async compatibility
+- feat: middleware.rest: appends `Content-Length` header
+- feat: middleware.rest: attaches `_lamb_error` in case of error on `JsonResponse` object
+- feat: middleware.rest: envelope original exception in `__cause__` of new one for non `ApiError`
+- ref: middleware.rest: swapped lines of logging error info and envelope for non `ApiError` - could impact on logging/analyze logic
+- ref: middleware.rest: `LAMB_ERROR_OVERRIDE_PROCESSOR` removed
+- feat: middleware.execution_time - completely rewritten for sync/async compatibility
+- feat: middleware.execution_time - flush records to database in background task with batches for performance
+- ref: middleware.abstract: sync/async middlewares revised and doc update to respect less context switches
+- ref: middleware.grequest: adapted to better sync/async compatibility
+- ref: middleware.xray: adapted to better sync/async compatibility
+- ref: middleware.device_info: adapted to better sync/async compatibility and default locale attach removed(use cfactory version)
+
+- deprecate: `settings.LAMB_ERROR_OVERRIDE_PROCESSOR`  removed
+- deprecate: ExecutionTimeMeter - invalidate method deprecated, use new instance instead
+
+
 # 3.6.3
 
 - dep: add dotenv
