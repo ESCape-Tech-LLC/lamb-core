@@ -28,12 +28,6 @@ class ExecutionTimeMeter:
             self.timestamp = time.time()
 
     def __init__(self):
-        # self._markers = list()
-        # self.start_time = time.time()
-        # self.context = None
-        self.invalidate()
-
-    def invalidate(self):
         self._markers = []
         self.start_time = time.time()
         self.context = None
