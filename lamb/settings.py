@@ -46,8 +46,6 @@ LAMB_RESPONSE_ENCODER = "lamb.json.encoder.JsonEncoder"
 LAMB_RESPONSE_EXCEPTION_SERIALIZER = None
 LAMB_RESPONSE_DATETIME_TRANSFORMER = "lamb.utils.transformers.transform_datetime_seconds_int"
 
-LAMB_ERROR_OVERRIDE_PROCESSOR = None
-
 
 # image uploading
 LAMB_IMAGE_UPLOAD_QUALITY = 87
