@@ -24,6 +24,10 @@ class LambGRequestMiddleware(LambMiddlewareMixin):
     Drop in replacement for CRequestMiddleware
     """
 
+    sync_capable = True
+    async_capable = True
+
+    # lifecycle
     def before_request(self, request):
         LambGRequestMiddleware.set_request(request)
         logger.debug(f"<{self.__class__.__name__}>: Did attach request to context")
@@ -37,6 +41,7 @@ class LambGRequestMiddleware(LambMiddlewareMixin):
         LambGRequestMiddleware.del_request()
         logger.debug(f"<{self.__class__.__name__}>: Did detach request from context on exception")
 
+    # utilities
     @classmethod
     def get_request(cls, default=None):
         return _request.get()
