@@ -61,6 +61,7 @@ class LambExecutionTimeMetric(ResponseEncodableMixin, DeclarativeBase):
     status_code: Mapped[int | None] = mapped_column(SMALLINT)
     elapsed_time: Mapped[float] = mapped_column(FLOAT, default=0.0, server_default=text("0"))
     context: Mapped[Any | None] = mapped_column(_JSON, nullable=True)
+    exc_info: Mapped[Any | None] = mapped_column(_JSON, nullable=True)
 
     # dynamic
     @hybrid_property
