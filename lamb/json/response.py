@@ -135,6 +135,8 @@ _JSON_CONTENT_TYPE = "application/json; charset=utf8"
 
 # response
 class JsonResponse(HttpResponse):
+    _lamb_error: Exception | None = None
+
     def __init__(self, data=None, status=200, callback=None, request=None, **kwargs):
         # determine content_type
         super().__init__(content_type=_JSON_CONTENT_TYPE, status=status, **kwargs)
