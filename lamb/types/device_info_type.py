@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-from functools import partial
+from functools import lru_cache
 from typing import Any, TypeVar
 
 from django.conf import settings
@@ -18,11 +18,24 @@ from lamb.json.mixins import ResponseEncodableMixin
 from lamb.types.locale_type import LambLocale
 from lamb.utils import LambRequest, dpath_value
 from lamb.utils.core import import_by_name
-from lamb.utils.validators import validate_length
+from lamb.utils.validators import v_opt_string
 
 __all__ = ["DeviceInfo", "DeviceInfoType", "device_info_factory", "get_device_info_class"]
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_LOCALE = LambLocale.parse(settings.LAMB_DEVICE_DEFAULT_LOCALE)
+
+
+@lru_cache
+def convert_locale_or_default(locale: str | None):
+    if locale is None:
+        return _DEFAULT_LOCALE
+    try:
+        return LambLocale.parse(locale)
+    except Exception as e:
+        logger.error(f"get_locale. parsing failed: {locale=}, {e=}")
+        return _DEFAULT_LOCALE
 
 
 # info class
@@ -41,34 +54,57 @@ class DeviceInfo(ResponseEncodableMixin):
     ip_routable: bool | None = None
     geoip2_info: dict[str, Any] | None = None
 
-    # construct
-    def __post_init__(self):
-        if isinstance(self.device_locale, str):
-            self.device_locale = LambLocale.parse(self.device_locale)
-
     @classmethod
     def parse_request(cls, request: LambRequest) -> dict[str, Any]:
         try:
             # extract fields
-            _transform = partial(validate_length, allow_none=True, empty_as_none=True, trimming=True)
-
             device_family = dpath_value(
-                request.META, settings.LAMB_DEVICE_INFO_HEADER_FAMILY, str, transform=_transform, default=None
+                request.META,
+                settings.LAMB_DEVICE_INFO_HEADER_FAMILY,
+                str,
+                transform=v_opt_string,
+                default=None,
             )
             device_platform = dpath_value(
-                request.META, settings.LAMB_DEVICE_INFO_HEADER_PLATFORM, str, transform=_transform, default=None
+                request.META,
+                settings.LAMB_DEVICE_INFO_HEADER_PLATFORM,
+                str,
+                transform=v_opt_string,
+                default=None,
             )
             device_os_version = dpath_value(
-                request.META, settings.LAMB_DEVICE_INFO_HEADER_OS_VERSION, str, transform=_transform, default=None
+                request.META,
+                settings.LAMB_DEVICE_INFO_HEADER_OS_VERSION,
+                str,
+                transform=v_opt_string,
+                default=None,
             )
             device_locale = dpath_value(
-                request.META, settings.LAMB_DEVICE_INFO_HEADER_LOCALE, str, transform=_transform, default=None
+                request.META,
+                settings.LAMB_DEVICE_INFO_HEADER_LOCALE,
+                str,
+                transform=v_opt_string,
+                default=None,
             )
             app_version = dpath_value(
-                request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_VERSION, str, transform=_transform, default=None
+                request.META,
+                settings.LAMB_DEVICE_INFO_HEADER_APP_VERSION,
+                str,
+                transform=v_opt_string,
+                default=None,
             )
-            app_build = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_BUILD, int, default=None)
-            app_id = dpath_value(request.META, settings.LAMB_DEVICE_INFO_HEADER_APP_ID, str, default=None)
+            app_build = dpath_value(
+                request.META,
+                settings.LAMB_DEVICE_INFO_HEADER_APP_BUILD,
+                int,
+                default=None,
+            )
+            app_id = dpath_value(
+                request.META,
+                settings.LAMB_DEVICE_INFO_HEADER_APP_ID,
+                str,
+                default=None,
+            )
 
             # ip/geo fields
             if settings.LAMB_DEVICE_INFO_COLLECT_IP:
@@ -119,14 +155,10 @@ class DeviceInfo(ResponseEncodableMixin):
                 geoip2_info = None
 
             # normalize values
+            device_locale = convert_locale_or_default(device_locale)
+
             if device_platform is not None:
                 device_platform = device_platform.lower()
-            if device_locale is not None:
-                try:
-                    device_locale = LambLocale.parse(device_locale)
-                except Exception as e:
-                    logger.debug(f"device_info device_locale parsing failed: {e}")
-                    device_locale = None
 
             # construct and store device info
             result = {
