@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import datetime
 import logging
@@ -22,6 +23,11 @@ from lamb.utils.validators import v_opt_string
 logger = logging.getLogger(__name__)
 
 __all__ = ["LambExecutionTimeMiddleware"]
+
+
+async_db_writer_queue: asyncio.Queue[LambExecutionTimeMetric] = asyncio.Queue()
+async_db_writer_task: asyncio.Task[None] | None = None
+async_db_writer_task_init_lock: asyncio.Lock = asyncio.Lock()
 
 
 class LambExecutionTimeMiddleware(LambMiddlewareMixin):
@@ -255,16 +261,49 @@ class LambExecutionTimeMiddleware(LambMiddlewareMixin):
             for index, m in enumerate(metric.markers):
                 logger.log(level_markers, f"<{self.__class__.__name__}>. [{index}] {m}")
 
-    async def _a_metrics_store_db(self, request: LambRequest, metric: LambExecutionTimeMetric):
-        if request.method not in self._settings_skip_methods and self._settings_should_store:
+    @classmethod
+    async def async_db_writer_worker(cls):
+        while True:
             try:
-                async with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
-                    db_session.expire_on_commit = False
-                    db_session.add(metric)
+                first_item = await async_db_writer_queue.get()  # would wait until item exist
+                batch = [first_item]
+
+                # collect items from queue in batch or until end
+                while not async_db_writer_queue.empty() and len(batch) < 500:
+                    batch.append(async_db_writer_queue.get_nowait())
+
+                # put info in database
+                async with lamb_db_context(pooled=False) as db_session:
+                    db_session.add_all(batch)
                     await db_session.commit()
-                    logger.debug(f"<{self.__class__.__name__}> DB metrics store: [ASYNC] SUCCES")
-            except Exception as e:
-                logger.error(f"<{self.__class__.__name__}>. DB metrics store: [ASYNC] FAILED {e=}")
+                    logger.debug(f"<{cls.__name__}> async_db_writer_worker. did store batch: {len(batch)}")
+
+                # finally - mark tasks as done
+                for _ in batch:
+                    async_db_writer_queue.task_done()
+
+            except asyncio.CancelledError:
+                logger.info(f"<{cls.__name__}> async_db_writer_worker. Cancelled - breaking")
+                break
+            except Exception:
+                logger.exception(f"<{cls.__name__}> async_db_writer_worker. FAILED -> sleep to let DB restart")
+                await asyncio.sleep(5)
+
+    async def _a_metrics_store_db(self, request: LambRequest, metric: LambExecutionTimeMetric):
+        global async_db_writer_task
+
+        if async_db_writer_task is None or async_db_writer_task.done():  # call on init/break
+            async with async_db_writer_task_init_lock:
+                if async_db_writer_task is None or async_db_writer_task.done():  # double check - race condition
+                    if async_db_writer_task is None:
+                        logger.info(f"<{self.__class__.__name__}>. Starting async DB writer - INITIAL")
+                    else:
+                        logger.info(f"<{self.__class__.__name__}>. Starting async DB writer - RESTART")
+
+                    loop = asyncio.get_running_loop()
+                    async_db_writer_task = loop.create_task(LambExecutionTimeMiddleware.async_db_writer_worker())
+
+        async_db_writer_queue.put_nowait(metric)
 
     def _metrics_store_db(self, request: LambRequest, metric: LambExecutionTimeMetric):
         if request.method not in self._settings_skip_methods and self._settings_should_store:
