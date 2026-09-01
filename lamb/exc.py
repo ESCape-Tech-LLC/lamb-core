@@ -79,7 +79,6 @@ class ApiError(Exception):
     _app_error_code = LambExceptionCodes.Unknown
     _status_code = 500
     _message = None
-    _wrapped_exception: Exception | None = None
 
     # attributes declaration
     message: str
@@ -100,7 +99,7 @@ class ApiError(Exception):
         super().__init__(self.message)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: code={self.app_error_code}, status={self.status_code}, msg={self.message}, details={self.error_details}, wrapped={self._wrapped_exception}>"
+        return f"<{self.__class__.__name__}: code={self.app_error_code}, status={self.status_code}, msg={self.message}, details={self.error_details}, wrapped={self.__cause__}>"
 
 
 class ServerError(ApiError):

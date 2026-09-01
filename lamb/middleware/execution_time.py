@@ -207,7 +207,7 @@ class LambExecutionTimeMiddleware(LambMiddlewareMixin):
             }
             if isinstance(exception, ApiError):
                 exc_info["app_error_code"] = exception.app_error_code
-                if _wrapped := exception._wrapped_exception:
+                if _wrapped := exception.__cause__:
                     exc_info["wrapped"] = {
                         "exc": v_opt_string(str(_wrapped)),
                         "exc_cls": str(_wrapped.__class__.__name__),
