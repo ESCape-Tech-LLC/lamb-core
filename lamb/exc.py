@@ -99,7 +99,11 @@ class ApiError(Exception):
         super().__init__(self.message)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: code={self.app_error_code}, status={self.status_code}, msg={self.message}, details={self.error_details}, wrapped={self.__cause__}>"
+        if self.__cause__ is not None:
+            _wrapped_log = {"exc_cls": str(self.__cause__.__class__.__name__), "msg": str(self.__cause__)}
+        else:
+            _wrapped_log = None
+        return f"<{self.__class__.__name__}: code={self.app_error_code}, status={self.status_code}, msg='{self.message}', details={self.error_details}, wrapped={_wrapped_log}>"
 
 
 class ServerError(ApiError):
