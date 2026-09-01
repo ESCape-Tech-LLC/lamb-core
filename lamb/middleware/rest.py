@@ -7,18 +7,12 @@ from typing import Any
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
 from django.http import HttpResponse, StreamingHttpResponse
-from django.utils.deprecation import MiddlewareMixin
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
-from lamb.exc import (
-    ApiError,
-    DatabaseError,
-    ImproperlyConfiguredError,
-    RequestBodyTooBigError,
-    ServerError,
-)
+from lamb.exc import ApiError, DatabaseError, ImproperlyConfiguredError, RequestBodyTooBigError, ServerError
 from lamb.json import JsonResponse
-from lamb.utils import LambRequest, dpath_value
+from lamb.middleware.base import LambMiddlewareMixin
+from lamb.utils import LambRequest, compact, dpath_value
 from lamb.utils.core import get_full_cls_instance_name, import_by_name
 
 try:
@@ -39,20 +33,26 @@ logger = logging.getLogger(__name__)
 __all__ = ["LambRestApiJsonMiddleware"]
 
 
-# TODO: migrate to async/sync version
-
-
-class LambRestApiJsonMiddleware(MiddlewareMixin):
+class LambRestApiJsonMiddleware(LambMiddlewareMixin):
     """Simple middleware that converts data to JSON.
 
-    1. Looks for all exceptions and converts it to JSON representation
-    2. For response that is not subclass of HttpResponse also try to create JsonResponse object
+    Main logic:
+        - checks if response should be serialized as JSON according to `LAMB_RESPONSE_APPLY_TO_APPS`
+        - in case of exception also converts it to JsonResponse object
+        - in case of response next layer is ok, but JSON serialize failed - also convert it to JSON error object
+        - usually should be used as last mile middleware
+        - in case of success serialization and not streaming response appends `Content-Length` header (Django common middleware not required)
+        - also touches request POST/FILES fields to mark it is as respected and omit buffer tmp files error
+
+    TODO: add support for "silent" errors with reduced log level
     """
 
-    def process_response(self, request: LambRequest, response: HttpResponse):
-        logger.debug(f"<{self.__class__.__name__}>: Processing response")
+    async_capable = True
+    sync_capable = True
 
-        """ Process response handler. Also touch request.POST/FILES fields for proper work """
+    # protocol: LambMiddlewareMixin sugar
+    def after_response(self, request: LambRequest, response: HttpResponse) -> HttpResponse | JsonResponse | Exception:
+        """Process successful response from underlying layer"""
         # touch request body
         _ = request.POST
         _ = request.FILES
@@ -66,12 +66,22 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
         # try to encode response
         if not isinstance(response, HttpResponse | StreamingHttpResponse):
             try:
-                response = JsonResponse(response, request=request)
+                response = LambRestApiJsonMiddleware._json_response(data=response, request=request)
             except Exception as e:
-                response = self.process_exception(request=request, exception=e)
+                # if serialize to JSON failed - convert this error in valid package
+                response = self.produce_error_response(request=request, exception=e)
+        elif not response.streaming and not response.has_header("Content-Length"):
+            response.headers["Content-Length"] = str(len(response.content))
 
         return response
 
+    # protocol: django middleware
+    def process_exception(self, request: LambRequest, exception: Exception):
+        """Process exception from underlying layer"""
+        logger.debug(f"<{self.__class__.__name__}>: Processing exception: {exception}")
+        return self.produce_error_response(request=request, exception=exception)
+
+    # utils
     _exception_serializer = None
 
     @classmethod
@@ -85,7 +95,11 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
 
     @classmethod
     def produce_error_response(cls, request: LambRequest, exception: Exception, ignore_resolver: bool = False):
-        """Internal service for process exception and convert it for proper response info"""
+        """Public method to produce error response
+
+        - used with internal exception handler
+        - can be used with external services/middlewares to produce valid error package
+        """
         # touch request body
         _ = request.POST
         _ = request.FILES
@@ -99,31 +113,28 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
             return exception
 
         # process exception to response
-        logger.exception(
-            "Handled exception:",
-            extra={
-                "exception_cls": get_full_cls_instance_name(exception),
-                "exception": str(exception),
-            },
-        )
         if not isinstance(exception, ApiError):
+            wrapped_exc = exception
             if isinstance(exception, _DB_EXCEPTIONS):
                 exception = DatabaseError()
             elif isinstance(exception, RequestDataTooBig):
                 exception = RequestBodyTooBigError()
             else:
                 exception = ServerError()
-            logger.error(f"{cls.__name__}. exception wrapped into: {exception!r}")
 
-        # optional patch error
-        if settings.LAMB_ERROR_OVERRIDE_PROCESSOR is not None:
-            try:
-                _processor = import_by_name(settings.LAMB_ERROR_OVERRIDE_PROCESSOR)
-                exception = _processor(exception)
-            except Exception as e:
-                exception = ImproperlyConfiguredError()
-                logger.exception("Exception processor failed")
-                logger.error(f"{cls.__name__}. Converting {e!r} -> {exception!r}")
+            exception.__cause__ = wrapped_exc
+            logger.error(f"<{cls.__name__}> exception wrapped: {exception!r}")
+
+        logger.exception(
+            f"<{cls.__name__}> exception handled:",
+            extra=compact(
+                {
+                    "exception_cls": get_full_cls_instance_name(exception),
+                    "exception": str(exception),
+                    "status_code": exception.status_code if isinstance(exception, ApiError) else None,
+                }
+            ),
+        )
 
         # envelope error
         if cls._exception_serializer is None:
@@ -140,12 +151,21 @@ class LambRestApiJsonMiddleware(MiddlewareMixin):
 
         result, status_code = cls._exception_serializer(exception, request)
 
+        # prepare response
         if request.method == "HEAD":
             # HEAD requests should not contain any response body
             result = None
-        return JsonResponse(result, status=status_code, request=request)
 
-    def process_exception(self, request: LambRequest, exception: Exception):
-        """Process exception handler"""
-        logger.debug(f"<{self.__class__.__name__}>: Processing exception: {exception}")
-        return self.produce_error_response(request=request, exception=exception)
+        response = LambRestApiJsonMiddleware._json_response(data=result, status=status_code, request=request)
+        response._lamb_error = exception
+        return response
+
+    @staticmethod
+    def _json_response(data: Any, request: LambRequest, status: int = 200):
+        """Internal utility function
+        - converts data to JsonResponse object
+        - appends `Content-Length` header
+        """
+        response = JsonResponse(data, status=status, request=request)
+        response.headers["Content-Length"] = str(len(response.content))
+        return response
