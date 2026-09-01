@@ -68,6 +68,7 @@ class LambXRayMiddleware(LambMiddlewareMixin):
             logger.debug(f"<{self.__class__.__name__}>: telemetry replaced value: [e={e}] {value} -> {result}")
             return result
 
+    # lifecycle
     def before_request(self, request):
         request.xray = dpath_value(
             request.META,
