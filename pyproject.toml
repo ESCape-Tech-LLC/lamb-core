@@ -28,79 +28,79 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
   "Programming Language :: Rust",
 ]
-#dependencies = [
-#  "boto3",
-#  "celery",
-#  "django",
-#  "django-ipware",
-#  "dpath",
-#  "furl",
-#  "jinja2",
-#  "lazy-object-proxy",
-#  "phonenumbers",
-#  "pillow",
-#  "psycopg2-binary",
-#  "python-dateutil",
-#  "python-magic",
-#  "redis",
-#  "requests",
-#  "sqlalchemy<2.1",
-#  "sqlalchemy-utils",
-#  # candidates to isolate/remove
-#  "babel",
-#  "lxml",
-#  "geoip2",
-#]
-optional-dependencies.boost = [
-    "cython>=3.2.9",
-    "redis[hiredis]>=8.1.0",
-    "uvloop>=0.22.1",
+# dependencies = [
+#   "boto3",
+#   "celery",
+#   "django",
+#   "django-ipware",
+#   "dpath",
+#   "furl",
+#   "jinja2",
+#   "lazy-object-proxy",
+#   "phonenumbers",
+#   "pillow",
+#   "psycopg2-binary",
+#   "python-dateutil",
+#   "python-magic",
+#   "redis",
+#   "requests",
+#   "sqlalchemy<2.1",
+#   "sqlalchemy-utils",
+#   # candidates to isolate/remove
+#   "babel",
+#   "lxml",
+#   "geoip2",
+# ]
+dependencies = [
+  "aioboto3>=15.5.0",
+  "aiofile>=3.12.3",
+  "aiohttp>=3.14.3",
+  "aioredis>=2.0.1",
+  "asyncpg>=0.31.0",
+  "babel>=2.18.0",
+  "boto3>=1.40.61",
+  "celery>=5.6.3",
+  "django<6.1",
+  "django-ipware>=7.0.1",
+  "dpath>=2.2.0",
+  "furl>=2.1.4",
+  "geoip2>=5.3.0",
+  "jinja2>=3.1.6",
+  "lazy-object-proxy>=1.12.0",
+  "lxml>=6.1.3",
+  "phonenumbers>=9.0.39",
+  "pillow>=12.3.0",
+  "psycopg2-binary>=2.9.13",
+  "python-dateutil>=2.9.0.post0",
+  "python-dotenv>=1.2.3",
+  "python-magic>=0.4.27",
+  "redis>=8.1.0",
+  "requests>=2.34.2",
+  "sqlalchemy<2.1",
+  "sqlalchemy[asyncio]>=2.0.53",
+  "sqlalchemy-utils>=0.42.1",
 ]
-optional-dependencies.scylla = [
-    "scylla-driver>=3.29.11",
+optional-dependencies.boost = [
+  "cython>=3.3.0",
+  "redis[hiredis]>=8.1.0",
+  "uvloop>=0.22.1",
 ]
 optional-dependencies.cassandra = [
-    "cassandra-driver>=3.30.1",
+  "cassandra-driver>=3.30.1",
+]
+optional-dependencies.scylla = [
+  "scylla-driver>=3.29.11",
 ]
 urls.Homepage = "https://github.com/ESCape-Tech-LLC/lamb-core"
-dependencies = [
-    "babel>=2.18.0",
-    "boto3>=1.40.61",
-    "celery>=5.6.3",
-    "django<6.1",
-    "django-ipware>=7.0.1",
-    "dpath>=2.2.0",
-    "furl>=2.1.4",
-    "geoip2>=5.3.0",
-    "jinja2>=3.1.6",
-    "lazy-object-proxy>=1.12.0",
-    "lxml>=6.1.1",
-    "phonenumbers>=9.0.36",
-    "pillow>=12.3.0",
-    "psycopg2-binary>=2.9.12",
-    "python-dateutil>=2.9.0.post0",
-    "python-magic>=0.4.27",
-    "redis>=8.1.0",
-    "requests>=2.34.2",
-    "sqlalchemy<2.1",
-    "sqlalchemy-utils>=0.42.1",
-    "aioboto3>=15.5.0",
-    "aiofile>=3.12.3",
-    "aiohttp>=3.14.3",
-    "aioredis>=2.0.1",
-    "asyncpg>=0.31.0",
-    "sqlalchemy[asyncio]>=2.0.51",
-    "python-dotenv>=1.2.3",
-]
+
 # candidates to isolate/remove
 #babel
 #lxml
 #geoip2
-
 [dependency-groups]
 dev = [
   "pre-commit>=4.6.2",
-  "ruff>=0.16.2",
+  "ruff>=0.16.7",
 ]
 
 # contrib/REMOVED
@@ -111,7 +111,6 @@ dev = [
 # babel - rare: used only with locale type
 # openpyxl - rare: used only with ext/openpyxl
 # migrate to pyproject.toml when would support
-
 [tool.ruff]
 target-version = "py314"
 line-length = 120
@@ -120,8 +119,8 @@ format.indent-style = "space"
 format.quote-style = "double"
 format.docstring-code-format = true
 lint.extend-select = [ "A", "FA", "I", "SIM", "UP" ]
+lint.ignore = [ "BLE001", "DTZ" ]
 lint.fixable = [ "F401", "F541", "I", "RUF", "SIM", "UP" ]
-lint.ignore = ["DTZ", "BLE001"]
 lint.isort.section-order = [ "future", "standard-library", "third-party", "lamb", "first-party", "local-folder" ]
 lint.isort.sections.lamb = [ "lamb" ]
 
