@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import pathlib
 import re
 from typing import IO, Any, BinaryIO, Self
 
@@ -46,6 +47,8 @@ if AsyncS3Client is None:
 logger = logging.getLogger(__name__)
 
 __all__ = ["AsyncS3Engine", "S3Engine"]
+
+type S3Path = str | pathlib.Path
 
 
 class S3EngineBase:
@@ -158,10 +161,17 @@ class S3EngineBase:
     def endpoint_url(self) -> str | None:
         return self._config.endpoint_url
 
+    @staticmethod
+    def normalize_path(value: S3Path) -> str:
+        result = str(value)
+        result = result.removeprefix("/")
+        result = result.removesuffix("/")
+        return result
+
     # S3: object access urls
     def generate_presigned_url(
         self,
-        path: str,
+        path: S3Path,
         expiration: int = 600,
         patch_bucket_url: bool = True,
         client_method: str = "get_object",
@@ -173,9 +183,10 @@ class S3EngineBase:
         :param patch_bucket_url: patch final url with external bucket link or return endpoint_url/signature_host based link
         :raise: FileNotFoundError
         """
+        _path = self.normalize_path(path)
         response: str = self._sync_client.generate_presigned_url(
             ClientMethod=client_method,
-            Params={"Bucket": self.bucket_name, "Key": path},
+            Params={"Bucket": self.bucket_name, "Key": _path},
             ExpiresIn=expiration,
         )
 
@@ -196,20 +207,21 @@ class S3EngineBase:
 
         return response
 
-    def generate_public_url(self, path: str) -> str:
+    def generate_public_url(self, path: S3Path) -> str:
         """
         Simple URL constructor without presigned logic - suitable for acl:public=True objects
         :param path: path to a stored file
         """
+        _path = self.normalize_path(path)
         if self.bucket_url is not None:
             result = furl.furl(self.bucket_url)
-            result.path.add(path)
+            result.path.add(_path)
             return result.url
         else:
             result = furl.furl()
             result.scheme = "https"
             result.host = f"{self._config.bucket_name}.s3.amazonaws.com"
-            result.path.add(path)
+            result.path.add(_path)
             return result.url
 
 
@@ -225,7 +237,7 @@ class S3Engine(S3EngineBase):
     def put_object(
         self,
         body: BinaryIO | UploadedFile | TemporaryUploadedFile | IO | bytes,
-        path: str,
+        path: S3Path,
         file_type: str | None = None,
         private: bool | None = False,
     ) -> str:
@@ -241,14 +253,14 @@ class S3Engine(S3EngineBase):
         logger.debug(
             f"{self.__class__.__name__}. Would try put_object file to S3: ACL={'private' if private else 'public-read'}"
         )
-        path = path.removeprefix("/")
+        _path = self.normalize_path(path)
         if isinstance(body, TemporaryUploadedFile):
             with open(body.temporary_file_path(), "rb") as f:
                 response: dict = self._client.put_object(
                     Bucket=self.bucket_name,
                     ACL="private" if private else "public-read",
                     Body=f,
-                    Key=path,
+                    Key=_path,
                     ContentType=file_type or "",
                 )
             logger.debug(f"{self.__class__.__name__}. Uploaded as TemporaryUploadedFile")
@@ -257,7 +269,7 @@ class S3Engine(S3EngineBase):
                 Bucket=self.bucket_name,
                 ACL="private" if private else "public-read",
                 Body=body.read(),
-                Key=path,
+                Key=_path,
                 ContentType=file_type or "",
             )
             logger.debug(f"{self.__class__.__name__}. Uploaded as UploadedFile")
@@ -266,7 +278,7 @@ class S3Engine(S3EngineBase):
                 Bucket=self.bucket_name,
                 ACL="private" if private else "public-read",
                 Body=body,
-                Key=path,
+                Key=_path,
                 ContentType=file_type or "",
             )
             logger.debug(f"{self.__class__.__name__}. Uploaded as plain")
@@ -280,27 +292,28 @@ class S3Engine(S3EngineBase):
         uploaded_paths: list[str] = []
         try:
             for obj in data:
+                _path = self.normalize_path(obj.path)
                 self._client.put_object(
                     Bucket=self.bucket_name,
                     ACL="private" if private else "public-read",
                     Body=obj.data,
-                    Key=obj.path,
+                    Key=_path,
                     ContentType=obj.mime_type,
                 )
-                uploaded_paths.append(obj.path)
+                uploaded_paths.append(_path)
         except Exception:
             logger.exception("Exception has occurred while uploading files: uploaded files will be deleted")
             for path in uploaded_paths:
                 self._client.delete_object(Bucket=self.bucket_name, Key=path)
                 logger.debug(f"{path} has been deleted")
 
-    def get_object(self, path: str, **kwargs):
+    def get_object(self, path: S3Path, **kwargs):
         """ "
         :raise: FileNotFoundError
         """
         try:
-            path = path.removeprefix("/")
-            response: dict = self._client.get_object(Bucket=self.bucket_name, Key=path, **kwargs)
+            _path = self.normalize_path(path)
+            response: dict = self._client.get_object(Bucket=self.bucket_name, Key=_path, **kwargs)
         except ClientError as e:
             try:
                 if e.response["Error"]["Code"] in ["NoSuchKey", "404"]:
@@ -312,16 +325,16 @@ class S3Engine(S3EngineBase):
         result = response["Body"].read()
         return result
 
-    def delete_object(self, path: str, **kwargs):
+    def delete_object(self, path: S3Path, **kwargs):
         """
         Removes file from S3
 
         :param path: relative path to stored file
         """
         try:
-            path = path.removeprefix("/")
+            _path = self.normalize_path(path)
             kwargs = compact(kwargs)
-            self._client.delete_object(Bucket=self.bucket_name, Key=path, **kwargs)
+            self._client.delete_object(Bucket=self.bucket_name, Key=_path, **kwargs)
         except ClientError as e:
             try:
                 if e.response["Error"]["Code"] in ["NoSuchKey", "404"]:
@@ -331,7 +344,7 @@ class S3Engine(S3EngineBase):
             except AttributeError, KeyError:
                 raise e
 
-    def head_object(self, path: str, **kwargs) -> dict[str, Any]:
+    def head_object(self, path: S3Path, **kwargs) -> dict[str, Any]:
         """
         Request low-level HEAD info from S3 storage about object
 
@@ -339,10 +352,9 @@ class S3Engine(S3EngineBase):
         :param kwargs: additional low level client kwargs
         :return: S3 HEAD info dict
         """
-        # TODO: test - blind adapted
         try:
-            relative_path = path.removeprefix("/")
-            response: dict = self._client.head_object(Bucket=self.bucket_name, Key=relative_path, **kwargs)
+            _path = self.normalize_path(path)
+            response: dict = self._client.head_object(Bucket=self.bucket_name, Key=_path, **kwargs)
             return response
         except ClientError as e:
             # Raise proper exception if the file does not exist
@@ -355,7 +367,7 @@ class S3Engine(S3EngineBase):
             except AttributeError, KeyError:
                 raise e
 
-    def head_object_hash(self, path: str) -> str:
+    def head_object_hash(self, path: S3Path) -> str:
         """
         Receives MD5 hash of the file (from "ETag" property)
 
@@ -363,28 +375,28 @@ class S3Engine(S3EngineBase):
         :raise: FileNotFoundError
         :raise: LookupError
         """
-        response = self.head_object(path=path)
+        _path = self.normalize_path(path)
+        response = self.head_object(path=_path)
         try:
             md5_hash: str = response["ETag"].strip('"')
         except KeyError:
             raise LookupError("Unable to fetch file hash from received response")
         return md5_hash
 
-    def object_exists(self, path: str) -> bool:
+    def object_exists(self, path: S3Path) -> bool:
         """
         Returns True if the file exists, otherwise returns False
         The result here is based on the result of the Head request from object_hash method
 
         :param path: path to a stored file
         """
-        # TODO: test - blind adapted
         try:
             self.head_object_hash(path)
         except FileNotFoundError:
             return False
         return True
 
-    def generate_presigned_url(self, path: str, expires_in: int | None = 3600) -> str:
+    def generate_presigned_url(self, path: S3Path, expires_in: int | None = 3600) -> str:
         """
         Generates pre-signed url for a stored in S3 file
 
@@ -393,9 +405,13 @@ class S3Engine(S3EngineBase):
         :return: pre-signed url
         """
         try:
+            _path = self.normalize_path(path)
             presigned_url = self._client.generate_presigned_url(
                 ClientMethod="get_object",
-                Params={"Bucket": self.bucket_name, "Key": path},
+                Params={
+                    "Bucket": self.bucket_name,
+                    "Key": _path,
+                },
                 ExpiresIn=expires_in,
             )
         except ClientError as e:
@@ -475,7 +491,7 @@ class AsyncS3Engine(S3EngineBase):
     # S3: wrapper
     async def put_object(
         self,
-        path: str,
+        path: S3Path,
         body: BinaryIO | UploadedFile | TemporaryUploadedFile | IO | bytes,
         file_type: str | None,
         private: bool | None = False,
@@ -492,13 +508,14 @@ class AsyncS3Engine(S3EngineBase):
         logger.info(
             f"{self.__class__.__name__}. Would try put_object file to S3: ACL={'private' if private else 'public-read'}"
         )
+        _path = self.normalize_path(path)
         if isinstance(body, TemporaryUploadedFile):
             async with aiofiles.open(body.temporary_file_path(), "rb") as f:
                 response: dict = await self._client.put_object(
                     Bucket=self.bucket_name,
                     ACL="private" if private else "public-read",
                     Body=f,
-                    Key=path,
+                    Key=_path,
                     ContentType=file_type or "",
                 )
             logger.info(f"{self.__class__.__name__}. Uploaded as TemporaryUploadedFile")
@@ -507,7 +524,7 @@ class AsyncS3Engine(S3EngineBase):
                 Bucket=self.bucket_name,
                 ACL="private" if private else "public-read",
                 Body=body.read(),
-                Key=path,
+                Key=_path,
                 ContentType=file_type or "",
             )
             logger.info(f"{self.__class__.__name__}. Uploaded as UploadedFile")
@@ -516,7 +533,7 @@ class AsyncS3Engine(S3EngineBase):
                 Bucket=self.bucket_name,
                 ACL="private" if private else "public-read",
                 Body=body,
-                Key=path,
+                Key=_path,
                 ContentType=file_type or "",
             )
             logger.info(f"{self.__class__.__name__}. Uploaded as plain")
@@ -530,28 +547,28 @@ class AsyncS3Engine(S3EngineBase):
         uploaded_paths: list[str] = []
         try:
             for obj in data:
+                _path = self.normalize_path(obj.path)
                 await self._client.put_object(
                     Bucket=self.bucket_name,
                     ACL="private" if private else "public-read",
                     Body=obj.data,
-                    Key=obj.path,
+                    Key=_path,
                     ContentType=obj.mime_type,
                 )
-                uploaded_paths.append(obj.path)
+                uploaded_paths.append(_path)
         except Exception:
             logger.exception("Exception has occurred while uploading files: uploaded files will be deleted")
             for path in uploaded_paths:
                 await self._client.delete_object(Bucket=self.bucket_name, Key=path)
                 logger.debug(f"{path} has been deleted")
 
-    async def get_object(self, path: str, **kwargs):
+    async def get_object(self, path: S3Path, **kwargs):
         """
         :raise: FileNotFoundError
         """
-        # TODO: test - blind adapted
         try:
-            path = path.removeprefix("/")
-            response: dict = await self._client.get_object(Bucket=self.bucket_name, Key=path, **kwargs)
+            _path = self.normalize_path(path)
+            response: dict = await self._client.get_object(Bucket=self.bucket_name, Key=_path, **kwargs)
         except ClientError as e:
             try:
                 if e.response["Error"]["Code"] in ["NoSuchKey", "404"]:
@@ -563,16 +580,16 @@ class AsyncS3Engine(S3EngineBase):
         result = await response["Body"].read()
         return result
 
-    async def delete_object(self, path: str, **kwargs):
+    async def delete_object(self, path: S3Path, **kwargs):
         """
         Removes file from S3
 
         :param path: relative path to stored file
         """
         try:
-            path = path.removeprefix("/")
+            _path = self.normalize_path(path)
             kwargs = compact(kwargs)
-            await self._client.delete_object(Bucket=self.bucket_name, Key=path, **kwargs)
+            await self._client.delete_object(Bucket=self.bucket_name, Key=_path, **kwargs)
         except ClientError as e:
             try:
                 if e.response["Error"]["Code"] in ["NoSuchKey", "404"]:
@@ -582,7 +599,7 @@ class AsyncS3Engine(S3EngineBase):
             except AttributeError, KeyError:
                 raise e
 
-    async def head_object(self, path: str, **kwargs) -> dict[str, Any]:
+    async def head_object(self, path: S3Path, **kwargs) -> dict[str, Any]:
         """
         Request low-level HEAD info from S3 storage about object
 
@@ -590,10 +607,9 @@ class AsyncS3Engine(S3EngineBase):
         :param kwargs: additional low level client kwargs
         :return: S3 HEAD info dict
         """
-        # TODO: test - blind adapted
         try:
-            path = path.removeprefix("/")
-            response: dict = await self._client.head_object(Bucket=self.bucket_name, Key=path, **kwargs)
+            _path = self.normalize_path(path)
+            response: dict = await self._client.head_object(Bucket=self.bucket_name, Key=_path, **kwargs)
             return response
         except ClientError as e:
             # Raise proper exception if the file does not exist
@@ -605,7 +621,7 @@ class AsyncS3Engine(S3EngineBase):
             except AttributeError, KeyError:
                 raise e
 
-    async def head_object_hash(self, path: str) -> str:
+    async def head_object_hash(self, path: S3Path) -> str:
         """
         Receives MD5 hash of the file (from "ETag" property)
 
@@ -613,21 +629,21 @@ class AsyncS3Engine(S3EngineBase):
         :raise: FileNotFoundError
         :raise: LookupError
         """
-        response = await self.head_object(path=path)
+        _path = self.normalize_path(path)
+        response = await self.head_object(path=_path)
         try:
             md5_hash: str = response["ETag"].strip('"')
         except KeyError:
             raise LookupError("Unable to fetch file hash from received response")
         return md5_hash
 
-    async def object_exists(self, path: str) -> bool:
+    async def object_exists(self, path: S3Path) -> bool:
         """
         Returns True if the file exists, otherwise returns False
         The result here is based on the result of the Head request from object_hash method
 
         :param path: path to a stored file
         """
-        # TODO: test - blind adapted
         try:
             await self.head_object_hash(path)
         except FileNotFoundError:
