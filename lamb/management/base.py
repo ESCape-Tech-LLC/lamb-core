@@ -1,18 +1,21 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import ClassVar
 
 import sqlalchemy.orm
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
 
 from lamb.db.session import get_metadata, lamb_db_session_maker
+from lamb.exc import ProgrammingError
 from lamb.utils import dpath_value
 from lamb.utils.core import lazy
 from lamb.utils.validators import validate_not_empty
 
-__all__ = ["CommandError", "LambCommand", "LambCommandMixin"]
+__all__ = ["AsyncLambCommand", "CommandError", "LambCommand", "LambCommandMixin"]
 
 logger = logging.getLogger(__name__)
 
@@ -92,4 +95,15 @@ class LambCommand(LambCommandMixin, BaseCommand):
     help = "Abstract Lamb management command"
 
     def handle(self, *args, **options):
-        raise NotImplementedError("subclasses of BaseCommand must provide a handle() method")
+        raise ProgrammingError("Subclasses of LambCommand must provide a handle() method")
+
+
+class AsyncLambCommand(LambCommandMixin, BaseCommand):
+    db_async = True
+    db_session: SAAsyncSession
+
+    async def async_handle(self, *args, **options):
+        raise ProgrammingError("Subclasses of AsyncLambCommand must provide a async_handle() method")
+
+    def handle(self, *args, **options):
+        return asyncio.run(self.async_handle(*args, **options))
