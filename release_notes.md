@@ -1,3 +1,19 @@
+# 3.7.0
+
+- feat: `lamb.management.base.AsyncLambCommand` - base async version;
+- feat: `lamb.service.aws.utils` - new functions add from contrib projects `s3_filepath_parse`, `s3_download_file_sync`, `s3_download_file_async`;
+- feat: `lamb.service.aws.s3engine` - normalize key suffix/prefix in all methods; 
+- feat: `lamb.service.aws.s3engine` - support str/pathlib.Path objects as key; 
+- ref: `lamb.service.aws.s3engine` - typing and logging refactoring;
+- feat: `lamb.management.csv_command.CsvCommandMixin` - support RAM effective CSV streaming; 
+- feat: `lamb.management.csv_command.CsvCommandMixin` - support batch streaming; 
+- feat: `lamb.management.csv_command.CsvCommandMixin` - add encoding argument parser; 
+- break: `lamb.management.csv_command.CsvCommandMixin` - logic changed to pure mixin, `super().handle()` should be replaced with `self.parse_scv_options()`
+- tools: pre-commit version bump
+- dep: bump dependencies; 
+- ref: pyproject linter
+
+
 # 3.6.4
 
 - feat/attention: LambExecutionTimeMetric - new `exc_info` field, would require table recreation of `ALTER TABLE lamb_execution_time_metric ADD COLUMN exc_info JSONB NULL;`
@@ -278,7 +294,7 @@ import os
 from lamb.utils import dpath_value
 from lamb.utils.validators import validate_not_empty
 
-result = dpath_value(os.environ, 'SOME_KEY', str, transform=validate_not_empty)
+result = dpath_value(os.environ, "SOME_KEY", str, transform=validate_not_empty)
 # in case environment contains SOME_KEY variable - corresponding value would be extracted and validated
 # in case SOME_KEY not exist but SOME_KEY_FILE exists - value would be extracted from file and validated
 ```
@@ -352,8 +368,8 @@ _Example:_
 @a_rest_allowed_http_methods(["GET"])
 class SomeView(RestView):
     async def get(self, request: LambRequest):
-        async with lamb_db_context(db_key='pythia', pooled=True) as db_session:
-            db_session = request.lamb_db_session_map['pythia']
+        async with lamb_db_context(db_key="pythia", pooled=True) as db_session:
+            db_session = request.lamb_db_session_map["pythia"]
             result = await db_session.execute(select(Area))
             response = result.scalars().all()
             return response
@@ -363,7 +379,7 @@ class SomeView(RestView):
 @a_rest_allowed_http_methods(["GET"])
 class SomeView(RestView):
     async def get(self, request: LambRequest):
-        db_session = request.lamb_db_session_map['pythia']
+        db_session = request.lamb_db_session_map["pythia"]
         result = await db_session.execute(select(Area))
         response = result.scalars().all()
         return response
@@ -371,7 +387,7 @@ class SomeView(RestView):
 
 # access db_session by default on view
 class PythiaView(RestView):
-    __default_db__ = 'pythia'
+    __default_db__ = "pythia"
 
 
 @a_rest_allowed_http_methods(["GET"])
@@ -485,7 +501,7 @@ def lamb_exception_serializer(exc: ApiError) -> Tuple[Any, int]:
         case AppErrorCodes.Decryption:
             exc.app_error_code = 100
             exc.status_code = 401
-        case (AppErrorCodes.UserNotExist | AppErrorCodes.UserNotExist):
+        case AppErrorCodes.UserNotExist | AppErrorCodes.UserNotExist:
             exc.app_error_code = 3
             exc.status_code = 401
         case _:
@@ -493,12 +509,12 @@ def lamb_exception_serializer(exc: ApiError) -> Tuple[Any, int]:
             exc.status_code = 500
 
     result = OrderedDict()
-    result['errorCode'] = exc.app_error_code
-    result['errorMessage'] = exc.message
+    result["errorCode"] = exc.app_error_code
+    result["errorMessage"] = exc.message
     return result, exc.status_code
 
 
-LAMB_RESPONSE_EXCEPTION_SERIALIZER = 'project_name.settings.lamb_exception_serializer'
+LAMB_RESPONSE_EXCEPTION_SERIALIZER = "project_name.settings.lamb_exception_serializer"
 ```
 
 # 3.4.15
