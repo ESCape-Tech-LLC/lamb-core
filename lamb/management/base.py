@@ -106,4 +106,7 @@ class AsyncLambCommand(LambCommandMixin, BaseCommand):
         raise ProgrammingError("Subclasses of AsyncLambCommand must provide a async_handle() method")
 
     def handle(self, *args, **options):
-        return asyncio.run(self.async_handle(*args, **options))
+        try:
+            return asyncio.run(self.async_handle(*args, **options))
+        finally:
+            asyncio.run(self.db_session.close())
