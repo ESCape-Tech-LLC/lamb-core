@@ -1,3 +1,7 @@
+# 3.7.1
+
+- feat: async command await db_session close on exit
+- 
 # 3.7.0
 
 - feat: `lamb.management.base.AsyncLambCommand` - base async version;
