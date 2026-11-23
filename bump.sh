@@ -51,7 +51,6 @@ if [ -f "$CHANGELOG_FILE" ]; then
         echo "## [Unreleased]"
         echo ""
         echo "---"
-        echo ""
         # Удаляем старый # Changelog из остального контента
         sed '1d' "$CHANGELOG_FILE"
     } > "$TEMP_FILE"
