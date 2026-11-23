@@ -4,7 +4,11 @@
 
 ---
 
-## [3.7.3] - 2026-11-24
+## [3.7.4] - 2026-11-24
+
+**Tools:**
+
+- tools: `bump.sh` improved and fixed in changelog 
 
 ---
 
