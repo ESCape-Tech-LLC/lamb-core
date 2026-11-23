@@ -12,7 +12,21 @@ echo "🚀 Bumping version: $BUMP_PART"
 CURRENT_VERSION=$(grep -E '^version = ' "$PYPROJECT_FILE" | head -1 | sed 's/version = "\(.*\)"/\1/')
 
 # 2. Рассчитать новую версию через bump-my-version
-NEW_VERSION=$(uvx bump-my-version bump --dry-run "$BUMP_PART" 2>&1 | grep -oP '\d+\.\d+\.\d+' | tail -1)
+case "$BUMP_PART" in
+    major)
+        NEW_VERSION=$(uvx bump-my-version show-bump 2>&1 | sed -n 's/.*─ major ─ \([0-9.]*\)/\1/p')
+        ;;
+    minor)
+        NEW_VERSION=$(uvx bump-my-version show-bump 2>&1 | sed -n 's/.*─ minor ─ \([0-9.]*\)/\1/p')
+        ;;
+    patch)
+        NEW_VERSION=$(uvx bump-my-version show-bump 2>&1 | sed -n 's/.*─ patch ─ \([0-9.]*\)/\1/p')
+        ;;
+    *)
+        echo "❌ Invalid bump part: $BUMP_PART"
+        exit 1
+        ;;
+esac
 
 if [ -z "$NEW_VERSION" ]; then
     echo "❌ Could not calculate new version"
@@ -32,8 +46,6 @@ if [ -f "$CHANGELOG_FILE" ]; then
     # Добавляем новую пустую Unreleased секцию в начало
     TEMP_FILE=$(mktemp)
     cat > "$TEMP_FILE" << 'EOF'
-# Changelog
-
 ## [Unreleased]
 
 ---
