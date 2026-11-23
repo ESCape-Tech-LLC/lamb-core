@@ -43,15 +43,18 @@ if [ -f "$CHANGELOG_FILE" ]; then
     sed -i.bak "s/## \[Unreleased\]/## [$NEW_VERSION] - $TODAY/" "$CHANGELOG_FILE"
     rm -f "${CHANGELOG_FILE}.bak"
     
-    # Добавляем новую пустую Unreleased секцию в начало
+    # Добавляем новую пустую Unreleased секцию в начало (после # Changelog)
     TEMP_FILE=$(mktemp)
-    cat > "$TEMP_FILE" << 'EOF'
-## [Unreleased]
-
----
-
-EOF
-    cat "$CHANGELOG_FILE" >> "$TEMP_FILE"
+    {
+        echo "# Changelog"
+        echo ""
+        echo "## [Unreleased]"
+        echo ""
+        echo "---"
+        echo ""
+        # Удаляем старый # Changelog из остального контента
+        sed '1d' "$CHANGELOG_FILE"
+    } > "$TEMP_FILE"
     mv "$TEMP_FILE" "$CHANGELOG_FILE"
     
     echo "✅ CHANGELOG.md updated"
