@@ -2,11 +2,33 @@
 
 ## [Unreleased]
 
+**Tools:**
+
+- tools: `docker-compose.test.yml` - complete test infrastructure with 6 services (PostgreSQL 18, Valkey 9.1.1, MinIO, Kafka 3.9)
+- tools: `docker-compose.test.yml` - PostgreSQL 18 with TimescaleDB on port 35432
+- tools: `docker-compose.test.yml` - Valkey bundle 9.1.1 in 3 modes: standalone (36379), Sentinel (36380-36382), Cluster (36390-36392)
+- tools: `docker-compose.test.yml` - MinIO S3-compatible storage on ports 39000/39001
+- tools: `docker-compose.test.yml` - Kafka 3.9 cluster in KRaft mode (2 nodes, ports 39092-39093)
+- tools: `docker-compose.test.yml` - password authentication on all Valkey services (testpass123)
+- tools: `docker-compose.test.yml` - health checks for automatic service readiness monitoring
+- tools: `scripts/start-test-env.sh` - automated test environment startup with health checks and service initialization
+- tools: `scripts/stop-test-env.sh` - clean teardown with volume removal
+- tools: `scripts/wait-for-healthy.sh` - reusable Docker service health check script with configurable timeout
+- tools: `scripts/sentinel-entrypoint.sh` - dynamic Valkey Sentinel configuration with master IP discovery
+- tools: `TESTING.md` - comprehensive testing guide with service configuration and troubleshooting
+
+**Dependencies:**
+
+- dep: remove `aioredis` from project dependencies - not used in codebase
+- dep: add `pytest-asyncio>=0.21` to test dependency group in `pyproject.toml`
+
 **Documentation:**
 
+- docs: add `TESTING.md` - testing infrastructure guide with quick start, fixtures reference, and CI/CD example
+- docs: consolidate test documentation (removed `tests/README.md`, `scripts/README.md`)
 - docs: add MIT LICENSE file
 
-**Tools:**
+**Chores:**
 
 - chore: update ruff to v0.17.6 in pre-commit hooks
 - chore: add PyPI classifiers (Intended Audience, License, Topic, Typing)
@@ -17,7 +39,7 @@
 
 **Tools:**
 
-- tools: `bump.sh` improved and fixed in changelog 
+- tools: `bump.sh` improved and fixed in changelog
 
 ---
 
@@ -54,7 +76,6 @@
 
 - feat: `lamb.management.base.AsyncLambCommand` - base async command class
 - feat: `lamb.service.aws.utils` - new functions from contrib: `s3_filepath_parse`, `s3_download_file_sync`, `s3_download_file_async`
-- feat: `lamb.service.aws.s3engine` - normalize key suffix/prefix in all methods
 - feat: `lamb.service.aws.s3engine` - support `str`/`pathlib.Path` objects as key
 - feat: `lamb.management.csv_command.CsvCommandMixin` - support RAM effective CSV streaming
 - feat: `lamb.management.csv_command.CsvCommandMixin` - support batch streaming

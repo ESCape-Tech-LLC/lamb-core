@@ -1,0 +1,249 @@
+# Test environment for lamb-core
+# All ports are shifted by +30000 to avoid conflicts with production services
+
+networks:
+  default:
+    driver: bridge
+
+# Valkey base configuration (shared by all Valkey services)
+x-valkey: &valkey
+  image: valkey/valkey-bundle:9.1.1
+  restart: unless-stopped
+  environment:
+    VALKEY_PASSWORD: testpass123
+  healthcheck:
+    test: ["CMD", "valkey-cli", "-a", "testpass123", "ping"]
+    interval: 5s
+    timeout: 5s
+    retries: 5
+    start_period: 5s
+
+services:
+  # PostgreSQL 18 with TimescaleDB (TSDB) - port 35432
+  postgres:
+    image: timescale/timescaledb:latest-pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lamb_test
+      POSTGRES_PASSWORD: lamb_test_pass
+      POSTGRES_DB: lamb_test
+    ports:
+      - "35432:5432"
+    volumes:
+      - v-postgres-test:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lamb_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Valkey bundle 9.1.1 - port 36379
+  valkey:
+    <<: *valkey
+    command: >
+      valkey-server
+      --requirepass testpass123
+    ports:
+      - "36379:6379"
+    volumes:
+      - v-valkey-test:/data
+
+  # MinIO latest - ports 39000 (API), 39001 (Console)
+  minio:
+    image: ghcr.io/coollabsio/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "39000:9000"
+      - "39001:9001"
+    command: ["server", "/data", "--console-address", ":9001"]
+    volumes:
+      - v-minio-test:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Kafka 3.9 Cluster - ports 39092-39093
+  kafka-1:
+    image: apache/kafka:3.9.1
+    restart: unless-stopped
+    environment:
+      # Internal listeners (for broker-to-broker communication)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094,EXTERNAL://0.0.0.0:39092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:9092,EXTERNAL://localhost:39092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9094,2@kafka-2:9095
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_LOGS_DIR: "/var/lib/kafka/data"
+    ports:
+      - "39092:39092"
+    volumes:
+      - v-kafka-1:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "39092"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
+  kafka-2:
+    image: apache/kafka:3.9.1
+    restart: unless-stopped
+    environment:
+      # Internal listeners (for broker-to-broker communication)
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9093,CONTROLLER://0.0.0.0:9095,EXTERNAL://0.0.0.0:39093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-2:9093,EXTERNAL://localhost:39093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9094,2@kafka-2:9095
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_LOGS_DIR: "/var/lib/kafka/data"
+    ports:
+      - "39093:39093"
+    volumes:
+      - v-kafka-2:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "39093"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
+
+  # Valkey Sentinel mode - ports 36380-36382
+  valkey-sentinel-master:
+    <<: *valkey
+    command: >
+      valkey-server
+      --requirepass testpass123
+      --masterauth testpass123
+      --replica-serve-stale-data yes
+      --replica-read-only yes
+    ports:
+      - "36380:6379"
+    volumes:
+      - v-valkey-sentinel-master:/data
+    networks:
+      default:
+        aliases:
+          - sentinel-master
+
+  valkey-sentinel-replica:
+    <<: *valkey
+    depends_on:
+      - valkey-sentinel-master
+    command: >
+      valkey-server
+      --requirepass testpass123
+      --masterauth testpass123
+      --replicaof sentinel-master 6379
+    ports:
+      - "36381:6379"
+    volumes:
+      - v-valkey-sentinel-replica:/data
+    networks:
+      default:
+        aliases:
+          - sentinel-replica
+
+  valkey-sentinel-1:
+    image: valkey/valkey-bundle:9.1.1
+    restart: unless-stopped
+    depends_on:
+      valkey-sentinel-master:
+        condition: service_healthy
+      valkey-sentinel-replica:
+        condition: service_healthy
+    entrypoint: /etc/valkey/sentinel-entrypoint.sh
+    ports:
+      - "36382:26379"
+    volumes:
+      - v-valkey-sentinel-1:/data
+      - ./scripts/sentinel-entrypoint.sh:/etc/valkey/sentinel-entrypoint.sh:ro
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-p", "26379", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      default:
+        aliases:
+          - sentinel
+
+  # Valkey Cluster mode - ports 36390-36392
+  valkey-cluster-node-1:
+    <<: *valkey
+    command: >
+      valkey-server
+      --requirepass testpass123
+      --cluster-enabled yes
+      --cluster-config-file nodes-1.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+    ports:
+      - "36390:6379"
+    volumes:
+      - v-valkey-cluster-1:/data
+
+  valkey-cluster-node-2:
+    <<: *valkey
+    command: >
+      valkey-server
+      --requirepass testpass123
+      --cluster-enabled yes
+      --cluster-config-file nodes-2.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+    ports:
+      - "36391:6379"
+    volumes:
+      - v-valkey-cluster-2:/data
+
+  valkey-cluster-node-3:
+    <<: *valkey
+    command: >
+      valkey-server
+      --requirepass testpass123
+      --cluster-enabled yes
+      --cluster-config-file nodes-3.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+    ports:
+      - "36392:6379"
+    volumes:
+      - v-valkey-cluster-3:/data
+
+volumes:
+  v-postgres-test:
+  v-valkey-test:
+  v-valkey-sentinel-master:
+  v-valkey-sentinel-replica:
+  v-valkey-sentinel-1:
+  v-valkey-cluster-1:
+  v-valkey-cluster-2:
+  v-valkey-cluster-3:
+  v-minio-test:
+  v-kafka-1:
+  v-kafka-2:
