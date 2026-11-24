@@ -21,6 +21,9 @@ requires-python = ">=3.13"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Framework :: Django :: 6",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
   "Operating System :: MacOS",
   "Operating System :: Unix",
   "Programming Language :: Python",
@@ -30,6 +33,8 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
   "Programming Language :: Rust",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
 ]
 dependencies = [
   "aioboto3>=15.5.0",
