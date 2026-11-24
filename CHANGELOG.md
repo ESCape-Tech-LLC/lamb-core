@@ -4,6 +4,8 @@
 
 **Tools:**
 
+- tools: `AGENTS.md` — complete refactor: new rule structure (LMB-{GROUP}{SEVERITY}{NNN}), status model, merged Code Quality section
+- tools: `AGENTS.md` — add `.python-version` and dependency categorization rules
 - tools: `docker-compose.test.yml` - complete test infrastructure with 6 services (PostgreSQL 18, Valkey 9.1.1, MinIO, Kafka 3.9)
 - tools: `docker-compose.test.yml` - PostgreSQL 18 with TimescaleDB on port 35432
 - tools: `docker-compose.test.yml` - Valkey bundle 9.1.1 in 3 modes: standalone (36379), Sentinel (36380-36382), Cluster (36390-36392)
@@ -19,8 +21,8 @@
 
 **Dependencies:**
 
+- dep: merge `test` dependency group into `dev` (pytest-asyncio moved)
 - dep: remove `aioredis` from project dependencies - not used in codebase
-- dep: add `pytest-asyncio>=0.21` to test dependency group in `pyproject.toml`
 
 **Documentation:**
 
