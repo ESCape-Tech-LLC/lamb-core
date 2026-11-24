@@ -1,53 +1,86 @@
 # AGENTS.md
 
-## 1. Git, VCS & Release Policy (STRICT)
-- **NO COMMITS OR PUSHES:** Never execute `git commit`, `git push`, or any variation of them (`--amend`, `-a`, `--no-verify`, `--tags`).
-- **NO STAGING (`git add`):** Never stage files using `git add` (e.g., `git add .`, `git add -A`, `git add <file>`), whether via terminal commands, chained commands, or IDE/PyCharm VCS and MCP tools.
-- **NO IDE / PyCharm VCS MUTATIONS:** Do not invoke any PyCharm, JetBrains, or MCP server tools that modify Git state, add files to changelists, stage changes, or trigger VCS commits.
-- **NO RELEASE / BUMP SCRIPTS:** Never run `./bump.sh`, `bumpversion`, or `bump-my-version`—they execute `git add`, `git commit`, `git tag`, and `git push` automatically. Never alter version numbers in `pyproject.toml`, `VERSION`, or `lamb/__init__.py`.
-- **Read-Only Git Access Only:** You are strictly limited to read-only inspection commands (`git status`, `git diff`, `git log`).
-- **Required Handoff:** Leave all modified files (including `CHANGELOG.md`) unstaged in the working tree. When finished, summarize the changes and provide a suggested commit message so the user can review, stage, and commit manually in PyCharm.
+## Context
+- **IDE:** PyCharm + AI Agent plugins (JetBrains MCP)
+- **Workflow:** Agent assists; user executes in PyCharm (commits, staging, reviews)
+- **Tools:** `jetbrains-pycharm__*`, terminal, file operations
 
-## 2. `CHANGELOG.md` Maintenance (REQUIRED AFTER EACH CONFIRMED JOB)
-After completing and verifying a task, automatically update the `## [Unreleased]` section of `CHANGELOG.md` (above the first `---` divider):
-- **Do Not Touch Released Sections:** Never modify any dated versioned sections below `---`, and never create version headers—`./bump.sh` handles version promotion during release.
-- **Category Headers:** Group entries under existing bold category headers (or create them in this order if missing, surrounded by blank lines):
-  - `**Breaking Changes:**` (`- break: ...`)
-  - `**Features:**` (`- feat: ...`)
-  - `**Bug Fixes:**` (`- fix: ...`)
-  - `**Refactoring:**` (`- ref: ...`)
-  - `**Deprecations:**` (`- deprecate: ...`)
-  - `**Documentation:**` (`- docs: ...`)
-  - `**Dependencies:**` (`- dep: ...`)
-  - `**Chores:**` (`- chore: ...`)
-  - `**Tools:**` (`- tools: ...`)
-- **Entry Format:** Follow the exact project style—prefix with the lowercase type, wrap the affected module/class/symbol in backticks, and separate with ` - `:
-  - Module-specific: ``- feat: `lamb.db.config` - support psycopg3 default connect options``
-  - Repo-wide: `- docs: add MIT LICENSE file`
+## Severity Levels
+- 🔴 **BLOCKER** — Never violate; stop and ask
+- 🟡 **WARNING** — Require explicit confirmation
+- 🟢 **RECOMMENDATION** — Best practice; explain deviations
 
-## 3. Environment & `uv` Tooling Rules
-- **Package Manager:** Always run tools and tests through `uv` (`uv run ...`). Never install packages globally or bypass the project environment.
-- **Do Not Auto-Format `pyproject.toml`:** Never run `uvx pyproject-fmt pyproject.toml`—it can corrupt `[tool.uv.sources.lamb]` and custom comments.
-- **Do Not Auto-Upgrade Dependencies:** Never run `uvx uv-upsync` or modify dependency constraints in `pyproject.toml` without explicit approval.
-- **Minimal Dependencies:** Avoid adding new runtime dependencies; optional heavy drivers (`boost`, `cassandra`, `scylla`) live under `optional-dependencies`.
+---
 
-## 4. Verification Commands
-Run these before updating `CHANGELOG.md` and completing any task:
-- **Run Tests:** `uv run pytest`
-- **Lint Check:** `uv run ruff check .`
-- **Format Check:** `uv run ruff format --check .`
-- **Auto-Fix Lint & Format:** `uv run ruff check --fix . && uv run ruff format .`
+## 🔴 BLOCKER Rules (Critical)
 
-## 5. Coding Standards (`lamb`)
-- **Layout:** Flat package layout under `lamb/` with tests under `tests/`.
-- **Python Compatibility:** Target Python `>=3.13` (3.13 and 3.14 supported; Ruff targets `py314`). Use modern built-in generics and typing syntax (`UP`, `FA` rules enabled).
-- **Formatting & Imports:**
-  - Max line length is `120` characters, double quotes, space indentation.
-  - Follow the custom `isort` import order: `future` -> `standard-library` -> `third-party` -> `lamb` -> `first-party` -> `local-folder`.
-  - `tests/` and `playground*.ipynb` are excluded from Ruff; keep test code clean and formatted manually.
-- **Public API & Typing:** Marked `Typing :: Typed`. Provide complete type annotations on all public functions, classes, and methods, and maintain `__all__` in public modules.
-- **Framework Conventions:** Built on Django `<6.1`, SQLAlchemy `<2.1` (sync + `asyncio`), Celery, `asyncpg`, `aiohttp`, and `aioboto3`. Respect sync/async boundaries and avoid blocking calls inside async paths.
+### Git & VCS (Never Commit/Push)
+- **LMB-01001**: No `git commit`, `push`, `add`, or any VCS mutation (terminal or PyCharm)
+- **LMB-01002**: No release scripts (`bump.sh`, `bumpversion`) or version changes in `pyproject.toml`/`VERSION`/`lamb/__init__.py`
+- **LMB-01003**: Git read-only: `status`, `diff`, `log` only
+- **LMB-01004**: Leave files unstaged; provide suggested commit message for manual commit
 
-## 6. Testing Conventions
-- **Async Tests:** `pytest-asyncio` runs with `asyncio_mode = "auto"` and **class-scoped** fixture/test event loops (`asyncio_default_fixture_loop_scope = "class"`). Keep async fixtures and tests within a test class compatible with a shared class-level event loop.
-- **Isolation:** Mock external network/cloud calls (`boto3`/`aioboto3`, `aiohttp`, `requests`), Redis, Cassandra/Scylla, and database connections in unit tests.
+### File Safety (Never Destroy)
+- **LMB-04001**: No `overwrite=true` on existing files
+- **LMB-04002**: Read file before modifying (`read_files`)
+- **LMB-04003**: Use `editor` tool for edits, not `create_new_file`
+- **LMB-04004**: Minimal changes; preserve formatting, structure, comments
+- **LMB-04005**: No spurious `__init__.py` in empty subdirectories
+- **LMB-04006**: Pre-flight check: verify existence → read → plan → edit
+
+### CHANGELOG (Preserve History)
+- **LMB-02001**: Edit `## [Unreleased]` only; never touch released sections (below `---`)
+- **LMB-02002**: Use categories: Breaking Changes, Features, Bug Fixes, Refactoring, Deprecations, Documentation, Dependencies, Chores, Tools
+- **LMB-02003**: Format: `- type: `module` - description`
+- **LMB-02004**: Insert at top of Unreleased; never recreate file
+
+### Policy Enforcement
+- **LMB-08001**: Reference rule numbers in actions (e.g., "Applying LMB-04002")
+- **LMB-08002**: Stop and ask if action would violate a rule
+- **LMB-08003**: Rule numbers never reused (even if deprecated)
+
+---
+
+## 🟡 WARNING Rules (Require Confirmation)
+
+### Environment & Dependencies
+- **LMB-03001**: Always use `uv` (`uv run ...`); never global installs
+- **LMB-03002**: No auto-format `pyproject.toml` (`uvx pyproject-fmt`)
+- **LMB-03003**: No auto-upgrade (`uvx uv-upsync`) without approval
+- **LMB-03004**: Minimal dependencies; optional heavy drivers under `optional-dependencies`
+- **LMB-03005**: Edit `pyproject.toml` with `editor`; preserve structure and comments
+
+### Major Changes
+- **LMB-03006**: Refactoring, file deletion, dependency changes, schema migrations → ask first
+
+---
+
+## 🟢 RECOMMENDATION Rules (Best Practice)
+
+### Verification (Before Completion)
+- **LMB-05001**: Run tests: `uv run pytest`
+- **LMB-05002**: Lint: `uv run ruff check .`
+- **LMB-05003**: Format: `uv run ruff format --check .`
+- **LMB-05004**: Auto-fix: `uv run ruff check --fix . && uv run ruff format .`
+
+### Coding Standards
+- **LMB-06001**: Layout: `lamb/` package, `tests/` for tests
+- **LMB-06002**: Python `>=3.13`; modern typing (`UP`, `FA` rules)
+- **LMB-06003**: Line length 120; isort order: future → stdlib → third-party → lamb → first-party → local
+- **LMB-06004**: Complete type annotations on public API; maintain `__all__`
+- **LMB-06005**: Frameworks: Django `<6.1`, SQLAlchemy `<2.1`, Celery, `asyncpg`, `aiohttp`, `aioboto3`; respect async boundaries
+
+### Testing Conventions
+- **LMB-07001**: `pytest-asyncio` with `asyncio_mode = "auto"`, class-scoped fixtures
+- **LMB-07002**: Mock external services (cloud, network, Redis, DB) in unit tests
+- **LMB-07003**: Use real Docker services (PostgreSQL, Valkey, MinIO, Kafka) for integration tests
+- **LMB-07004**: Centralize fixtures in `tests/conftest.py`
+- **LMB-07005**: Verify Docker services healthy before integration tests
+
+### Refactoring
+- **LMB-04007**: Ask before refactoring: "I notice X could be improved, want me to do it?"
+
+---
+
+## Rule Format
+`LMB-SSSSS` where `SS` = section (01-99), `SSS` = rule (001-999)
