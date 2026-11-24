@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+**Documentation:**
+
+- docs: add MIT LICENSE file
+
+**Tools:**
+
+- chore: update ruff to v0.17.6 in pre-commit hooks
+- chore: add PyPI classifiers (Intended Audience, License, Topic, Typing)
+
 ---
 
 ## [3.7.4] - 2026-11-24
