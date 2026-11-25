@@ -94,14 +94,22 @@ def dpath_value(
         raise exc.ServerError("Failed to parse params due unknown error") from error
 
     # prepare key_path
-    if not isinstance(key_path, str | list | tuple):
+    if not isinstance(key_path, (str, list, tuple)):
         raise exc.ServerError
 
     _key_path = copy.copy(key_path)
 
     # query
     try:
-        if isinstance(dict_object, os._Environ):
+        if type(dict_object) is dict and type(key_path) is str and _impl_dict is _impl_dict_reduce:
+            # A flat JSON key is literal in the reduce engine. Return missing defaults before conversion.
+            try:
+                if (default_on_missing is not _UNSET or "default" in kwargs) and key_path not in dict_object:
+                    return kwargs.get("default", default_on_missing)
+                result = dict_object[key_path]
+            except Exception as error:
+                raise IndexError("Path not exist") from error
+        elif isinstance(dict_object, os._Environ):
             result = _impl_environ(dict_object, key_path=_key_path, **kwargs)
         elif isinstance(dict_object, dict):
             result = _impl_dict(dict_object, key_path=_key_path, **kwargs)

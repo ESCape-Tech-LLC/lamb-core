@@ -134,9 +134,33 @@ class DictionaryTestMixin:
 class DpathTest(DictionaryTestMixin, LambTestCase):
     _engine = "dpath"
 
+    def test_string_path_traverses_nested_dict(self):
+        self.assertEqual(dpath_value({"actor": {"name": "Robin"}}, "actor/name"), "Robin")
+
 
 class ReduceTest(DictionaryTestMixin, LambTestCase):
     _engine = "reduce"
+
+    def test_flat_key_defaults(self):
+        fallback = object()
+        self.assertIs(dpath_value({}, "limit", int, default_on_missing=fallback), fallback)
+        self.assertIsNone(dpath_value({"limit": None}, "limit", int, allow_none=True, default_on_missing=fallback))
+        self.assertIs(dpath_value({"limit": "bad"}, "limit", int, default=fallback), fallback)
+        with self.assertRaises(exc.InvalidParamTypeError):
+            dpath_value({"limit": "bad"}, "limit", int, default_on_missing=fallback)
+
+    def test_flat_key_custom_errors(self):
+        with self.assertRaises(KeyError):
+            dpath_value({}, "limit", int, missing_error=KeyError)
+        with self.assertRaises(ValueError):
+            dpath_value({"limit": "10"}, "limit", int, strict=True, invalid_error=ValueError)
+
+    def test_flat_key_on_dict_subclass(self):
+        from collections import defaultdict
+
+        values = defaultdict(int)
+        self.assertEqual(dpath_value(values, "limit", int, default=10), 0)
+        self.assertIn("limit", values)
 
 
 class EtreeTestCase(LambTestCase):
