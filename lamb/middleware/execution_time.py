@@ -51,7 +51,7 @@ class LambExecutionTimeMiddleware(LambMiddlewareMixin):
     # settings: memoize
     @lazy_default_ro(default=[])
     def _settings_skip_methods(self) -> list[str]:
-        result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_METHODS", str, transform=tf_list_string, default=[])
+        result = dpath_value(settings, "LAMB_EXECUTION_TIME_SKIP_METHODS", transform=tf_list_string, default=[])
         result = [r.upper() for r in result]
         logger.debug(f"<{self.__class__.__name__}>. settings_skip_methods: {result}")
         return result
@@ -289,8 +289,14 @@ class LambExecutionTimeMiddleware(LambMiddlewareMixin):
                 logger.exception(f"<{cls.__name__}> async_db_writer_worker. FAILED -> sleep to let DB restart")
                 await asyncio.sleep(5)
 
+    def _should_store_metric(self, request: LambRequest) -> bool:
+        return self._settings_should_store and request.method not in self._settings_skip_methods
+
     async def _a_metrics_store_db(self, request: LambRequest, metric: LambExecutionTimeMetric):
         global async_db_writer_task
+
+        if not self._should_store_metric(request):
+            return
 
         if async_db_writer_task is None or async_db_writer_task.done():  # call on init/break
             async with async_db_writer_task_init_lock:
@@ -306,7 +312,7 @@ class LambExecutionTimeMiddleware(LambMiddlewareMixin):
         async_db_writer_queue.put_nowait(metric)
 
     def _metrics_store_db(self, request: LambRequest, metric: LambExecutionTimeMetric):
-        if request.method not in self._settings_skip_methods and self._settings_should_store:
+        if self._should_store_metric(request):
             try:
                 with lamb_db_context(pooled=settings.LAMB_DB_CONTEXT_POOLED_METRICS) as db_session:
                     db_session.expire_on_commit = False
