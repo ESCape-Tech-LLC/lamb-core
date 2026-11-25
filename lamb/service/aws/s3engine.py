@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import pathlib
 import re
@@ -24,12 +25,10 @@ except ImportError:
 
 try:
     import aioboto3
-    import aiofiles
     from aiobotocore.config import AioConfig
     from aiobotocore.session import ClientCreatorContext
 except ImportError:
     aioboto3 = None
-    aiofiles = None
     AioConfig = None
     ClientCreatorContext = None
 
@@ -510,11 +509,13 @@ class AsyncS3Engine(S3EngineBase):
         )
         _path = self.normalize_path(path)
         if isinstance(body, TemporaryUploadedFile):
-            async with aiofiles.open(body.temporary_file_path(), "rb") as f:
+            # Botocore calls read(), seek(), and tell() synchronously.
+            file = await asyncio.to_thread(open, body.temporary_file_path(), "rb")
+            with file:
                 response: dict = await self._client.put_object(
                     Bucket=self.bucket_name,
                     ACL="private" if private else "public-read",
-                    Body=f,
+                    Body=file,
                     Key=_path,
                     ContentType=file_type or "",
                 )
