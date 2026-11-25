@@ -12,6 +12,7 @@ __pycache__/
 
 # def: build artefacts
 *.so
+lamb/utils/dpath/_impl.c
 build/
 develop-eggs/
 dist/

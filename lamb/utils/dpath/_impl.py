@@ -1,3 +1,4 @@
+# cython: annotation_typing=False
 from __future__ import annotations
 
 import contextlib
@@ -16,9 +17,6 @@ from lxml import etree
 from lxml.etree import _Element as EtreeElement
 from lxml.etree import _ElementTree as Etree
 
-from lamb import exc
-from lamb.ext.lxml import __lxml_hints_reverse_map__
-
 logger = logging.getLogger(__name__)
 
 __all__ = ["adapt_dict_impl", "dpath_value"]
@@ -28,7 +26,6 @@ DictObject = dict | EtreeElement | Etree | Mapping | Settings
 KeyPath = str | list[Any] | tuple[Any]
 
 # main
-# TODO: migrate functions to cython with pure python versions - could be much faster
 _UNSET = object()
 
 
@@ -237,7 +234,7 @@ def _impl_etree(element: EtreeElement | Etree, key_path: str, namespaces: dict |
                     result = __lxml_hints_reverse_map__[hinted_type](result)
 
         return result
-    except exc.ApiError, _MissingPath:
+    except (exc.ApiError, _MissingPath):  # fmt: skip
         raise
     except etree.ParseError as e:
         raise exc.InvalidBodyStructureError(
@@ -298,3 +295,9 @@ def _impl_environ(env: os._Environ, key_path: str | list[str] | None = None, **k
             raise exc.InvalidBodyStructureError("Could not adapt _FILE like env variable") from e
 
     return _impl_dict(dict_object=env, key_path=key_path, **kwargs)
+
+
+# Importing Lamb loads the public dpath module. Its functions must already exist
+# when the extension is imported first (for example, when unpickling a function).
+from lamb import exc
+from lamb.ext.lxml import __lxml_hints_reverse_map__

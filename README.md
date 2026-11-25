@@ -43,6 +43,41 @@ git+https://github.com/ESCape-Tech-LLC/lamb-core.git
 poetry add git+https://github.com/ESCape-Tech-LLC/lamb-core.git
 ```
 
+### Optional native `dpath_value`
+
+Select the `dpath-fast` extra to use the Cython build of `lamb.utils.dpath_value`.
+The standard installation and the `boost` extra use the Python implementation by default.
+Both implementations use the configured `LAMB_DPATH_DICT_ENGINE`.
+
+To install from a local checkout:
+
+```bash
+uv pip install '.[dpath-fast]' ./lamb/utils/dpath
+```
+
+For a service installing Lamb from Git, point both packages at the same tag or commit
+containing the accelerator in the service's `pyproject.toml`.
+
+```toml
+[project]
+dependencies = ["lamb[dpath-fast]"]
+
+[tool.uv.sources]
+lamb = { git = "https://github.com/ESCape-Tech-LLC/lamb-core.git", rev = "<revision>" }
+lamb-speedups = { git = "https://github.com/ESCape-Tech-LLC/lamb-core.git", rev = "<revision>", subdirectory = "lamb/utils/dpath" }
+```
+
+Building from source requires a C compiler and Python headers on the build machine.
+The build backend installs Cython in its isolated build environment. If both packages
+are available from your package index as compatible wheels, use `uv pip install 'lamb[dpath-fast]'`.
+Check which implementation is active with:
+
+```bash
+python -c 'from lamb.utils import dpath_value; print(dpath_value.__module__)'
+```
+
+The native module reports `_lamb_dpath_fast`. The Python module reports `lamb.utils.dpath._impl`.
+
 ### Add `lamb` to your project via `settings.py`:
 
 ```python
