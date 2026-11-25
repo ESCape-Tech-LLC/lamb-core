@@ -29,7 +29,15 @@ KeyPath = str | list[Any] | tuple[Any]
 
 # main
 # TODO: migrate functions to cython with pure python versions - could be much faster
-# TODO: modify - split logic of default for presented and not exist key_path
+_UNSET = object()
+
+
+class _MissingPath(IndexError):
+    """Carry the source-specific error for an unresolved path."""
+
+    def __init__(self, error: exc.InvalidBodyStructureError):
+        super().__init__(error.message)
+        self.error = error
 
 
 def dpath_value(
@@ -38,6 +46,11 @@ def dpath_value(
     req_type: Callable | None = None,
     allow_none: bool = False,
     transform: Callable | None = None,
+    *,
+    default_on_missing: Any = _UNSET,
+    missing_error: Callable[[], Exception] | None = None,
+    invalid_error: Callable[[], Exception] | None = None,
+    strict: bool = False,
     **kwargs,
 ):
     """Search for object in provided dict_object under key_path
@@ -49,25 +62,36 @@ def dpath_value(
     :param transform: Optional callback (lamb.utils.transformers function or other)
         to apply on extracted value before return
 
-    :param kwargs: Optional parameters:
-        - `default` - default value is passed to extractor function
-        - others - passed to the transformer (if set).
+    :param default_on_missing: Return this value unchanged when the path cannot be found.
+    :param missing_error: Exception class or zero-argument factory for an unresolved path.
+        Mutually exclusive with default_on_missing.
+    :param invalid_error: Exception class or zero-argument factory for a disallowed None,
+        conversion failure, or validation error in transform (ValueError or a Lamb
+        parameter/structure error).
+    :param strict: Require the exact req_type before transform instead of coercing the value.
+    :param kwargs: Source-specific options and the legacy fallback `default`, which also
+        covers conversion and transformation failures. Use it separately from the new
+        missing/invalid policies.
 
     :return: Extracted value
 
     """
 
-    # utils
-    def _type_convert(_result):
-        if type(_result) is req_type:
-            return _result
-        try:
-            _result = req_type(_result)
-            return _result
-        except (ValueError, TypeError) as _e:
-            raise exc.InvalidParamTypeError(
-                f"Invalid data type for param '{key_path}'", error_details={"key_path": key_path}
-            ) from _e
+    if default_on_missing is not _UNSET and missing_error is not None:
+        raise exc.ProgrammingError("default_on_missing and missing_error are mutually exclusive")
+    if "default" in kwargs and (
+        default_on_missing is not _UNSET or missing_error is not None or invalid_error is not None
+    ):
+        raise exc.ProgrammingError("default cannot be combined with default_on_missing, missing_error or invalid_error")
+    if strict and not isinstance(req_type, type):
+        raise exc.ProgrammingError("strict=True requires a type for req_type")
+
+    def handle_error(error: Exception):
+        if "default" in kwargs:
+            return kwargs["default"]
+        if isinstance(error, exc.ApiError):
+            raise error
+        raise exc.ServerError("Failed to parse params due unknown error") from error
 
     # prepare key_path
     if not isinstance(key_path, str | list | tuple):
@@ -77,49 +101,56 @@ def dpath_value(
 
     # query
     try:
-        # custom dispatch
-        try:
-            if isinstance(dict_object, os._Environ):
-                result = _impl_environ(dict_object, key_path=_key_path, **kwargs)
-            elif isinstance(dict_object, dict):
-                result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
-            elif isinstance(dict_object, Settings):
-                result = _impl_django_conf(dict_object, key_path=_key_path, **kwargs)
-            elif isinstance(dict_object, QueryDict):
-                result = _impl_query_dict(dict_object, key_path=_key_path, **kwargs)
-            elif isinstance(dict_object, Etree | EtreeElement):
-                result = _impl_etree(dict_object, key_path=_key_path, **kwargs)
-            else:
-                # last mile - attempt as dict
-                result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
-        except IndexError as e:
-            raise exc.InvalidBodyStructureError(f"Could not locate key: {key_path}") from e
+        if isinstance(dict_object, os._Environ):
+            result = _impl_environ(dict_object, key_path=_key_path, **kwargs)
+        elif isinstance(dict_object, dict):
+            result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
+        elif isinstance(dict_object, Settings):
+            result = _impl_django_conf(dict_object, key_path=_key_path, **kwargs)
+        elif isinstance(dict_object, QueryDict):
+            result = _impl_query_dict(dict_object, key_path=_key_path, **kwargs)
+        elif isinstance(dict_object, Etree | EtreeElement):
+            result = _impl_etree(dict_object, key_path=_key_path, **kwargs)
+        else:
+            result = _impl_dict(dict_object, key_path=_key_path, **kwargs)
+    except IndexError as lookup_error:
+        if default_on_missing is not _UNSET:
+            return default_on_missing
+        if "default" in kwargs:
+            return kwargs["default"]
+        if missing_error is not None:
+            raise missing_error() from lookup_error
+        if isinstance(lookup_error, _MissingPath):
+            raise lookup_error.error from lookup_error.__cause__
+        raise exc.InvalidBodyStructureError(f"Could not locate key: {key_path}") from lookup_error
+    except Exception as error:
+        return handle_error(error)
 
+    try:
         # check for none
         if result is None:
             if allow_none:
                 return None
-            else:
-                raise exc.InvalidParamTypeError(
-                    f"Invalid data type for param: {key_path}", error_details={"key_path": key_path}
-                )
+            raise exc.InvalidParamTypeError(
+                f"Invalid data type for param: {key_path}", error_details={"key_path": key_path}
+            )
 
-        # apply type convert
-        if req_type is not None:
-            result = _type_convert(result)
+        if req_type is not None and type(result) is not req_type:
+            message = f"Invalid data type for param '{key_path}'"
+            if strict:
+                raise exc.InvalidParamTypeError(message, error_details={"key_path": key_path})
+            try:
+                result = req_type(result)
+            except (ValueError, TypeError) as error:
+                raise exc.InvalidParamTypeError(message, error_details={"key_path": key_path}) from error
 
-        # apply transform
-        if transform is not None:
-            return transform(result)
-
-        return result
-    except Exception as e:
-        if "default" in kwargs:
-            return kwargs["default"]
-        elif isinstance(e, exc.ApiError):
-            raise
-        else:
-            raise exc.ServerError("Failed to parse params due unknown error") from e
+        return transform(result) if transform is not None else result
+    except Exception as error:
+        if invalid_error is not None and isinstance(
+            error, (exc.InvalidParamTypeError, exc.InvalidParamValueError, exc.InvalidBodyStructureError, ValueError)
+        ):
+            raise invalid_error() from error
+        return handle_error(error)
 
 
 # dict engine utils
@@ -181,9 +212,11 @@ def _impl_etree(element: EtreeElement | Etree, key_path: str, namespaces: dict |
         # extract child and text
         child = element.find(key_path, namespaces=namespaces)
         if child is None:
-            raise exc.InvalidBodyStructureError(
-                f"Could not extract param for key_path {key_path} from provided XML data",
-                error_details={"key_path": key_path},
+            raise _MissingPath(
+                exc.InvalidBodyStructureError(
+                    f"Could not extract param for key_path {key_path} from provided XML data",
+                    error_details={"key_path": key_path},
+                )
             )
         result = child.text
 
@@ -196,7 +229,7 @@ def _impl_etree(element: EtreeElement | Etree, key_path: str, namespaces: dict |
                     result = __lxml_hints_reverse_map__[hinted_type](result)
 
         return result
-    except exc.ApiError:
+    except exc.ApiError, _MissingPath:
         raise
     except etree.ParseError as e:
         raise exc.InvalidBodyStructureError(
@@ -223,10 +256,13 @@ def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
         result = getattr(settings, key_path)  # type: Any
         return result
     except Exception as e:
-        raise exc.InvalidBodyStructureError(
+        error = exc.InvalidBodyStructureError(
             f"Could not locate field for key_path = {key_path} from settings object",
             error_details={"key_path": key_path},
-        ) from e
+        )
+        if isinstance(e, AttributeError):
+            raise _MissingPath(error) from e
+        raise error from e
 
 
 def _impl_query_dict(dict_object: QueryDict, key_path: str | list[str] | None = None, **kwargs) -> Any:
