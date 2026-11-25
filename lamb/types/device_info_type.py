@@ -54,6 +54,13 @@ class DeviceInfo(ResponseEncodableMixin):
     ip_routable: bool | None = None
     geoip2_info: dict[str, Any] | None = None
 
+    def __post_init__(self) -> None:
+        if isinstance(self.device_locale, str):
+            try:
+                self.device_locale = LambLocale.parse(self.device_locale)
+            except Exception as e:
+                raise exc.ServerError("Invalid stored device locale") from e
+
     @classmethod
     def parse_request(cls, request: LambRequest) -> dict[str, Any]:
         try:
