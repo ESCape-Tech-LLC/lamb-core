@@ -83,6 +83,7 @@ urls.Homepage = "https://github.com/ESCape-Tech-LLC/lamb-core"
 #geoip2
 [dependency-groups]
 dev = [
+  "coverage>=7.17.5",
   "pre-commit>=4.7.0",
   "pytest-asyncio>=0.21",
   "ruff>=0.17.6",
