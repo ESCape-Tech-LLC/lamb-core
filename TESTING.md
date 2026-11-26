@@ -1,528 +1,167 @@
-# Testing Guide
+# Testing Guidelines
 
-This document describes the testing infrastructure and conventions for the `lamb-core` project.
+## Philosophy
 
-## Table of Contents
+- Tests are specifications of behavior, not just validation tools
+- Each test should clearly express intent and expected outcomes
+- Failing tests should provide actionable diagnostic information
+- Test design should follow Arrange-Act-Assert pattern with clear comments
 
-- [Test Environment](#test-environment)
-- [Quick Start](#quick-start)
-- [Test Fixtures](#test-fixtures)
-- [Running Tests](#running-tests)
-- [Test Categories](#test-categories)
-- [Writing Tests](#writing-tests)
-- [Troubleshooting](#troubleshooting)
-
-## Test Environment
-
-The test environment uses Docker Compose to provide real services for integration testing:
-
-| Service | Version | Port | Purpose |
-|---------|---------|------|---------|
-| PostgreSQL 18 + TimescaleDB | latest-pg18 | 35432 | Database |
-| Valkey bundle (standalone) | 9.1.1 | 36379 | Cache/Session |
-| Valkey Sentinel | 9.1.1 | 36380-36382 | High availability |
-| Valkey Cluster | 9.1.1 | 36390-36392 | Distributed cache |
-| MinIO | latest | 39000/39001 | S3 Storage |
-| Kafka Cluster | 3.9.1 | 39092-39093 | Event Streaming (2 nodes) |
-
-All ports are in the 30000+ range to avoid conflicts with production services.
-
-### Service Configuration
-
-**PostgreSQL:**
-- Database: `lamb_test`
-- User: `lamb_test`
-- Password: `lamb_test_pass`
-
-**Valkey Standalone:**
-- Password: `testpass123`
-- Default DB: 0
-
-**Valkey Sentinel:**
-- Master port: 36380
-- Replica port: 36381
-- Sentinel port: 36382
-- Password: `testpass123`
-- Master name: `mymaster`
-
-**Valkey Cluster:**
-- Nodes: 36390, 36391, 36392
-- Password: `testpass123"
-- Cluster mode enabled
-
-**MinIO:**
-- Access Key: `minio`
-- Secret Key: `minio123`
-- Buckets: `test-bucket`, `test-bucket-private`
-
-**Kafka Cluster:**
-- Bootstrap servers: `localhost:39092,localhost:39093`
-- Nodes: kafka-1 (39092), kafka-2 (39093)
-- Mode: KRaft (no ZooKeeper)
-- Replication factor: 2
-- Security: PLAINTEXT
-
-## Quick Start
-
-### 1. Start Test Environment
-
-```bash
-./scripts/start-test-env.sh
-```
-
-This script will:
-- Clean up any existing test containers
-- Start all Docker services
-- Wait for health checks
-- Initialize MinIO buckets and Kafka topics
-
-### 2. Install Test Dependencies
-
-```bash
-uv sync --group test
-```
-
-### 3. Run Tests
-
-```bash
-# Unit tests only
-uv run pytest tests/unit -v
-
-# Integration tests only
-uv run pytest tests/integration -v -m integration
-
-# All tests with coverage
-uv run pytest tests/ -v --cov=lamb --cov-report=html
-```
-
-### 4. Stop Test Environment
-
-```bash
-./scripts/stop-test-env.sh
-```
-
-## Test Fixtures
-
-All fixtures are defined in `tests/conftest.py`.
-
-### Database Fixtures
-
-**Sync Database Context:**
-```python
-def test_with_sync_db(db_context):
-    """Use sync database context."""
-    from sqlalchemy import text
-    
-    db_context.execute(text("SELECT 1"))
-    db_context.commit()
-```
-
-**Async Database Context:**
-```python
-@pytest.mark.asyncio
-async def test_with_async_db(async_db_context):
-    """Use async database context."""
-    from sqlalchemy import text
-    
-    await async_db_context.execute(text("SELECT 1"))
-    await async_db_context.commit()
-```
-
-**Clean Database:**
-```python
-@pytest.mark.asyncio
-async def test_with_clean_db(clean_database):
-    """Use clean database fixture."""
-    # Database will be truncated before test
-    pass
-```
-
-### Valkey Fixtures
-
-**Sync Valkey Client:**
-```python
-def test_valkey_sync(valkey_client):
-    """Use sync Valkey client."""
-    valkey_client.set("key", "value")
-    assert valkey_client.get("key") == b"value"
-```
-
-**Async Valkey Client:**
-```python
-@pytest.mark.asyncio
-async def test_valkey_async(async_valkey_client):
-    """Use async Valkey client."""
-    await async_valkey_client.set("key", "value")
-    assert await async_valkey_client.get("key") == b"value"
-```
-
-### S3/MinIO Fixtures
-
-**S3 Bucket:**
-```python
-def test_s3_operations(s3_bucket, minio_endpoint, minio_credentials):
-    """Test S3 operations with MinIO."""
-    import boto3
-    
-    s3_client = boto3.client(
-        "s3",
-        endpoint_url=minio_endpoint,
-        aws_access_key_id=minio_credentials["aws_access_key_id"],
-        aws_secret_access_key=minio_credentials["aws_secret_access_key"],
-        region_name=minio_credentials["region_name"],
-    )
-    
-    s3_client.put_object(Bucket=s3_bucket, Key="test.txt", Body=b"content")
-```
-
-**Async S3 Client:**
-```python
-@pytest.mark.asyncio
-async def test_async_s3(s3_async_client, s3_bucket):
-    """Test async S3 operations."""
-    async with await s3_async_client() as client:
-        await client.put_object(Bucket=s3_bucket, Key="async.txt", Body=b"content")
-```
-
-### Kafka Fixtures
-
-**Kafka Topic:**
-```python
-def test_kafka_topic(kafka_topic, kafka_config):
-    """Test with Kafka topic."""
-    # Topic 'test-topic' is created and will be deleted after test
-    pass
-```
-
-## Running Tests
-
-### Test Markers
-
-Use markers to categorize tests:
-
-```python
-import pytest
-
-
-@pytest.mark.integration
-def test_integration():
-    """Integration test requiring Docker services."""
-    pass
-
-
-@pytest.mark.requires_db
-def test_requires_database(db_context):
-    """Test requiring database."""
-    pass
-
-
-@pytest.mark.requires_valkey
-def test_requires_valkey(valkey_client):
-    """Test requiring Valkey."""
-    pass
-
-
-@pytest.mark.requires_s3
-def test_requires_s3(s3_bucket):
-    """Test requiring S3."""
-    pass
-
-
-@pytest.mark.slow
-def test_slow_operation():
-    """Slow test (e.g., large data processing)."""
-    pass
-```
-
-### Running Specific Test Types
-
-```bash
-# Only integration tests
-uv run pytest tests/ -m integration
-
-# Exclude slow tests
-uv run pytest tests/ -m "not slow"
-
-# Multiple markers
-uv run pytest tests/ -m "integration and requires_db"
-
-# Specific test file
-uv run pytest tests/integration/test_valkey_basic.py -v
-
-# Specific test method
-uv run pytest tests/integration/test_valkey_basic.py::TestValkeyBasic::test_ping -v
-```
-
-### Coverage
-
-Generate coverage report:
-
-```bash
-uv run pytest tests/ --cov=lamb --cov-report=html --cov-report=term-missing
-```
-
-Open coverage report:
-
-```bash
-open htmlcov/index.html  # macOS
-```
-
-## Test Categories
+## Test Structure
 
 ### Unit Tests
-
-Located in `tests/unit/`:
-- Test individual components in isolation
-- No external dependencies
-- Fast execution
-- Use mocks for external services
-
-```python
-# tests/unit/test_utils.py
-import pytest
-
-
-class TestUtilityFunctions:
-    """Unit tests for utility functions."""
-
-    def test_helper_function(self):
-        """Test a helper function."""
-        from lamb.utils import helper
-
-        result = helper("input")
-        assert result == "expected"
-```
+- Located in `tests/unit/` with parallel structure to `lamb/`
+- Use pytest with async support where appropriate
+- Prefer isolated, fast, deterministic tests
+- Use mocks and fixtures judiciously - prefer real dependencies when feasible
 
 ### Integration Tests
+- Located in `tests/integration/`
+- Test service interactions with real Dockerized dependencies
+- Use `tests/conftest.py` for shared fixtures
+- Health-check services before test execution
 
-Located in `tests/integration/`:
-- Test integration with real services
-- Require Docker test environment
-- Slower than unit tests
-- Use fixtures for service connections
+### Characterization Tests
+- Document existing behavior for refactoring safety
+- Preserve edge cases and quirks until explicitly changed
+- Essential for legacy code coverage
 
-```python
-# tests/integration/test_db.py
-import pytest
-from sqlalchemy import text
+## Test Modes
 
+### Coverage Mode
+**Goal**: Understand current system behavior and identify potential issues
 
-@pytest.mark.integration
-@pytest.mark.requires_db
-class TestDatabaseIntegration:
-    """Database integration tests."""
+**Approach**:
+- Create tests as a diagnostic tool for behavior
+- Don't aim for 100% pass rate by any means necessary
+- Record discrepancies between expectations and reality
+- Formulate reasoned doubts and questions
 
-    def test_query(self, db_context):
-        """Test database query."""
-        result = db_context.execute(text("SELECT 1"))
-        assert result.fetchone()[0] == 1
-```
+**What to do when issues are discovered**:
+1. Analyze the logic of the discrepancy
+2. Check documentation and specifications
+3. Formulate specific questions about the nature of the problem
+4. Leave tests failing as indicators for discussion
 
-### API Tests
+**Implementation adjustments**:
+- Only for explicit bugs (null pointer, crashes, etc.)
+- Never for "fitting" tests
+- Only after confirming the problem
 
-Located in `tests/api/`:
-- Test REST API endpoints
-- Use Django test client
-- May require database
+### Feature Development Mode
+**Goal**: Implement new functionality with complete test coverage
 
-## Writing Tests
+**Approach**:
+- Tests as precise specification of behavior
+- All tests should pass
+- Maintain backward compatibility
+- Follow TDD principles
 
-### Test Structure
+**What to do when tests fail**:
+- Fix the implementation, not the tests
+- Ensure all existing tests pass
+- Strictly follow specifications
 
-```python
-# tests/integration/test_service.py
-import pytest
+## Naming Conventions
 
+- `test_<unit>_<action>_<expected>` for clear intent
+- Descriptive test class names for grouping related tests
+- Parameterized tests for data-driven scenarios
+- Clear, readable assertions with meaningful messages
 
-@pytest.mark.integration
-class TestServiceName:
-    """Tests for ServiceName."""
+## Test Data
 
-    def test_basic_operation(self, fixture1, fixture2):
-        """Test basic operation."""
-        # Arrange
-        input_data = "test"
+- Prefer realistic, domain-relevant test data
+- Use factories or builders for complex test objects
+- Externalize large test datasets to `tests/data/`
+- Avoid hardcoded magic values in favor of named constants
 
-        # Act
-        result = service_function(input_data)
+## Assertions
 
-        # Assert
-        assert result == "expected"
+- Specific, precise assertions over generic "truthy" checks
+- Use pytest's rich assertion introspection
+- Include context in assertion messages when values aren't self-explanatory
+- Prefer `pytest.approx()` for floating-point comparisons
 
-    @pytest.mark.asyncio
-    async def test_async_operation(self, async_fixture):
-        """Test async operation."""
-        result = await async_service_function("input")
-        assert result == "expected"
-```
+## Error Handling
 
-### Best Practices
+- Test both success paths and failure modes
+- Verify exception types and messages precisely
+- Use `pytest.raises()` with `match=` for message validation
+- Test error recovery and state consistency
 
-1. **Use descriptive test names:**
-   ```python
-   def test_upload_file_creates_object_in_bucket()  # Good
-   def test_upload()  # Too vague
-   ```
+## Performance
 
-2. **One assertion per test (when possible):**
-   ```python
-   def test_upload_returns_200()  # Good
-   def test_upload_returns_200_and_creates_object()  # Consider splitting
-   ```
+- Mark slow tests with `@pytest.mark.slow`
+- Use `pytest.mark.skipif` for environment-dependent tests
+- Avoid unnecessary setup/teardown in test loops
+- Profile test suites regularly for bottlenecks
 
-3. **Use fixtures for setup/teardown:**
-   ```python
-   @pytest.fixture
-   def sample_data():
-       return {"key": "value"}
-   ```
+## Database Tests
 
-4. **Mark async tests:**
-   ```python
-   @pytest.mark.asyncio
-   async def test_async_function():
-       pass
-   ```
+- Use transactions with rollback for test isolation
+- Prefer read replicas for non-mutating tests
+- Clean up test data explicitly, don't rely on test order
+- Use `pytest-lazy-fixture` for complex fixture combinations
 
-5. **Use integration marker for Docker-dependent tests:**
-   ```python
-   @pytest.mark.integration
-   def test_with_docker_service():
-       pass
-   ```
+## Async Testing
 
-## Troubleshooting
+- Use `pytest-asyncio` with `asyncio_mode = "auto"`
+- Prefer `async def` test functions for async code
+- Use `anyio` backend for cross-async-library compatibility
+- Test cancellation and timeout scenarios
 
-### Tests fail with connection errors
+## Mocking Strategy
 
-Make sure test environment is running:
+- Prefer state verification over interaction testing
+- Use `unittest.mock` for simple cases, `pytest-mock` for fixtures
+- Avoid deep mocking that couples tests to implementation details
+- Mock at service boundaries, not internal collaborators
 
-```bash
-./scripts/start-test-env.sh
-```
+## Code Coverage
 
-Check if services are healthy:
+- Aim for meaningful coverage, not arbitrary percentages
+- Critical paths and error handlers must be covered
+- Legacy code should gain characterization coverage before changes
+- Exclude test files, migrations, and generated code from coverage metrics
 
-```bash
-docker compose -f docker-compose.test.yml ps
-```
+## Continuous Integration
 
-### Port conflicts
+- Tests must run in isolated, reproducible environments
+- Use Docker Compose for service dependencies
+- Parallelize test execution where safe
+- Report flaky tests immediately - don't tolerate instability
 
-Check if ports are already in use:
+## Debugging and Diagnostics
 
-```bash
-lsof -i :35432  # PostgreSQL
-lsof -i :36379  # Valkey standalone
-lsof -i :36380  # Valkey Sentinel master
-lsof -i :36390  # Valkey Cluster
-lsof -i :39000  # MinIO
-lsof -i :39092  # Kafka
-```
+- Use `pytest --pdb` for interactive debugging
+- Enable verbose output with `-v` for CI diagnostics
+- Capture logs with `--log-cli-level=INFO`
+- Use `pytest-html` for detailed test reports
 
-### Docker services not healthy
+## Best Practices Learned
 
-Check service logs:
+### Test Expectation Alignment
+- Always ensure test expectations match actual implementation behavior
+- When implementation behavior changes, update tests accordingly rather than changing the implementation
+- Pay attention to third-party library behaviors (e.g., `furl` omitting default ports)
 
-```bash
-docker compose -f docker-compose.test.yml logs postgres
-docker compose -f docker-compose.test.yml logs valkey
-docker compose -f docker-compose.test.yml logs valkey-sentinel-master
-docker compose -f docker-compose.test.yml logs valkey-cluster-node-1
-docker compose -f docker-compose.test.yml logs minio
-docker compose -f docker-compose.test.yml logs kafka-1
-docker compose -f docker-compose.test.yml logs kafka-2
-```
+### Import and Response Handling
+- Use correct imports in tests (e.g., lamb JsonResponse vs Django JsonResponse)
+- Handle response parsing correctly (e.g., use `json.loads()` instead of `.json()` method)
 
-### Fixture not found
+### Validator Behavior Understanding
+- Understand the exact behavior of validation functions:
+  - `empty_as_none=True` requires `allow_none=True` to actually return None
+  - Different exception types may be raised than initially expected
+- Test edge cases thoroughly to understand actual behavior
 
-Make sure `tests/conftest.py` is in the correct location and pytest can discover it:
+### Code Formatting and Style
+- Maintain consistent code formatting using `ruff format`
+- Fix import ordering issues regularly
+- Address linting issues promptly to maintain code quality
 
-```bash
-uv run pytest --collect-only tests/
-```
-
-### Database connection refused
-
-Verify PostgreSQL is running and accessible:
-
-```bash
-psql -h localhost -p 35432 -U lamb_test -d lamb_test
-```
-
-### MinIO bucket creation fails
-
-Check MinIO is accessible:
-
-```bash
-curl http://localhost:39000/minio/health/live
-```
-
-Manually create buckets:
-
-```bash
-./scripts/start-test-env.sh  # Re-run to initialize buckets
-```
-
-## CI/CD Integration
-
-Example GitHub Actions workflow:
-
-```yaml
-name: Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: timescale/timescaledb:latest-pg18
-        ports:
-          - 35432:5432
-        env:
-          POSTGRES_USER: lamb_test
-          POSTGRES_PASSWORD: lamb_test_pass
-          POSTGRES_DB: lamb_test
-      valkey:
-        image: valkey/valkey-bundle:9.1.1
-        ports:
-          - 36379:6379
-      minio:
-        image: ghcr.io/coollabsio/minio:latest
-        ports:
-          - 39000:9000
-          - 39001:9001
-        env:
-          MINIO_ROOT_USER: minio
-          MINIO_ROOT_PASSWORD: minio123
-      kafka:
-        image: apache/kafka:3.9.1
-        ports:
-          - 39092:9092
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-      
-      - name: Install dependencies
-        run: uv sync --group test
-      
-      - name: Run tests
-        run: uv run pytest tests/ -v --cov=lamb --cov-report=xml
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-```
-
-## Additional Resources
-
-- [pytest documentation](https://docs.pytest.org/)
-- [pytest-asyncio documentation](https://pytest-asyncio.readthedocs.io/)
-- [Docker Compose documentation](https://docs.docker.com/compose/)
-- [pytest fixtures](https://docs.pytest.org/en/stable/explanation/fixtures.html)
-- [pytest markers](https://docs.pytest.org/en/stable/example/markers.html)
+### Test Maintenance
+- Regularly run the full test suite to catch regressions
+- Keep tests up-to-date with implementation changes
+- Use characterization tests to safely refactor existing code
