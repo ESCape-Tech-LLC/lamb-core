@@ -7,27 +7,25 @@
 - ai: `agents permissions` - revised; 
 - ai: `common permissions` collected in opncode.json
 - ai: `changelog skill` - add
-- ai: `architecture rules` - add
+- ai: 4 agents rules (`architect`, `test-engineer`, `python-dev`, `breaking-guard`) - add
 
 **Refactoring:**
 
 - ref: `dpath` - documentation improvements
-- ref: `architect folder` - initial version
+- ref: `architecture` folder and rules - initial version
 
 **Tests:**
 
-- tests: `dpath` - add initial test suite and configuration files
-- tests: `dpath` - exclude legacy temporal tests and remove old tests from git
+- tests: `utils/dpath` - add initial test suite and configuration files
+- tests: `utils` - add unit tests for general utils
+- tests: general - exclude legacy temporal tests and remove old tests from git
+- tests: general - add configurations
 
 **Tools:**
 
-- tools: `AGENTS.md` - initial version added
-- tools: `AGENTS.md` - separate agent roles introduced
-- tools: `Docker Compose` - add test infrastructure with health checks
-- tools: `ai/architecture` - add rules
-- tools: `ai/architect folder` - modify rules
-- tools: `ai/agent rules` - improve and revise
-- tools: `tests` - add instructions
+- tools: `AGENTS.md` - add initial version a
+- tools: `.opencode/agents/` - separate agent roles introduced
+- tools: `tests` - add test infrastructure over `Docker Compose` with health checks and instructions
 
 **Dependencies:**
 
