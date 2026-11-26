@@ -2,43 +2,46 @@
 
 ## [Unreleased]
 
+**AI/Architecture:**
+
+- ai: `agents permissions` - revised; 
+- ai: `common permissions` collected in opncode.json
+- ai: `changelog skill` - add
+- ai: `architecture rules` - add
+
+**Refactoring:**
+
+- ref: `dpath` - documentation improvements
+- ref: `architect folder` - initial version
+
 **Tests:**
 
-- tests: `dpath` - add comprehensive test suite with 5 test files covering engines, main functionality, transformers, and performance benchmarks
-- tests: `dpath` - add pytest fixtures for engine switching in `conftest.py`
+- tests: `dpath` - add initial test suite and configuration files
+- tests: `dpath` - exclude legacy temporal tests and remove old tests from git
 
 **Tools:**
 
-- tools: `AGENTS.md` — complete refactor: new rule structure (LMB-{GROUP}{SEVERITY}{NNN}), status model, merged Code Quality section
-- tools: `AGENTS.md` — add `.python-version` and dependency categorization rules
-- tools: `docker-compose.test.yml` - complete test infrastructure with 6 services (PostgreSQL 18, Valkey 9.1.1, MinIO, Kafka 3.9)
-- tools: `docker-compose.test.yml` - PostgreSQL 18 with TimescaleDB on port 35432
-- tools: `docker-compose.test.yml` - Valkey bundle 9.1.1 in 3 modes: standalone (36379), Sentinel (36380-36382), Cluster (36390-36392)
-- tools: `docker-compose.test.yml` - MinIO S3-compatible storage on ports 39000/39001
-- tools: `docker-compose.test.yml` - Kafka 3.9 cluster in KRaft mode (2 nodes, ports 39092-39093)
-- tools: `docker-compose.test.yml` - password authentication on all Valkey services (testpass123)
-- tools: `docker-compose.test.yml` - health checks for automatic service readiness monitoring
-- tools: `scripts/start-test-env.sh` - automated test environment startup with health checks and service initialization
-- tools: `scripts/stop-test-env.sh` - clean teardown with volume removal
-- tools: `scripts/wait-for-healthy.sh` - reusable Docker service health check script with configurable timeout
-- tools: `scripts/sentinel-entrypoint.sh` - dynamic Valkey Sentinel configuration with master IP discovery
-- tools: `TESTING.md` - comprehensive testing guide with service configuration and troubleshooting
+- tools: `AGENTS.md` - initial version added
+- tools: `AGENTS.md` - separate agent roles introduced
+- tools: `Docker Compose` - add test infrastructure with health checks
+- tools: `ai/architecture` - add rules
+- tools: `ai/architect folder` - modify rules
+- tools: `ai/agent rules` - improve and revise
+- tools: `tests` - add instructions
 
 **Dependencies:**
 
-- dep: merge `test` dependency group into `dev` (pytest-asyncio moved)
-- dep: remove `aioredis` from project dependencies - not used in codebase
+- dep: add `coverage` dependency for test reporting
 
 **Documentation:**
 
-- docs: add `TESTING.md` - testing infrastructure guide with quick start, fixtures reference, and CI/CD example
-- docs: consolidate test documentation (removed `tests/README.md`, `scripts/README.md`)
-- docs: add MIT LICENSE file
+- docs: `AGENTS.md` - refactor with new rule structure and merge test dependencies
+- docs: `LICENSE` - add MIT license file
+- docs: `CHANGELOG` - restore historical entries in `CHANGELOG_OLD.md`
 
 **Chores:**
 
-- chore: update ruff to v0.17.6 in pre-commit hooks
-- chore: add PyPI classifiers (Intended Audience, License, Topic, Typing)
+- chore: update `ruff` to v0.17.6 and add PyPI classifiers
 
 ---
 
