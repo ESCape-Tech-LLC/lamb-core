@@ -12,6 +12,7 @@ permission:
     "lamb/*": allow
     "src/*": allow
     "rust/*": allow
+    "architecture/*": ask
     "Cargo.toml": ask
     "pyproject.toml": ask
   task:

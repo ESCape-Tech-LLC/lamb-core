@@ -7,7 +7,9 @@ permission:
     "*.env": deny
     "*.env.*": deny
     "*.env.test": allow
-  edit: deny
+  edit: 
+    "*": deny
+    "architecture/*": ask
   webfetch: ask
   bash:
     "*": ask
