@@ -2,6 +2,11 @@
 description: QA & Test Engineer — pytest setup, characterization and edge-case tests
 mode: all
 permission:
+  read:
+    "*": allow
+    "*.env": deny
+    "*.env.*": deny
+    "*.env.test": allow
   edit:
     "*": deny
     "tests/*": allow
@@ -9,15 +14,12 @@ permission:
   bash:
     "*": ask
     "uv run python -c *": allow
-    "uv run pytest": allow
     "uv run pytest *": allow
     "uv run ruff check tests*": allow
-    "git status": allow
     "git status *": allow
-    "git diff": allow
     "git diff *": allow
-    "git log": allow
     "git log *": allow
+    "git show *": allow
 ---
 
 Staff Python QA Engineer for `lamb`. Follow `AGENTS.md` strictly.
