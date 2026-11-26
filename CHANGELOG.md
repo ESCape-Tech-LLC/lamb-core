@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+**Tests:**
+
+- tests: `dpath` - add comprehensive test suite with 5 test files covering engines, main functionality, transformers, and performance benchmarks
+- tests: `dpath` - add pytest fixtures for engine switching in `conftest.py`
+
 **Tools:**
 
 - tools: `AGENTS.md` — complete refactor: new rule structure (LMB-{GROUP}{SEVERITY}{NNN}), status model, merged Code Quality section
