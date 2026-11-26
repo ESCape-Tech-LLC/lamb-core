@@ -63,6 +63,7 @@ dependencies = [
   "sqlalchemy<2.1",
   "sqlalchemy[asyncio]>=2.0.53",
   "sqlalchemy-utils>=0.43.0",
+  "ipykernel>=7.4.0",
 ]
 optional-dependencies.boost = [
   "cython>=3.3.1",
@@ -83,8 +84,10 @@ urls.Homepage = "https://github.com/ESCape-Tech-LLC/lamb-core"
 #geoip2
 [dependency-groups]
 dev = [
+  "asyncpg>=0.32.0",
   "coverage>=7.17.5",
   "pre-commit>=4.7.0",
+  "psycopg>=3.3.9",
   "pytest-asyncio>=0.21",
   "ruff>=0.17.6",
 ]
@@ -123,6 +126,48 @@ ini_options.log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 ini_options.asyncio_default_fixture_loop_scope = "class"
 ini_options.asyncio_default_test_loop_scope = "class"
 ini_options.asyncio_mode = "auto"
+ini_options.testpaths = ["tests"]
+ini_options.addopts = [
+  "--strict-markers",
+  "--strict-config",
+  "--verbose",
+]
+ini_options.markers = [
+  "unit: Unit tests that do not require external services",
+  "integration: Integration tests that require Docker services",
+  "requires_db: Tests that require database connectivity",
+  "requires_valkey: Tests that require Valkey connectivity",
+  "requires_s3: Tests that require S3/MinIO connectivity",
+  "requires_kafka: Tests that require Kafka connectivity",
+  "slow: Slow running tests",
+]
+
+[tool.coverage.run]
+source = ["lamb", "tests"]
+branch = true
+omit = [
+  "*/migrations/*",
+  "*/tests/*",
+  "*/venv/*",
+  "*/.venv/*",
+  "*/site-packages/*",
+  "*/__pycache__/*",
+  "*/settings/*",
+  "*/manage.py",
+  "*/setup.py",
+  "*/conftest.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if settings.DEBUG",
+  "if TYPE_CHECKING:",
+]
 
 [tool.bumpversion]
 current_version = "3.7.4"
