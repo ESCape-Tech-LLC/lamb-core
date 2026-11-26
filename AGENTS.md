@@ -114,6 +114,18 @@ bumps.
 
 ---
 
+## 09 — Architectural Proposals
+
+- `🟢 S` **LMB-09S001**: Major architectural changes SHOULD have a proposal document in `architecture/proposals/` before
+  implementation begins
+- `🟢 S` **LMB-09S002**: Proposal documents SHOULD include problem statement, solution approach, benefits, and impact
+  assessment
+- `🟢 S` **LMB-09S003**: Reference existing proposals when making related changes to maintain consistency and context
+- `🟢 M` **LMB-09M004**: Proposal documents MUST be numbered sequentially (e.g., `AP-001`, `AP-002`) and listed in a
+  registry
+
+---
+
 ## 99 — Policy Enforcement
 
 - `🟢 M` **LMB-99M001**: Reference rule numbers in actions (e.g., "Applying LMB-02M002")
@@ -191,4 +203,5 @@ bumps.
 | `06` | Code Quality & Standards        |
 | `07` | Testing                         |
 | `08` | Rust (`PyO3`) & Agent Pipeline  |
+| `09` | Architectural Proposals         |
 | `99` | Policy Enforcement (meta-rules) |
