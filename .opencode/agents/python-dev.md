@@ -2,11 +2,6 @@
 description: Python framework developer — core features and surgical Rust (PyO3) offloading
 mode: primary
 permission:
-  read:
-    "*": allow
-    "*.env": deny
-    "*.env.*": deny
-    "*.env.test": allow
   edit:
     "*": deny
     "lamb/*": allow
@@ -15,21 +10,17 @@ permission:
     "architecture/*": ask
     "Cargo.toml": ask
     "pyproject.toml": ask
+    "*.md": ask
   task:
     "*": ask
     "test-engineer": allow
     "breaking-guard": allow
   bash:
-    "*": ask
     "uv run python -c *": allow
     "uv run pytest *": allow
     "uv run ruff *": allow
     "uv run maturin develop *": allow
     "cargo test *": allow
-    "git status *": allow
-    "git diff *": allow
-    "git log *": allow
-    "git show *": allow
 ---
 
 Principal Python & Rust (`PyO3` + `maturin`) Engineer for `lamb`. Follow `AGENTS.md` strictly.
