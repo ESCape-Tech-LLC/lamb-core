@@ -40,21 +40,58 @@ def dpath_value(
     transform: Callable | None = None,
     **kwargs,
 ):
-    """Search for object in provided dict_object under key_path
+    """Extract a value from a nested data structure using a key path.
 
-    :param dict_object: Container to find data within
-    :param key_path: Query string
-    :param req_type: Type of argument that expected
-    :param allow_none: Return None without exception if leaf exist and equal to None
-    :param transform: Optional callback (lamb.utils.transformers function or other)
-        to apply on extracted value before return
+    This function provides a unified interface for extracting values from various
+    data sources including dictionaries, XML elements, Django settings, environment
+    variables, and QueryDict objects. It supports type conversion, validation,
+    and transformation of the extracted values.
 
-    :param kwargs: Optional parameters:
-        - `default` - default value is passed to extractor function
-        - others - passed to the transformer (if set).
+    Args:
+        dict_object: The container to search within. Can be a dict, XML element,
+            Django settings, environment variables, or QueryDict.
+        key_path: The path to the desired value. Can be a string, list, or tuple.
+            For nested structures, use a list or tuple of keys/indices.
+        req_type: Optional type to convert the extracted value to. If conversion
+            fails, raises InvalidParamTypeError.
+        allow_none: If True, returns None when the extracted value is None.
+            If False (default), raises InvalidParamTypeError for None values.
+        transform: Optional callable to transform the extracted value before
+            returning. Useful for validation or custom parsing.
+        **kwargs: Additional keyword arguments:
+            - default: Value to return if the key_path is not found
+            - Other arguments are passed to the transformer function
 
-    :return: Extracted value
+    Returns:
+        The extracted value, potentially transformed and/or type-converted.
 
+    Raises:
+        InvalidParamTypeError: If the value is None and allow_none=False, or
+            if type conversion fails.
+        InvalidBodyStructureError: If the key_path cannot be found.
+        ServerError: For other unexpected errors during extraction.
+
+    Examples:
+        # Simple dictionary access
+        data = {"user": {"name": "John", "age": "30"}}
+        name = dpath_value(data, ["user", "name"])  # Returns "John"
+        age = dpath_value(data, ["user", "age"], int)  # Returns 30 (int)
+
+        # With default value
+        city = dpath_value(data, ["user", "city"], default="Unknown")
+
+        # With transformation
+        from functools import partial
+        from lamb.utils import transformers
+        date_val = dpath_value(
+            data,
+            "birth_date",
+            transform=partial(transformers.transform_date, __format="%Y-%m-%d")
+        )
+
+        # Environment variable access
+        import os
+        debug_mode = dpath_value(os.environ, "DEBUG_MODE", bool, default=False)
     """
 
     # utils
@@ -124,12 +161,36 @@ def dpath_value(
 
 # dict engine utils
 def _impl_dict_dpath(dict_object: dict[Any, Any], key_path: KeyPath, **_) -> Any:
+    """Extract value from dictionary using dpath library.
+
+    Args:
+        dict_object: Dictionary to search within
+        key_path: Path to the desired value
+
+    Returns:
+        The extracted value
+
+    Raises:
+        IndexError: If the key_path cannot be found
+    """
     items: list[Any] = dpath.values(dict_object, key_path)
     result = items[0]
     return result
 
 
 def _impl_dict_reduce(dict_object: dict[Any, Any], key_path: KeyPath, **_) -> Any:
+    """Extract value from dictionary using functools.reduce.
+
+    Args:
+        dict_object: Dictionary to search within
+        key_path: Path to the desired value (must be list/tuple for this implementation)
+
+    Returns:
+        The extracted value
+
+    Raises:
+        IndexError: If the key_path cannot be found
+    """
     # TODO: candidate to remove - traverse speed same
     try:
         if isinstance(key_path, str):
@@ -145,6 +206,20 @@ _impl_dict = _impl_dict_reduce
 
 
 def adapt_dict_impl():
+    """Adapt the dictionary implementation based on Django settings.
+
+    This function reads the LAMB_DPATH_DICT_ENGINE setting from Django configuration
+    and sets the appropriate implementation for dictionary value extraction.
+
+    The setting can be:
+        - "dpath" (default): Use the dpath library implementation
+        - "reduce": Use the functools.reduce implementation
+
+    If the setting is not configured or invalid, it defaults to "dpath".
+
+    Raises:
+        ImproperlyConfiguredError: If an unknown engine is specified in settings
+    """
     from django.conf import settings
 
     engine_value = dpath_value(settings, "LAMB_DPATH_DICT_ENGINE", str, default=None)
@@ -163,12 +238,21 @@ def adapt_dict_impl():
 
 # other sources
 def _impl_etree(element: EtreeElement | Etree, key_path: str, namespaces: dict | None = None, **_) -> Any:
-    """Etree/EtreeElement implementation
+    """Extract value from XML element tree.
 
-    :param element: Element object to extract value
-    :param key_path: Subtag name
-    :param namespaces: Namespaces for XML find mapping
-    :return: Extracted value
+    Args:
+        element: XML element or element tree to search within
+        key_path: XPath expression to locate the desired element
+        namespaces: Optional namespace mappings for XPath resolution
+
+    Returns:
+        The text content of the located element, potentially type-converted
+        based on type hints in the XML
+
+    Raises:
+        InvalidParamTypeError: If element or key_path types are incorrect
+        InvalidBodyStructureError: If the element cannot be found
+        ServerError: For other unexpected errors
     """
     if not isinstance(element, EtreeElement | Etree):
         logger.warning(f"Improperly configured element param data type: {element}")
@@ -210,11 +294,18 @@ def _impl_etree(element: EtreeElement | Etree, key_path: str, namespaces: dict |
 
 
 def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
-    """
-    Implementation to query and parse djnago configs
-    :param settings: Initialized Settings object
-    :param key_path: Variable name
-    :return: Extracted value
+    """Extract value from Django settings.
+
+    Args:
+        settings: Django settings object
+        key_path: Name of the setting to retrieve (must be a string)
+
+    Returns:
+        The value of the specified setting
+
+    Raises:
+        InvalidBodyStructureError: If the setting cannot be found
+        ServerError: If key_path is not a string
     """
     try:
         if not isinstance(key_path, str):
@@ -230,11 +321,39 @@ def _impl_django_conf(settings: Settings, key_path: KeyPath, **_r) -> Any:
 
 
 def _impl_query_dict(dict_object: QueryDict, key_path: str | list[str] | None = None, **kwargs) -> Any:
+    """Extract value from Django QueryDict.
+
+    Args:
+        dict_object: QueryDict to search within
+        key_path: Key to look up (passed to dict implementation)
+        **kwargs: Additional arguments passed to dict implementation
+
+    Returns:
+        The extracted value
+    """
     # TODO: support for multiple values
     return _impl_dict(dict_object.dict(), key_path, **kwargs)
 
 
 def _impl_environ(env: os._Environ, key_path: str | list[str] | None = None, **kwargs) -> Any:
+    """Extract value from environment variables.
+
+    This implementation supports Docker secrets pattern where a secret value
+    can be provided through a file referenced by an environment variable with
+    the same name plus '_FILE' suffix.
+
+    Args:
+        env: Environment variables dictionary
+        key_path: Name of the environment variable to retrieve (must be a string)
+        **kwargs: Additional arguments passed to dict implementation
+
+    Returns:
+        The value of the environment variable, potentially loaded from a file
+
+    Raises:
+        ProgrammingError: If key_path is not a string
+        InvalidBodyStructureError: If file-based environment variable cannot be loaded
+    """
     if not isinstance(key_path, str):
         raise exc.ProgrammingError("Environment variable name must be a string")
 
