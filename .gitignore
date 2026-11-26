@@ -106,3 +106,6 @@ sbom-esi-backend.json
 sbom-esi-backend-update.json
 sbom-esi-backend-update.odt
 sbom-requirements.txt
+
+# test: temporal
+.tests_legacy
